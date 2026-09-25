@@ -283,7 +283,8 @@
 
             const userCustomTopic = customThemeInput.value.trim();
             const activeTopic = userCustomTopic || selectedTheme;
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            // 這裡已經更新為正確的 gemini-3.8-flash 模型網址
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
             btnGenerate.disabled = true;
             btnGenerateText.textContent = "v3.8 正在編織冒險故事...";
