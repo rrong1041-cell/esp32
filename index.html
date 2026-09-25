@@ -71,14 +71,14 @@
 
     <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
 
-        <!-- 左側面板：藍牙與設定控制 -->
+        <!-- 左側面板：藍牙、聲音設定與控制 -->
         <section class="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
-            <div>
-                <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
+            <div class="space-y-4">
+                <h2 class="text-xl font-bold text-cyan-300 flex items-center gap-2">
                     <i class="fa-bluetooth-b fab text-cyan-400"></i> 藍牙繪本裝置
                 </h2>
                 
-                <div id="connectionStatusCard" class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
+                <div id="connectionStatusCard" class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <span id="statusIndicator" class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow"></span>
                         <div>
@@ -89,20 +89,26 @@
                     <i id="statusIcon" class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"></i>
                 </div>
 
-                <button id="btnConnect" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-base">
+                <button id="btnConnect" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-sm">
                     <i class="fa-solid fa-wifi"></i> 連接故事裝置
                 </button>
-                <button id="btnDisconnect" class="w-full hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3.5 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-base mt-2">
+                <button id="btnDisconnect" class="w-full hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-sm">
                     <i class="fa-solid fa-power-off"></i> 中斷藍牙連線
                 </button>
             </div>
 
-            <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
-                <h3 class="text-sm font-bold text-purple-300 mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-hand-sparkles"></i> 測試/手動觸發模式
-                </h3>
-                <p class="text-xs text-slate-400 mb-3">可手動點擊送出 SWIPE 信號。</p>
-                <button id="btnManualSwipe" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2 text-sm">
+            <!-- 聲音選擇設定區塊 -->
+            <div class="space-y-2 bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
+                <label for="voiceSelect" class="block text-xs font-semibold text-purple-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-microphone-lines text-pink-400"></i> 選擇朗讀聲音
+                </label>
+                <select id="voiceSelect" class="w-full bg-slate-800 border border-slate-700 focus:border-purple-400 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none transition">
+                    <option value="">載入系統語音中...</option>
+                </select>
+            </div>
+
+            <div class="bg-slate-950/40 p-3 rounded-2xl border border-slate-800">
+                <button id="btnManualSwipe" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-3 rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2 text-xs">
                     <i class="fa-solid fa-wand-magic"></i> 手動觸發 SWIPE 揮動
                 </button>
             </div>
@@ -113,13 +119,6 @@
                 </label>
                 <input type="password" id="apiKeyInput" placeholder="請輸入 Gemini API Key" class="w-full bg-slate-800/80 border border-slate-700 focus:border-purple-400 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none transition">
             </div>
-
-            <div id="iosNotice" class="text-xs text-slate-400 bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                <p class="flex items-start gap-1.5">
-                    <i class="fa-solid fa-circle-info text-cyan-400 mt-0.5"></i>
-                    <span><strong>提示：</strong> iOS 請使用 <a href="https://apps.apple.com/app/blueify-web-ble-browser/id1492822255" target="_blank" class="text-cyan-300 underline">Blueify App</a> 開啟以支援 Web BLE。</span>
-                </p>
-            </div>
         </section>
 
         <!-- 右側面板：故事冒險卡片 -->
@@ -128,8 +127,8 @@
                 <div id="storyContainer" class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-8">
                         <div class="text-5xl mb-3">🗡️✨📖</div>
-                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好開始深度奇幻冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400">點擊下方「生成長篇冒險故事」，將為你召喚沉浸式的精采故事！</p>
+                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好開始多互動的奇幻冒險了嗎？</h3>
+                        <p class="text-sm text-slate-400">點擊下方按鈕，將為你生成充滿互動機關的長篇故事！</p>
                     </div>
                     <p id="storyText" class="text-lg md:text-xl leading-relaxed text-slate-100 hidden font-medium"></p>
                 </div>
@@ -173,13 +172,13 @@
                 </div>
 
                 <div id="customModeContainer" class="hidden space-y-2">
-                    <textarea id="manualStoryInput" rows="3" placeholder="貼上或輸入您自己的故事文字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
+                    <textarea id="manualStoryInput" rows="3" placeholder="貼上故事文字，記得想互動的地方加上 [SWIPE]..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
                 </div>
 
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-3">
                         <i id="btnGenerateIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnGenerateText">生成長篇冒險故事</span>
+                        <span id="btnGenerateText">生成互動冒險故事</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 flex items-center justify-center text-xl transition">
                         <i class="fa-solid fa-play"></i>
@@ -213,6 +212,7 @@
         let triggeredKeywords = new Set();
         let currentMode = 'ai';
         let isWaitingForAction = false; 
+        let voices = [];
 
         const btnConnect = document.getElementById('btnConnect');
         const btnDisconnect = document.getElementById('btnDisconnect');
@@ -221,6 +221,7 @@
         const btnGenerateText = document.getElementById('btnGenerateText');
         const btnGenerateIcon = document.getElementById('btnGenerateIcon');
         const btnSpeak = document.getElementById('btnSpeak');
+        const voiceSelect = document.getElementById('voiceSelect');
         const statusIndicator = document.getElementById('statusIndicator');
         const statusText = document.getElementById('statusText');
         const statusIcon = document.getElementById('statusIcon');
@@ -241,6 +242,38 @@
         const customThemeInput = document.getElementById('customThemeInput');
         const manualStoryInput = document.getElementById('manualStoryInput');
         const themeBtns = document.querySelectorAll('.theme-btn');
+
+        // 載入系統語音清單
+        function loadVoices() {
+            if (!window.speechSynthesis) return;
+            voices = window.speechSynthesis.getVoices().filter(v => v.lang.includes('zh') || v.lang.includes('cmn') || v.lang.includes('TW') || v.lang.includes('CN'));
+            
+            voiceSelect.innerHTML = '';
+            if (voices.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '使用預設系統語音';
+                voiceSelect.appendChild(opt);
+                return;
+            }
+
+            voices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                if (voice.lang.includes('TW') || voice.name.includes('Traditional') || voice.name.includes('Hsiao')) {
+                    option.selected = true; // 優先選取台灣或慣用中文語音
+                }
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        if (window.speechSynthesis) {
+            loadVoices();
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = loadVoices;
+            }
+        }
 
         function showToast(message, type = 'info') {
             toastMessage.textContent = message;
@@ -381,15 +414,14 @@
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
             btnGenerate.disabled = true;
-            btnGenerateText.textContent = "正在編織大型史詩冒險...";
+            btnGenerateText.textContent = "正在編織多互動冒險故事...";
             btnGenerateIcon.className = "fa-solid fa-spinner animate-spin";
 
-            // 要求更長篇幅與固定格式的互動點
-            const prompt = `你是一位世界級的兒童繪本大師。請為小朋友創作一段關於「${activeTopic}」的【超長篇】奇幻冒險故事。
+            // 強化提示詞，確保每隔一段距離就有互動點
+            const prompt = `你是一位世界級的兒童繪本大師。請為小朋友創作一段關於「${activeTopic}」的長篇奇幻冒險故事。
 要求：
-1. 字數必須在 **1500 字以上**，情節要非常豐富、有層次、充滿轉折與細膩描述。
-2. 語氣生動、充滿童趣。
-3. **重要互動安排**：請在故事中均勻安插 **8次** 動作標記，格式必須嚴格寫成 **[SWIPE]**。例如：「小騎士舉起長劍 [SWIPE] 向前衝去！」。千萬不要寫成英文括號以外的格式。`;
+1. 字數約 1200 到 1500 字，情節生動豐富。
+2. **非常重要的互動安排**：為了讓小朋友可以經常與藍牙裝置互動，請在故事中**每隔大約 150 到 200 字**就均勻安插一次動作標記 **[SWIPE]**。整篇故事總共必須包含 **6 到 8 個 [SWIPE]** 標記（例如危機、轉折、施法或擊敗怪物時）。絕對不可漏掉或只放一兩次。`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -414,7 +446,7 @@
                 storyText.classList.remove('hidden');
                 btnSpeak.disabled = false;
                 
-                showToast("長篇冒險故事完成！", "success");
+                showToast("互動冒險故事完成！", "success");
                 speakStory();
 
             } catch (error) {
@@ -422,7 +454,7 @@
                 showToast("生成失敗：" + error.message, "error");
             } finally {
                 btnGenerate.disabled = false;
-                btnGenerateText.textContent = "生成長篇冒險故事";
+                btnGenerateText.textContent = "生成互動冒險故事";
                 btnGenerateIcon.className = "fa-solid fa-wand-magic-sparkles";
             }
         }
@@ -447,13 +479,19 @@
                 return;
             }
 
-            // 【關鍵修正】：朗讀時將 [SWIPE] 或 (SWIPE) 從語音文字中濾除，避免被唸出來！
+            // 過濾掉 [SWIPE] 或 (SWIPE)，絕不讓機器唸出英文
             const cleanTextForSpeech = currentStory.replace(/\[SWIPE\]|\(SWIPE\)/g, '');
 
             const utterance = new SpeechSynthesisUtterance(cleanTextForSpeech);
             utterance.lang = 'zh-TW';
             utterance.rate = 0.9;
             utterance.pitch = 1.2; 
+
+            // 套用使用者選擇的聲音
+            const selectedVoiceIndex = voiceSelect.value;
+            if (selectedVoiceIndex !== "" && voices[selectedVoiceIndex]) {
+                utterance.voice = voices[selectedVoiceIndex];
+            }
 
             triggeredKeywords.clear();
             actionIndicator.classList.remove('hidden');
@@ -463,8 +501,6 @@
             utterance.onboundary = function(event) {
                 if (event.name === 'word' || event.name === 'sentence') {
                     const spokeTextSoFar = cleanTextForSpeech.substring(0, event.charIndex + event.charLength);
-                    
-                    // 用原始故事來比對互動點的位置
                     const originalSoFar = currentStory.substring(0, event.charIndex + event.charLength);
 
                     if (originalSoFar.includes("SWIPE")) {
