@@ -128,8 +128,8 @@
                 <div id="storyContainer" class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-8">
                         <div class="text-5xl mb-3">🗡️✨📖</div>
-                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好開始奇幻冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400">點擊下方「生成冒險故事」，將為你召喚專屬的奇境故事！</p>
+                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好開始 10 分鐘超長奇幻冒險了嗎？</h3>
+                        <p class="text-sm text-slate-400">點擊下方「生成 10 分鐘大冒險故事」，將為你召喚深度沈浸的長篇故事！</p>
                     </div>
                     <p id="storyText" class="text-lg md:text-xl leading-relaxed text-slate-100 hidden font-medium"></p>
                 </div>
@@ -173,13 +173,13 @@
                 </div>
 
                 <div id="customModeContainer" class="hidden space-y-2">
-                    <textarea id="manualStoryInput" rows="3" placeholder="貼上或輸入您自己的故事文字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
+                    <textarea id="manualStoryInput" rows="3" placeholder="貼上或輸入您自己的長篇故事文字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
                 </div>
 
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-3">
                         <i id="btnGenerateIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnGenerateText">生成冒險故事</span>
+                        <span id="btnGenerateText">生成 10 分鐘大冒險故事</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 flex items-center justify-center text-xl transition">
                         <i class="fa-solid fa-play"></i>
@@ -210,8 +210,9 @@
         let bleCharacteristic = null;
         let selectedTheme = "勇敢的小騎士與巨龍";
         let currentStory = "";
-        let hasTriggeredSwipe = false;
+        let triggeredKeywords = new Set();
         let currentMode = 'ai';
+        let isWaitingForAction = false; 
 
         const btnConnect = document.getElementById('btnConnect');
         const btnDisconnect = document.getElementById('btnDisconnect');
@@ -377,14 +378,18 @@
             const userCustomTopic = customThemeInput.value.trim();
             const activeTopic = userCustomTopic || selectedTheme;
             
-            // 使用 gemini-3.8-flash 模型
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
             btnGenerate.disabled = true;
-            btnGenerateText.textContent = "故事編織中...";
+            btnGenerateText.textContent = "正在編織 10 分鐘史詩故事...";
             btnGenerateIcon.className = "fa-solid fa-spinner animate-spin";
 
-            const prompt = `你是一位充滿童趣的故事繪本大師。請為小朋友創作一段關於「${activeTopic}」的短篇冒險故事。字數約 100~150 字，故事高潮處包含關鍵指示語「揮動寶劍 (SWIPE)」或「揮動魔法棒 (SWIPE)」。`;
+            // 調整提示詞，要求產出長篇故事與約 8 次動作點
+            const prompt = `你是一位世界級的兒童繪本大師與說故事專家。請為小朋友創作一段關於「${activeTopic}」的【超長篇】奇幻冒險故事。
+要求：
+1. 字數必須在 **1200 到 1500 字**之間，包含非常豐富的場景細節、對話、危機、轉折與完美結局，讓朗讀時間可以達到大約 8 到 10 分鐘。
+2. 語氣生動、引人入勝且充滿童趣。
+3. **重要互動安排**：請在故事中均勻分佈，總共安插 **8 次**動作指令字眼「(SWIPE)」。`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -409,7 +414,7 @@
                 storyText.classList.remove('hidden');
                 btnSpeak.disabled = false;
                 
-                showToast("冒險故事已生成！", "success");
+                showToast("10分鐘大冒險故事完成！", "success");
                 speakStory();
 
             } catch (error) {
@@ -417,7 +422,7 @@
                 showToast("生成失敗：" + error.message, "error");
             } finally {
                 btnGenerate.disabled = false;
-                btnGenerateText.textContent = "生成冒險故事";
+                btnGenerateText.textContent = "生成 10 分鐘大冒險故事";
                 btnGenerateIcon.className = "fa-solid fa-wand-magic-sparkles";
             }
         }
@@ -425,18 +430,29 @@
         function speakStory() {
             if (!currentStory) return;
 
+            if (isWaitingForAction) {
+                isWaitingForAction = false;
+                speechStatusText.textContent = "正在生動朗讀 10 分鐘大冒險中...";
+                btnSpeak.innerHTML = `<i class="fa-solid fa-stop text-pink-400"></i>`;
+                window.speechSynthesis.resume();
+                showToast("繼續精采的冒險！", "success");
+                return;
+            }
+
             if (window.speechSynthesis.speaking) {
                 window.speechSynthesis.cancel();
                 actionIndicator.classList.add('hidden');
+                isWaitingForAction = false;
                 btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
                 return;
             }
 
             const utterance = new SpeechSynthesisUtterance(currentStory);
             utterance.lang = 'zh-TW';
-            utterance.rate = 0.95; 
+            utterance.rate = 0.9;
+            utterance.pitch = 1.2; 
 
-            hasTriggeredSwipe = false;
+            triggeredKeywords.clear();
             actionIndicator.classList.remove('hidden');
             speechStatusText.textContent = "正在為你講故事...";
             btnSpeak.innerHTML = `<i class="fa-solid fa-stop text-pink-400"></i>`;
@@ -444,16 +460,37 @@
             utterance.onboundary = function(event) {
                 if (event.name === 'word' || event.name === 'sentence') {
                     const spokeTextSoFar = currentStory.substring(0, event.charIndex + event.charLength);
-                    if (!hasTriggeredSwipe && (spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動"))) {
-                        hasTriggeredSwipe = true;
-                        showToast("偵測到動作關鍵字！發送藍牙 SWIPE 信號", "success");
-                        sendBleCommand("SWIPE");
+                    
+                    if ((spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動"))) {
+                        const matchKey = Math.floor(event.charIndex / 50);
+                        if (!triggeredKeywords.has(matchKey)) {
+                            triggeredKeywords.add(matchKey);
+                            
+                            sendBleCommand("SWIPE");
+                            
+                            isWaitingForAction = true;
+                            window.speechSynthesis.pause();
+                            
+                            speechStatusText.textContent = "✋ 請揮動裝置！完成後點擊按鈕繼續...";
+                            btnSpeak.innerHTML = `<i class="fa-solid fa-play text-emerald-400 animate-bounce"></i>`;
+                            showToast("✨ 故事已暫停，請揮動你的裝置互動！", "success");
+                        }
                     }
                 }
             };
 
             utterance.onend = function() {
+                if (!isWaitingForAction) {
+                    actionIndicator.classList.add('hidden');
+                    btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
+                    showToast("10分鐘大冒險故事講完了！太棒了！", "success");
+                }
+            };
+
+            utterance.onerror = function(e) {
+                console.error("語音播放失敗", e);
                 actionIndicator.classList.add('hidden');
+                isWaitingForAction = false;
                 btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
             };
 
