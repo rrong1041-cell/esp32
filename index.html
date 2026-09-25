@@ -376,7 +376,9 @@
 
             const userCustomTopic = customThemeInput.value.trim();
             const activeTopic = userCustomTopic || selectedTheme;
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            
+            // 使用 gemini-3.8-flash 模型
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
             btnGenerate.disabled = true;
             btnGenerateText.textContent = "故事編織中...";
@@ -498,66 +500,6 @@
 
             btnGenerate.addEventListener('click', generateAdventureStory);
             btnSpeak.addEventListener('click', speakStory);
-        });
-    </script>
-</body>
-</html>
-
-            window.speechSynthesis.speak(utterance);
-        }
-
-        // 初始化事件監聽
-        document.addEventListener('DOMContentLoaded', () => {
-            // 藍牙按鈕
-            btnConnect.addEventListener('click', connectBLE);
-            btnDisconnect.addEventListener('click', disconnectBLE);
-
-            // 模式頁籤切換 (AI 靈感 vs 自訂貼上)
-            tabAiMode.addEventListener('click', () => {
-                currentMode = 'ai';
-                tabAiMode.className = 'flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1';
-                tabCustomMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
-                aiModeContainer.classList.remove('hidden');
-                customModeContainer.classList.add('hidden');
-                btnGenerateText.textContent = '生成冒險故事';
-                btnGenerateIcon.className = 'fa-solid fa-wand-magic-sparkles';
-            });
-
-            tabCustomMode.addEventListener('click', () => {
-                currentMode = 'custom';
-                tabCustomMode.className = 'flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1';
-                tabAiMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
-                customModeContainer.classList.remove('hidden');
-                aiModeContainer.classList.add('hidden');
-                btnGenerateText.textContent = '開始朗讀自訂故事';
-                btnGenerateIcon.className = 'fa-solid fa-book-open';
-            });
-
-            // 手動觸發 SWIPE 按鈕
-            btnManualSwipe.addEventListener('click', () => {
-                showToast("手動發送 SWIPE 指令！", "info");
-                sendBleCommand("SWIPE");
-            });
-
-            // 故事生成與播放按鈕
-            btnGenerate.addEventListener('click', generateAdventureStory);
-            btnSpeak.addEventListener('click', speakStory);
-
-            // 故事主題選擇卡片
-            const themeBtns = document.querySelectorAll('.theme-btn');
-            themeBtns.forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    themeBtns.forEach(b => {
-                        b.classList.remove('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
-                        b.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-300');
-                    });
-                    
-                    btn.classList.add('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
-                    btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-300');
-                    selectedTheme = btn.getAttribute('data-theme');
-                    customThemeInput.value = ""; // 選取預設主題時清空自訂主題框
-                });
-            });
         });
     </script>
 </body>
