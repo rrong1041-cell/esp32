@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聲動奇境 - ESP32 互動故事繪本</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font (Nunito & Fredoka for playful childish style) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        magic: {
+                            dark: '#0f172a',
+                            card: '#1e1b4b',
+                            purple: '#8b5cf6',
+                            pink: '#ec4899',
+                            yellow: '#f59e0b',
+                            cyan: '#06b6d4',
+                            emerald: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'Noto Sans TC', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+            background: radial-gradient(circle at top, #2e1065 0%, #0f172a 100%);
+            min-height: 100vh;
+        }
+        .glow-effect {
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
+        }
+        .glow-button {
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+            transition: all 0.3s ease;
+        }
+        .glow-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.6);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .animate-pulse-ring {
+            animation: pulse-ring 2s infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between">
+
+    <!-- 頁頭與標題區域 -->
+    <header class="w-full max-w-4xl text-center my-4 animate-float">
+        <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
+            <i class="fa-solid font-bold fa-wand-magic-sparkles text-amber-400 text-xl"></i>
+            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">ESP32 繪本互動夥伴</span>
+        </div>
+        <h1 class="text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300 tracking-wide drop-shadow-md">
+            聲動奇境 ✨ 冒險魔法書
+        </h1>
+    </header>
+
+    <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+
+        <!-- 左側面板：藍牙與設定控制 -->
+        <section class="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
+            
+            <!-- 藍牙裝置區塊 -->
+            <div>
+                <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
+                    <i class="fa-bluetooth-b fab text-cyan-400"></i> 藍牙繪本裝置
+                </h2>
+                
+                <!-- 連線狀態指示燈 -->
+                <div id="connectionStatusCard" class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span id="statusIndicator" class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow"></span>
+                        <div>
+                            <div class="text-xs text-slate-400">連線狀態</div>
+                            <div id="statusText" class="font-bold text-slate-200">尚未連線</div>
+                        </div>
+                    </div>
+                    <i id="statusIcon" class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"></i>
+                </div>
+
+                <!-- 連線按鈕 -->
+                <button id="btnConnect" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-base">
+                    <i class="fa-solid fa-wifi"></i> 連接故事裝置
+                </button>
+                <button id="btnDisconnect" class="w-full hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3.5 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-base mt-2">
+                    <i class="fa-solid fa-power-off"></i> 中斷藍牙連線
+                </button>
+            </div>
+
+            <!-- 手動/模擬測試區塊 (iOS相容) -->
+            <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
+                <h3 class="text-sm font-bold text-purple-300 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-hand-sparkles"></i> 測試/手動觸發模式
+                </h3>
+                <p class="text-xs text-slate-400 mb-3">若不支援藍牙或需測試動作，可手動點擊送出 SWIPE 信號。</p>
+                <button id="btnManualSwipe" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-wand-magic"></i> 手動觸發 SWIPE 揮動
+                </button>
+            </div>
+
+            <!-- API Key 設定 -->
+            <div class="space-y-2">
+                <label for="apiKeyInput" class="block text-xs font-semibold text-slate-400 flex items-center gap-1">
+                    <i class="fa-solid fa-key text-amber-400"></i> Gemini API Key (可選/免填預設)
+                </label>
+                <input type="password" id="apiKeyInput" placeholder="貼上自訂 API Key (預設留空)" class="w-full bg-slate-800/80 border border-slate-700 focus:border-purple-400 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none transition">
+            </div>
+
+            <!-- 提示說明 -->
+            <div id="iosNotice" class="text-xs text-slate-400 bg-slate-950/50 p-3 rounded-xl border border-slate-800">
+                <p class="flex items-start gap-1.5">
+                    <i class="fa-solid fa-circle-info text-cyan-400 mt-0.5"></i>
+                    <span><strong>提示：</strong> iOS 請使用 <a href="https://apps.apple.com/app/blueify-web-ble-browser/id1492822255" target="_blank" class="text-cyan-300 underline">Blueify App</a> 開啟以支援 Web BLE。</span>
+                </p>
+            </div>
+        </section>
+
+        <!-- 右側面板：故事冒險卡片 -->
+        <section class="md:col-span-2 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
+            
+            <!-- 故事對話/內容輸出框 -->
+            <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[280px]">
+                
+                <!-- 故事文本內容 -->
+                <div id="storyContainer" class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
+                    <div id="welcomeMessage" class="text-center py-8">
+                        <div class="text-5xl mb-3">🗡️✨📖</div>
+                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好開始奇幻冒險了嗎？</h3>
+                        <p class="text-sm text-slate-400">點擊下方「生成冒險故事」，將為你召喚專屬的奇境故事！</p>
+                    </div>
+                    <p id="storyText" class="text-lg md:text-xl leading-relaxed text-slate-100 hidden font-medium"></p>
+                </div>
+
+                <!-- 語音朗讀與提示動畫列 -->
+                <div id="actionIndicator" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm">
+                    <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
+                        <i class="fa-solid fa-volume-high"></i>
+                        <span id="speechStatusText">正在朗讀故事中...</span>
+                    </div>
+                    <div id="swipeBadge" class="hidden bg-amber-500/20 border border-amber-500/50 text-amber-300 px-3 py-1 rounded-full text-xs font-bold animate-bounce flex items-center gap-1">
+                        <i class="fa-solid fa-bolt"></i> 送出 SWIPE 訊號！
+                    </div>
+                </div>
+            </div>
+
+            <!-- 故事類型選擇與生成控制區 -->
+            <div class="space-y-4">
+                <!-- 模式切換頁籤：AI 生成 vs 自訂輸入 -->
+                <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+                    <button id="tabAiMode" class="flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI 靈感主題
+                    </button>
+                    <button id="tabCustomMode" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-pen-to-square"></i> 自訂/貼上故事
+                    </button>
+                </div>
+
+                <!-- AI 生成主題模式容器 -->
+                <div id="aiModeContainer" class="space-y-3">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-3 rounded-xl text-xs md:text-sm font-semibold hover:bg-purple-800/50 transition">
+                            ⚔️ 騎士巨龍
+                        </button>
+                        <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs md:text-sm font-semibold hover:bg-slate-700 transition">
+                            🌲 魔法森林
+                        </button>
+                        <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs md:text-sm font-semibold hover:bg-slate-700 transition">
+                            🐬 海底寶藏
+                        </button>
+                    </div>
+                    <!-- 自訂主題輸入框 -->
+                    <div class="relative">
+                        <input type="text" id="customThemeInput" placeholder="✍️ 或輸入您想發想的主題（如：小熊外星大冒險）..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl px-3 py-2.5 text-xs md:text-sm text-slate-200 outline-none transition">
+                    </div>
+                </div>
+
+                <!-- 自訂貼上故事模式容器 -->
+                <div id="customModeContainer" class="hidden space-y-2">
+                    <textarea id="manualStoryInput" rows="3" placeholder="貼上或輸入您自己的故事文字...（內容若包含「SWIPE」或「揮動」字詞，語音唸到時會自動觸發藍牙感應喔！）" class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
+                </div>
+
+                <!-- 生成/載入故事按鈕 -->
+                <div class="flex gap-3">
+                    <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-3">
+                        <i id="btnGenerateIcon" class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span id="btnGenerateText">生成冒險故事</span>
+                    </button>
+                    <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 flex items-center justify-center text-xl transition">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- 訊息提示 Box (代替 Alert) -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-info text-cyan-400 text-lg"></i>
+        <span id="toastMessage" class="text-sm font-semibold">提示訊息</span>
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="w-full max-w-4xl text-center py-4 text-xs text-slate-500">
+        <p>聲動奇境 Web BLE App &copy; 2026 - Powered by Gemini API & Web Speech</p>
+    </footer>
+
+    <script>
+        // 常數設定 (ESP32 BLE UUIDs)
+        const BLE_CONFIG = {
+            deviceName: '聲動奇境_BLE',
+            serviceUuid: '4fa8691a-136d-4560-84ed-01354051b785',
+            characteristicUuid: 'beb5483e-36e1-4688-b7f5-ea07361b26a8'
+        };
+
+        // 狀態變數
+        let bleDevice = null;
+        let bleServer = null;
+        let bleCharacteristic = null;
+        let selectedTheme = "勇敢的小騎士與巨龍";
+        let currentStory = "";
+        let isSpeaking = false;
+        let hasTriggeredSwipe = false;
+        let currentMode = 'ai'; // 'ai' 或 'custom'
+
+        // DOM 元素
+        const btnConnect = document.getElementById('btnConnect');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const btnManualSwipe = document.getElementById('btnManualSwipe');
+        const btnGenerate = document.getElementById('btnGenerate');
+        const btnGenerateText = document.getElementById('btnGenerateText');
+        const btnGenerateIcon = document.getElementById('btnGenerateIcon');
+        const btnSpeak = document.getElementById('btnSpeak');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const statusIcon = document.getElementById('statusIcon');
+        const storyContainer = document.getElementById('storyContainer');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const storyText = document.getElementById('storyText');
+        const actionIndicator = document.getElementById('actionIndicator');
+        const speechStatusText = document.getElementById('speechStatusText');
+        const swipeBadge = document.getElementById('swipeBadge');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        
+        // 新增的自訂元素
+        const tabAiMode = document.getElementById('tabAiMode');
+        const tabCustomMode = document.getElementById('tabCustomMode');
+        const aiModeContainer = document.getElementById('aiModeContainer');
+        const customModeContainer = document.getElementById('customModeContainer');
+        const customThemeInput = document.getElementById('customThemeInput');
+        const manualStoryInput = document.getElementById('manualStoryInput');
+        // 呼叫 Gemini API 產生冒險故事或載入自訂故事
+        async function generateAdventureStory() {
+            if (currentMode === 'custom') {
+                const manualText = manualStoryInput.value.trim();
+                if (!manualText) {
+                    showToast("請先輸入或貼上故事內容喔！", "error");
+                    return;
+                }
+                currentStory = manualText;
+                welcomeMessage.classList.add('hidden');
+                storyText.textContent = currentStory;
+                storyText.classList.remove('hidden');
+                btnSpeak.disabled = false;
+                showToast("自訂故事已載入！準備開始朗讀", "success");
+                speakStory();
+                return;
+            }
+
+            // AI 模式：決定主題（優先採用自訂輸入框）
+            const userCustomTopic = customThemeInput.value.trim();
+            const activeTopic = userCustomTopic || selectedTheme;
+
+            const apiKey = apiKeyInput.value.trim() || ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            btnGenerate.disabled = true;
+            btnGenerateText.textContent = "故事編織中...";
+            btnGenerateIcon.className = "fa-solid fa-spinner animate-spin";
+
+            const prompt = `你是一位充滿童趣的故事繪本大師。請為小朋友創作一段關於「${activeTopic}」的短篇冒險故事。
+要求：
+1. 字數約 100~150 字，文字生動活潑，適合小朋友朗讀。
+2. 故事的最高潮或結尾處，務必明確包含讓小朋友動作的關鍵指示語，例如「揮動寶劍 (SWIPE)」或「揮動魔法棒 (SWIPE)」。
+3. 關鍵字中務必包含英語單詞 "SWIPE" 或 中文 "揮動"。`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: "你是一位充滿熱情的兒童故事繪本作家，語言溫馨、充滿奇幻色彩。" }]
+                }
+            };
+
+            try {
+                let response = null;
+                let delay = 1000;
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.ok) break;
+                    } catch (e) {
+                        if (i === 2) throw e;
+                    }
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+
+                const data = await response.json();
+                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!generatedText) {
+                    throw new Error("無法取得故事內容");
+                }
+
+                currentStory = generatedText;
+                
+                // 更新 UI 顯示故事
+                welcomeMessage.classList.add('hidden');
+                storyText.textContent = currentStory;
+                storyText.classList.remove('hidden');
+                btnSpeak.disabled = false;
+                
+                showToast("冒險故事已生成！點擊播放開始朗讀", "success");
+                
+                // 自動開始朗讀
+                speakStory();
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                showToast("生成故事失敗，請檢查 API Key 或網路狀態", "error");
+            } finally {
+                btnGenerate.disabled = false;
+                btnGenerateText.textContent = "生成冒險故事";
+                btnGenerateIcon.className = "fa-solid fa-wand-magic-sparkles";
+            }
+        }
+
+        // 連接藍牙裝置
+        async function connectBLE() {
+            if (!navigator.bluetooth) {
+                showToast('您的瀏覽器不支援 Web Bluetooth，請使用 Chrome、Edge 或 iOS Blueify App', 'error');
+                return;
+            }
+
+            try {
+                updateConnectionState('connecting');
+                showToast('尋找 ESP32 故事繪本裝置中...', 'info');
+
+                // 要求選取藍牙裝置
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [
+                        { name: BLE_CONFIG.deviceName },
+                        { services: [BLE_CONFIG.serviceUuid] }
+                    ],
+                    optionalServices: [BLE_CONFIG.serviceUuid]
+                });
+
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+                // 建立 Gatt 連線
+                bleServer = await bleDevice.gatt.connect();
+                const service = await bleServer.getPrimaryService(BLE_CONFIG.serviceUuid);
+                bleCharacteristic = await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
+
+                updateConnectionState('connected');
+                showToast(`已成功連接至 ${bleDevice.name || 'ESP32 繪本'}！`, 'success');
+
+            } catch (error) {
+                console.error('BLE 連線失敗:', error);
+                updateConnectionState('disconnected');
+                if (error.name !== 'NotFoundError') { // 非使用者取消
+                    showToast('藍牙連線失敗：' + error.message, 'error');
+                }
+            }
+        }
+
+        // 中斷藍牙連線
+        function disconnectBLE() {
+            if (bleDevice && bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+            }
+            onDisconnected();
+        }
+
+        function onDisconnected() {
+            bleCharacteristic = null;
+            bleServer = null;
+            updateConnectionState('disconnected');
+            showToast('藍牙裝置已中斷連線', 'info');
+        }
+
+        // 發送訊號指令給 ESP32
+        async function sendBleCommand(commandStr) {
+            if (!bleCharacteristic) {
+                console.warn('藍牙未連線，僅執行模擬訊號觸發');
+                triggerVisualSwipeEffect();
+                return false;
+            }
+
+            try {
+                const encoder = new TextEncoder();
+                const data = encoder.encode(commandStr);
+                await bleCharacteristic.writeValue(data);
+                console.log(`成功送出 BLE 指令: ${commandStr}`);
+                triggerVisualSwipeEffect();
+                return true;
+            } catch (error) {
+                console.error('BLE 送出指令錯誤:', error);
+                showToast('指令傳送失敗: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        // 畫面上顯示 SWIPE 觸發動畫效果
+        function triggerVisualSwipeEffect() {
+            swipeBadge.classList.remove('hidden');
+            setTimeout(() => {
+                swipeBadge.classList.add('hidden');
+            }, 3000);
+        }
+
+        // 呼叫 Gemini API 產生冒險故事
+        async function generateAdventureStory() {
+            const apiKey = apiKeyInput.value.trim() || ""; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            btnGenerate.disabled = true;
+            btnGenerate.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 故事編織中...`;
+
+            const prompt = `你是一位充滿童趣的故事繪本大師。請為小朋友創作一段關於「${selectedTheme}」的短篇冒險故事。
+要求：
+1. 字數約 100~150 字，文字生動活潑，適合小朋友朗讀。
+2. 故事的最高潮或結尾處，務必明確包含讓小朋友動作的關鍵指示語，例如「揮動寶劍 (SWIPE)」或「揮動魔法棒 (SWIPE)」。
+3. 關鍵字中務必包含英語單詞 "SWIPE" 或 中文 "揮動"。`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: "你是一位充滿熱情的兒童故事繪本作家，語言溫馨、充滿奇幻色彩。" }]
+                }
+            };
+
+            try {
+                // 指數退避重試邏輯 (Backoff fetch)
+                let response = null;
+                let delay = 1000;
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.ok) break;
+                    } catch (e) {
+                        if (i === 2) throw e;
+                    }
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+
+                const data = await response.json();
+                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!generatedText) {
+                    throw new Error("無法取得故事內容");
+                }
+
+                currentStory = generatedText;
+                
+                // 更新 UI 顯示故事
+                welcomeMessage.classList.add('hidden');
+                storyText.textContent = currentStory;
+                storyText.classList.remove('hidden');
+                btnSpeak.disabled = false;
+                
+                showToast("冒險故事已生成！點擊播放開始朗讀", "success");
+                
+                // 自動開始朗讀
+                speakStory();
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                showToast("生成故事失敗，請檢查 API Key 或網路狀態", "error");
+            } finally {
+                btnGenerate.disabled = false;
+                btnGenerate.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>生成冒險故事</span>`;
+            }
+        }
+
+        // 語音朗讀故事與關鍵字觸發
+        function speakStory() {
+            if (!currentStory) return;
+
+            // 若正進行朗讀則暫停
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                actionIndicator.classList.add('hidden');
+                btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(currentStory);
+            utterance.lang = 'zh-TW';
+            utterance.rate = 0.95; // 稍微放慢速度適合兒童
+            utterance.pitch = 1.1; // 稍微高音調顯得親切
+
+            hasTriggeredSwipe = false;
+            actionIndicator.classList.remove('hidden');
+            speechStatusText.textContent = "正在為你講故事...";
+            btnSpeak.innerHTML = `<i class="fa-solid fa-stop text-pink-400"></i>`;
+
+            // 語音播放邊進行文字劃詞/關鍵字比對偵測
+            utterance.onboundary = function(event) {
+                if (event.name === 'word' || event.name === 'sentence') {
+                    const spokeTextSoFar = currentStory.substring(0, event.charIndex + event.charLength);
+                    
+                    // 檢查讀到的文字是否包含 SWIPE 或 揮動
+                    if (!hasTriggeredSwipe && (spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動"))) {
+                        hasTriggeredSwipe = true;
+                        showToast("偵測到動作關鍵字！發送藍牙 SWIPE 信號", "success");
+                        sendBleCommand("SWIPE");
+                    }
+                }
+            };
+
+            utterance.onend = function() {
+                actionIndicator.classList.add('hidden');
+                btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
+                
+                // 保險機制：如果全文結束但未曾觸發過，且全文含關鍵字，則發送 SWIPE
+                if (!hasTriggeredSwipe && (currentStory.includes("SWIPE") || currentStory.includes("揮動"))) {
+                    sendBleCommand("SWIPE");
+                }
+            };
+
+            utterance.onerror = function(e) {
+                console.error("語音播放失敗", e);
+                actionIndicator.classList.add('hidden');
+                btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // 初始化事件監聽
+        document.addEventListener('DOMContentLoaded', () => {
+            // 藍牙按鈕
+            btnConnect.addEventListener('click', connectBLE);
+            btnDisconnect.addEventListener('click', disconnectBLE);
+
+            // 模式頁籤切換 (AI 靈感 vs 自訂貼上)
+            tabAiMode.addEventListener('click', () => {
+                currentMode = 'ai';
+                tabAiMode.className = 'flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1';
+                tabCustomMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
+                aiModeContainer.classList.remove('hidden');
+                customModeContainer.classList.add('hidden');
+                btnGenerateText.textContent = '生成冒險故事';
+                btnGenerateIcon.className = 'fa-solid fa-wand-magic-sparkles';
+            });
+
+            tabCustomMode.addEventListener('click', () => {
+                currentMode = 'custom';
+                tabCustomMode.className = 'flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1';
+                tabAiMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
+                customModeContainer.classList.remove('hidden');
+                aiModeContainer.classList.add('hidden');
+                btnGenerateText.textContent = '開始朗讀自訂故事';
+                btnGenerateIcon.className = 'fa-solid fa-book-open';
+            });
+
+            // 手動觸發 SWIPE 按鈕
+            btnManualSwipe.addEventListener('click', () => {
+                showToast("手動發送 SWIPE 指令！", "info");
+                sendBleCommand("SWIPE");
+            });
+
+            // 故事生成與播放按鈕
+            btnGenerate.addEventListener('click', generateAdventureStory);
+            btnSpeak.addEventListener('click', speakStory);
+
+            // 故事主題選擇卡片
+            const themeBtns = document.querySelectorAll('.theme-btn');
+            themeBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    themeBtns.forEach(b => {
+                        b.classList.remove('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
+                        b.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-300');
+                    });
+                    
+                    btn.classList.add('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
+                    btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-300');
+                    selectedTheme = btn.getAttribute('data-theme');
+                    customThemeInput.value = ""; // 選取預設主題時清空自訂主題框
+                });
+            });
+        });
+    </script>
+</body>
+</html>
