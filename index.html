@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - Wi-Fi 互動故事繪本</title>
+    <title>聲動奇境 v3.8 - Wi-Fi 互動故事繪本</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -62,7 +62,7 @@
     <header class="w-full max-w-4xl text-center my-4 animate-float">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
             <i class="fa-solid font-bold fa-wand-magic-sparkles text-amber-400 text-xl"></i>
-            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">Wi-Fi 繪本互動夥伴 (Safari 適用)</span>
+            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">Wi-Fi 繪本互動夥伴 v3.8 (Safari 適用)</span>
         </div>
         <h1 class="text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300 tracking-wide drop-shadow-md">
             聲動奇境 ✨ 冒險魔法書
@@ -75,7 +75,7 @@
         <section class="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
             <div class="space-y-4">
                 <h2 class="text-xl font-bold text-cyan-300 flex items-center gap-2">
-                    <i class="fa-solid fa-wifi text-cyan-400"></i> Wi-Fi 裝置連線
+                    <i class="fa-solid fa-wifi text-cyan-400"></i> Wi-Fi 裝置連線 v3.8
                 </h2>
                 
                 <div class="space-y-2">
@@ -115,7 +115,7 @@
                 <div id="storyContainer" class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-8">
                         <div class="text-5xl mb-3">🗡️✨📖</div>
-                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好用 Safari 展開冒險了嗎？</h3>
+                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好用 Safari 展開冒險 v3.8 了嗎？</h3>
                         <p class="text-sm text-slate-400">產生故事後，點擊下方播放鍵即可用內建語音朗讀，並自動透過 Wi-Fi 傳送互動指令！</p>
                     </div>
                     <p id="storyText" class="text-lg md:text-xl leading-relaxed text-slate-100 hidden font-medium"></p>
@@ -166,7 +166,7 @@
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-3">
                         <i id="btnGenerateIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnGenerateText">生成互動冒險故事</span>
+                        <span id="btnGenerateText">生成互動冒險故事 (v3.8)</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 flex items-center justify-center text-xl transition" title="開始朗讀">
                         <i class="fa-solid fa-play"></i>
@@ -182,7 +182,7 @@
     </div>
 
     <footer class="w-full max-w-4xl text-center py-4 text-xs text-slate-500">
-        <p>聲動奇境 Wi-Fi App &copy; 2026 - Powered by Gemini API & Web Speech</p>
+        <p>聲動奇境 Wi-Fi App v3.8 &copy; 2026 - Powered by Gemini API & Web Speech</p>
     </footer>
 
     <script>
@@ -233,7 +233,6 @@
             }, 3000);
         }
 
-        // 透過 Wi-Fi 送出指令到 ESP32
         async function sendWifiCommand(commandStr) {
             const ip = espIpInput.value.trim();
             if (!ip) {
@@ -241,18 +240,14 @@
                 return;
             }
 
-            // 觸發前端視覺特效
             triggerVisualSwipeEffect();
 
             try {
-                // 使用 Fetch 傳送 GET 請求到 ESP32 (例如: http://192.168.4.1/command?action=SWIPE)
                 const url = `http://${ip}/command?action=${commandStr}`;
-                // 使用 no-cors 模式避免常見的跨域阻擋問題
                 await fetch(url, { mode: 'no-cors' });
-                console.log('Wi-Fi 指令已發送:', commandStr);
+                console.log('Wi-Fi 指令已發送 (v3.8):', commandStr);
             } catch (error) {
                 console.error('Wi-Fi 傳送錯誤:', error);
-                // 就算 ESP32 網路沒通，介面視覺特效依然會動，不影響現場展示
             }
         }
 
@@ -275,7 +270,7 @@
                 storyText.textContent = currentStory;
                 storyText.classList.remove('hidden');
                 btnSpeak.disabled = false;
-                showToast("自訂故事已載入！", "success");
+                showToast("自訂故事已載入 (v3.8)！", "success");
                 return;
             }
 
@@ -291,7 +286,7 @@
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
             btnGenerate.disabled = true;
-            btnGenerateText.textContent = "正在編織冒險故事...";
+            btnGenerateText.textContent = "v3.8 正在編織冒險故事...";
             btnGenerateIcon.className = "fa-solid fa-spinner animate-spin";
 
             const prompt = `你是一位兒童繪本大師。請為小朋友創作一段關於「${activeTopic}」的故事。字數約 300 到 400 字，適合口語朗讀。`;
@@ -313,19 +308,18 @@
                 storyText.textContent = currentStory;
                 storyText.classList.remove('hidden');
                 btnSpeak.disabled = false;
-                showToast("故事生成完畢！", "success");
+                showToast("故事生成完畢 (v3.8)！", "success");
 
             } catch (error) {
                 console.error("Gemini API Error:", error);
                 showToast("生成失敗：" + error.message, "error");
             } finally {
                 btnGenerate.disabled = false;
-                btnGenerateText.textContent = "生成互動冒險故事";
+                btnGenerateText.textContent = "生成互動冒險故事 (v3.8)";
                 btnGenerateIcon.className = "fa-solid fa-wand-magic-sparkles";
             }
         }
 
-        // 語音朗讀控制
         function toggleSpeech() {
             if (!currentStory) return;
 
@@ -338,13 +332,12 @@
 
             utterance = new SpeechSynthesisUtterance(currentStory);
             utterance.lang = 'zh-TW';
-            utterance.rate = 0.95; // 語速稍微放慢，適合說故事
+            utterance.rate = 0.95;
 
             utterance.onstart = () => {
                 actionIndicator.classList.remove('hidden');
-                speechStatusText.textContent = "語音朗讀中...";
+                speechStatusText.textContent = "語音朗讀中 (v3.8)...";
                 btnSpeak.innerHTML = `<i class="fa-solid fa-stop"></i>`;
-                // 朗讀開始時自動透過 Wi-Fi 發送一個動作指令給 ESP32
                 sendWifiCommand("SWIPE");
             };
 
@@ -365,7 +358,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             btnManualSwipe.addEventListener('click', () => {
-                showToast("傳送測試 Wi-Fi 指令...", "info");
+                showToast("傳送測試 Wi-Fi 指令 (v3.8)...", "info");
                 sendWifiCommand("SWIPE");
             });
 
@@ -393,7 +386,7 @@
             tabCustomMode.addEventListener('click', () => {
                 currentMode = 'custom';
                 tabCustomMode.className = 'flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1';
-                tabAiMode.className, tabAiMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
+                tabAiMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
                 customModeContainer.classList.remove('hidden');
                 aiModeContainer.classList.add('hidden');
             });
