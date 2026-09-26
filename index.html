@@ -1,134 +1,282 @@
-<!DOCTYPE html>
+const HTML = String.raw`
+<!doctype html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 互動故事手環 (藍牙版)</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f0f2f5;
-            text-align: center;
-            padding: 20px;
-            margin: 0;
-        }
-        .container {
-            max-width: 400px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        h2 { color: #333; font-size: 22px; }
-        .story-box {
-            background: #eef2f7;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 18px;
-            color: #333;
-            margin: 20px 0;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: left;
-        }
-        .btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .btn-ble {
-            background-color: #007AFF;
-        }
-        .btn:active { opacity: 0.8; }
-        .status {
-            font-size: 14px;
-            color: #666;
-            margin-top: 15px;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>聲動奇境｜AI互動式冒險裝置</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top,#312e81,#111827 70%);color:#fff;min-height:100vh;padding:18px}
+.card{max-width:560px;margin:auto;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:20px;backdrop-filter:blur(12px);box-shadow:0 18px 50px #0006}
+h1{font-size:25px;margin:0 0 4px} .sub{color:#c7d2fe;font-size:13px;margin-bottom:16px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button,input{font:inherit}button{border:0;border-radius:12px;padding:12px;cursor:pointer}
+.connect{background:#2563eb;color:white;font-weight:700}.start{background:linear-gradient(135deg,#ec4899,#7c3aed);color:#fff;font-weight:800;width:100%;margin-top:10px}
+select,input{width:100%;padding:11px;border-radius:11px;border:1px solid #ffffff33;background:#fff;color:#111827}
+label{display:block;font-size:13px;color:#cbd5e1;margin:12px 0 6px}
+.status{padding:9px 12px;border-radius:10px;background:#0005;margin:10px 0;font-size:13px}
+.ok{color:#86efac}.bad{color:#fca5a5}.story{margin-top:14px;background:#0f172acc;border-radius:16px;padding:17px;line-height:1.65;min-height:170px;white-space:pre-wrap}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.choice{background:#ffffff18;color:#fff;border:1px solid #ffffff33}.choice:disabled{opacity:.35}
+.log{font-size:12px;color:#94a3b8;margin-top:12px;min-height:18px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#4f46e533;color:#c7d2fe;font-size:12px;margin-top:4px}
+</style>
 </head>
 <body>
+<div class="card">
+  <h1>✨ 聲動奇境</h1>
+  <div class="sub">AI互動式冒險裝置｜AI即時生成故事 × BLE體感互動</div>
 
-<div class="container">
-    <h2>🤖 AI 互動故事手環</h2>
-    
-    <!-- 藍牙連線按鈕 -->
-    <button class="btn btn-ble" onclick="connectBluetooth()">🔗 連線藍牙手環</button>
+  <div class="row">
+    <button class="connect" id="bleBtn">🔗 連線 ESP32</button>
+    <div class="status" id="status">尚未連線</div>
+  </div>
 
-    <!-- 故事內容顯示區 -->
-    <div class="story-box" id="storyText">
-        請先點擊上方按鈕連線藍牙，再開始冒險！
-    </div>
+  <label>故事主題</label>
+  <select id="theme">
+    <option>騎士與巨龍</option>
+    <option>魔法森林</option>
+    <option>海底寶藏</option>
+    <option>太空探險</option>
+    <option>神秘古堡</option>
+  </select>
 
-    <!-- 控制按鈕 -->
-    <button class="btn" onclick="startStory()">開始冒險 / 觸發震動</button>
-    
-    <div class="status" id="systemStatus">系統狀態：藍牙未連線</div>
+  <label>自訂主題（可留空）</label>
+  <input id="custom" placeholder="例如：尋找彩虹山頂的棉花糖巨龍">
+
+  <button class="start" id="startBtn">🪄 開始 AI 冒險</button>
+
+  <div class="badge" id="mode">等待開始</div>
+  <div class="story" id="story">按下「開始 AI 冒險」，AI 會真正生成第一段故事。接著你可以直接用 ESP32 的按鈕或體感動作決定故事走向。</div>
+  <div class="choices">
+    <button class="choice" id="a" disabled>A</button>
+    <button class="choice" id="b" disabled>B</button>
+    <button class="choice" id="c" disabled>C</button>
+  </div>
+  <div class="log" id="log"></div>
 </div>
 
 <script>
-    // 藍牙 UUID 設定（必須與 ESP32 程式碼內的數字完全一致）
-    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a9";
+const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a9";
+let characteristic = null;
+let history = [];
+let busy = false;
+let connectedDevice = null;
 
-    let bluetoothCharacteristic = null;
+const $ = id => document.getElementById(id);
+function setStatus(t, cls=""){ $("status").textContent=t; $("status").className="status "+cls; }
+function log(t){ $("log").textContent=t; }
 
-    // 1. 連線藍牙裝置
-    async function connectBluetooth() {
-        try {
-            document.getElementById("systemStatus").innerText = "系統狀態：正在搜尋藍牙裝置...";
-            
-            // 搜尋名為 SmartStoryBook 的藍牙裝置
-            const device = await navigator.bluetooth.requestDevice({
-                filters: [{ name: 'SmartStoryBook' }],
-                optionalServices: [SERVICE_UUID]
-            });
+function speak(text){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "zh-TW";
+  u.rate = 0.95;
+  speechSynthesis.speak(u);
+}
 
-            document.getElementById("systemStatus").innerText = "系統狀態：正在建立藍牙連線...";
-            const server = await device.gatt.connect();
-            
-            const service = await server.getPrimaryService(SERVICE_UUID);
-            bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+async function sendBLE(text){
+  if(!characteristic) return;
+  try{
+    await characteristic.writeValue(new TextEncoder().encode(text));
+  }catch(e){ log("BLE 傳送失敗："+e.message); }
+}
 
-            document.getElementById("systemStatus").innerText = "系統狀態：✨ 藍牙已成功連線！";
-            document.getElementById("storyText").innerText = "手環已就緒，點擊下方按鈕開始冒險！";
-        } catch (error) {
-            console.error("藍牙連線失敗", error);
-            document.getElementById("systemStatus").innerText = "系統狀態：藍牙連線失敗或取消";
-        }
+function setChoices(choices){
+  const ids=["a","b","c"];
+  ids.forEach((id,i)=>{
+    const b=$(id);
+    b.textContent=choices && choices[i] ? choices[i] : ["選擇 A","選擇 B","選擇 C"][i];
+    b.disabled=!choices || !choices[i] || busy;
+  });
+}
+
+async function connectBluetooth(){
+  try{
+    if(!navigator.bluetooth) throw new Error("此瀏覽器不支援 Web Bluetooth，請使用支援 Web Bluetooth 的瀏覽器。");
+    setStatus("搜尋 ESP32…");
+    const device=await navigator.bluetooth.requestDevice({
+      filters:[{name:"SmartStoryBook"}],
+      optionalServices:[SERVICE_UUID]
+    });
+    connectedDevice=device;
+    device.addEventListener("gattserverdisconnected",()=>{ characteristic=null; setStatus("ESP32 已斷線","bad"); });
+    const server=await device.gatt.connect();
+    const service=await server.getPrimaryService(SERVICE_UUID);
+    characteristic=await service.getCharacteristic(CHARACTERISTIC_UUID);
+    if(characteristic.properties.notify){
+      await characteristic.startNotifications();
+      characteristic.addEventListener("characteristicvaluechanged", onBLEMessage);
     }
+    setStatus("✨ ESP32 已連線","ok");
+    log("按鈕／體感事件會自動送給 AI。");
+    await sendBLE("CONNECTED");
+  }catch(e){
+    console.error(e);
+    setStatus("連線失敗","bad");
+    log(e.message);
+  }
+}
 
-    // 2. 開始故事並發送藍牙震動指令
-    async function startStory() {
-        if (!bluetoothCharacteristic) {
-            alert("請先點擊上方的「連線藍牙手環」按鈕！");
-            return;
-        }
+function onBLEMessage(event){
+  const value=new TextDecoder().decode(event.target.value).trim();
+  log("裝置事件："+value);
+  if(value==="BTN_A") continueStory("按下左鍵 A");
+  else if(value==="BTN_B") continueStory("按下中鍵 B");
+  else if(value==="BTN_C") continueStory("按下右鍵 C");
+  else if(value==="MOTION_SWING") continueStory("揮動手環");
+  else if(value==="MOTION_JUMP") continueStory("跳動手環");
+}
 
-        document.getElementById("storyText").innerText = "AI 正在生成故事：前方出現了岔路，手環已震動提醒...";
-        document.getElementById("systemStatus").innerText = "系統狀態：已發送震動指令";
+async function callAI(mode, action=""){
+  const theme=$("custom").value.trim() || $("theme").value;
+  const res=await fetch("/api/story",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({mode,theme,action,history})
+  });
+  if(!res.ok) throw new Error(await res.text());
+  return await res.json();
+}
 
-        try {
-            // 透過藍牙寫入資料給 ESP32
-            const encoder = new TextEncoder();
-            await bluetoothCharacteristic.writeValue(encoder.encode("START_STORY"));
-            console.log("已成功透過藍牙發送指令給 ESP32");
-        } catch (error) {
-            console.error("發送指令失敗：", error);
-            document.getElementById("systemStatus").innerText = "系統狀態：發送指令失敗";
-        }
-    }
+function renderStory(data){
+  $("story").textContent=data.story || "AI 沒有產生故事內容。";
+  $("mode").textContent=data.nextAction ? "🎯 "+data.nextAction : "✨ AI 故事";
+  setChoices(data.choices || []);
+  speak((data.story || "") + (data.choices?.length ? " " + data.choices.join("。") : ""));
+}
+
+async function startStory(){
+  if(busy) return;
+  busy=true; setChoices([]); $("story").textContent="🤖 AI 正在編織你的冒險…"; log("正在向 AI 請求第一段故事。");
+  try{
+    history=[];
+    const data=await callAI("start");
+    history.push({role:"assistant",...data});
+    renderStory(data);
+    await sendBLE("START_STORY");
+    log("第一段故事完成。現在直接操作 ESP32。");
+  }catch(e){
+    $("story").textContent="AI 連線失敗："+e.message;
+    log("請確認 Cloudflare Workers AI Binding 已設定。");
+  }finally{busy=false; setChoices(history.at(-1)?.choices || []);}
+}
+
+async function continueStory(action){
+  if(busy || history.length===0) return;
+  busy=true; setChoices([]); $("mode").textContent="🤖 AI 正在判斷…"; log("收到："+action+"，AI 正在生成下一段。");
+  try{
+    history.push({role:"user",content:action});
+    const data=await callAI("continue",action);
+    history.push({role:"assistant",...data});
+    renderStory(data);
+    if(data.haptic) await sendBLE(data.haptic);
+    log("AI 已根據你的動作改變故事。");
+  }catch(e){
+    log("AI 生成失敗："+e.message);
+    setChoices(history.at(-2)?.choices || []);
+  }finally{busy=false;}
+}
+
+$("bleBtn").onclick=connectBluetooth;
+$("startBtn").onclick=startStory;
+$("a").onclick=()=>continueStory("按下左鍵 A");
+$("b").onclick=()=>continueStory("按下中鍵 B");
+$("c").onclick=()=>continueStory("按下右鍵 C");
 </script>
-
 </body>
-</html>
+</html>`;
+
+function json(data, status=200){
+  return new Response(JSON.stringify(data),{
+    status,
+    headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}
+  });
+}
+
+function corsHeaders(){
+  return {
+    "Access-Control-Allow-Origin":"*",
+    "Access-Control-Allow-Headers":"Content-Type",
+    "Access-Control-Allow-Methods":"GET,POST,OPTIONS"
+  };
+}
+
+function extractJSON(text){
+  if(typeof text !== "string") return null;
+  const clean=text.replace(/```json/gi,"").replace(/```/g,"").trim();
+  try { return JSON.parse(clean); } catch {}
+  const match=clean.match(/\{[\s\S]*\}/);
+  if(!match) return null;
+  try { return JSON.parse(match[0]); } catch { return null; }
+}
+
+function fallback(theme, action){
+  return {
+    story: action
+      ? "你做出了「"+action+"」的決定。眼前的道路忽然亮起神秘的光芒，冒險才正要開始……"
+      : "你踏入「"+theme+"」的世界。前方出現三條不同的道路，而遠處傳來神秘的聲音。",
+    choices:["勇敢前進","觀察四周","尋找線索"],
+    nextAction:"選擇你的下一步",
+    haptic:"AI_READY"
+  };
+}
+
+export default {
+  async fetch(request, env){
+    const url=new URL(request.url);
+
+    if(request.method==="OPTIONS"){
+      return new Response(null,{headers:corsHeaders()});
+    }
+
+    if(request.method==="GET" && (url.pathname==="/" || url.pathname==="/index.html")){
+      return new Response(HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
+    }
+
+    if(request.method==="POST" && url.pathname==="/api/story"){
+      if(!env.AI) return json({error:"Workers AI Binding 尚未設定。請在 Worker 的 Settings > Bindings 加入 Workers AI，變數名稱設為 AI。"},500);
+      try{
+        const body=await request.json();
+        const theme=String(body.theme||"奇幻冒險").slice(0,120);
+        const action=String(body.action||"").slice(0,120);
+        const history=Array.isArray(body.history)?body.history.slice(-8):[];
+        const mode=body.mode==="continue"?"continue":"start";
+
+        const system=`你是「聲動奇境」的互動故事引擎。你要為高中職創意競賽展示用的體感故事裝置生成繁體中文、適合兒童與一般觀眾的冒險故事。
+規則：
+1. 每次只生成約80到150字故事。
+2. 故事必須真的根據使用者最新動作改變，不可只是換句話說。
+3. 每次結尾提供三個不同選擇。
+4. 選擇要短，最好8到14字。
+5. nextAction 用一句話描述目前要玩家做什麼。
+6. haptic 只能是 AI_READY、SUCCESS、TRY_AGAIN、START_STORY 其中之一。
+7. 只輸出 JSON，不要 Markdown，不要額外解釋。
+格式：
+{"story":"...","choices":["...","...","..."],"nextAction":"...","haptic":"SUCCESS"}`;
+
+        const prompt=mode==="start"
+          ? `故事主題：${theme}\n請開始第一幕，立刻讓玩家遇到需要選擇或體感互動的情境。`
+          : `故事主題：${theme}\n玩家最新動作：${action}\n以下是最近故事紀錄：${JSON.stringify(history)}\n請讓這個動作真正造成故事後果，然後產生下一幕。`;
+
+        const result=await env.AI.run("@cf/meta/llama-3.1-8b-instruct",{
+          messages:[
+            {role:"system",content:system},
+            {role:"user",content:prompt}
+          ],
+          max_tokens:300
+        });
+
+        const text=result?.response ?? result?.result?.response ?? "";
+        const parsed=extractJSON(text) || fallback(theme,action);
+        return json(parsed);
+      }catch(e){
+        return json({error:"AI 生成失敗",detail:String(e)},500);
+      }
+    }
+
+    return new Response("聲動奇境 AI 伺服器運作中",{status:200,headers:{"content-type":"text/plain; charset=utf-8"}});
+  }
+};
