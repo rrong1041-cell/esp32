@@ -1,4 +1,3 @@
-const HTML = String.raw`
 <!doctype html>
 <html lang="zh-TW">
 <head>
@@ -64,6 +63,11 @@ let history = [];
 let busy = false;
 let connectedDevice = null;
 
+// ==========================================
+// ⚠️ 重要：請把下方引號內的網址，換成妳自己的 Cloudflare Worker 網址！
+// ==========================================
+const WORKER_API_URL = "https://你的worker名稱.workers.dev/api/story"; 
+
 const $ = id => document.getElementById(id);
 function setStatus(t, cls=""){ $("status").textContent=t; $("status").className="status "+cls; }
 function log(t){ $("log").textContent=t; }
@@ -95,7 +99,7 @@ function setChoices(choices){
 
 async function connectBluetooth(){
   try{
-    if(!navigator.bluetooth) throw new Error("此瀏覽器不支援 Web Bluetooth，請使用支援 Web Bluetooth 的瀏覽器。");
+    if(!navigator.bluetooth) throw new Error("此瀏覽器不支援 Web Bluetooth。如果是手機，請使用 Android Chrome 或 iOS 的 Bluefy App。");
     setStatus("搜尋 ESP32…");
     const device=await navigator.bluetooth.requestDevice({
       filters:[{name:"SmartStoryBook"}],
@@ -132,7 +136,7 @@ function onBLEMessage(event){
 
 async function callAI(mode, action=""){
   const theme=$("custom").value.trim() || $("theme").value;
-  const res=await fetch("/api/story",{
+  const res=await fetch(WORKER_API_URL,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({mode,theme,action,history})
@@ -160,7 +164,7 @@ async function startStory(){
     log("第一段故事完成。現在直接操作 ESP32。");
   }catch(e){
     $("story").textContent="AI 連線失敗："+e.message;
-    log("請確認 Cloudflare Workers AI Binding 已設定。");
+    log("請確認 Cloudflare Worker 網址是否正確。");
   }finally{busy=false; setChoices(history.at(-1)?.choices || []);}
 }
 
@@ -187,96 +191,4 @@ $("b").onclick=()=>continueStory("按下中鍵 B");
 $("c").onclick=()=>continueStory("按下右鍵 C");
 </script>
 </body>
-</html>`;
-
-function json(data, status=200){
-  return new Response(JSON.stringify(data),{
-    status,
-    headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}
-  });
-}
-
-function corsHeaders(){
-  return {
-    "Access-Control-Allow-Origin":"*",
-    "Access-Control-Allow-Headers":"Content-Type",
-    "Access-Control-Allow-Methods":"GET,POST,OPTIONS"
-  };
-}
-
-function extractJSON(text){
-  if(typeof text !== "string") return null;
-  const clean=text.replace(/```json/gi,"").replace(/```/g,"").trim();
-  try { return JSON.parse(clean); } catch {}
-  const match=clean.match(/\{[\s\S]*\}/);
-  if(!match) return null;
-  try { return JSON.parse(match[0]); } catch { return null; }
-}
-
-function fallback(theme, action){
-  return {
-    story: action
-      ? "你做出了「"+action+"」的決定。眼前的道路忽然亮起神秘的光芒，冒險才正要開始……"
-      : "你踏入「"+theme+"」的世界。前方出現三條不同的道路，而遠處傳來神秘的聲音。",
-    choices:["勇敢前進","觀察四周","尋找線索"],
-    nextAction:"選擇你的下一步",
-    haptic:"AI_READY"
-  };
-}
-
-export default {
-  async fetch(request, env){
-    const url=new URL(request.url);
-
-    if(request.method==="OPTIONS"){
-      return new Response(null,{headers:corsHeaders()});
-    }
-
-    if(request.method==="GET" && (url.pathname==="/" || url.pathname==="/index.html")){
-      return new Response(HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
-    }
-
-    if(request.method==="POST" && url.pathname==="/api/story"){
-      if(!env.AI) return json({error:"Workers AI Binding 尚未設定。請在 Worker 的 Settings > Bindings 加入 Workers AI，變數名稱設為 AI。"},500);
-      try{
-        const body=await request.json();
-        const theme=String(body.theme||"奇幻冒險").slice(0,120);
-        const action=String(body.action||"").slice(0,120);
-        const history=Array.isArray(body.history)?body.history.slice(-8):[];
-        const mode=body.mode==="continue"?"continue":"start";
-
-        const system=`你是「聲動奇境」的互動故事引擎。你要為高中職創意競賽展示用的體感故事裝置生成繁體中文、適合兒童與一般觀眾的冒險故事。
-規則：
-1. 每次只生成約80到150字故事。
-2. 故事必須真的根據使用者最新動作改變，不可只是換句話說。
-3. 每次結尾提供三個不同選擇。
-4. 選擇要短，最好8到14字。
-5. nextAction 用一句話描述目前要玩家做什麼。
-6. haptic 只能是 AI_READY、SUCCESS、TRY_AGAIN、START_STORY 其中之一。
-7. 只輸出 JSON，不要 Markdown，不要額外解釋。
-格式：
-{"story":"...","choices":["...","...","..."],"nextAction":"...","haptic":"SUCCESS"}`;
-
-        const prompt=mode==="start"
-          ? `故事主題：${theme}\n請開始第一幕，立刻讓玩家遇到需要選擇或體感互動的情境。`
-          : `故事主題：${theme}\n玩家最新動作：${action}\n以下是最近故事紀錄：${JSON.stringify(history)}\n請讓這個動作真正造成故事後果，然後產生下一幕。`;
-
-        const result=await env.AI.run("@cf/meta/llama-3.1-8b-instruct",{
-          messages:[
-            {role:"system",content:system},
-            {role:"user",content:prompt}
-          ],
-          max_tokens:300
-        });
-
-        const text=result?.response ?? result?.result?.response ?? "";
-        const parsed=extractJSON(text) || fallback(theme,action);
-        return json(parsed);
-      }catch(e){
-        return json({error:"AI 生成失敗",detail:String(e)},500);
-      }
-    }
-
-    return new Response("聲動奇境 AI 伺服器運作中",{status:200,headers:{"content-type":"text/plain; charset=utf-8"}});
-  }
-};
+</html>
