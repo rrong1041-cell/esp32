@@ -131,21 +131,20 @@
     <div id="storyOutput" class="story-card">點擊上方「開始全新故事」或按下硬體按鈕來展開冒險吧！</div>
 
     <!-- 系統日誌 -->
-    <div id="logBox" class="log-box">[系統] 網頁介面已就緒，請點擊連線並配對 ESP32...</div>
+    <div id="logBox" class="log-box">[系統] 藍牙重構版本已就緒，等待連線...</div>
 </div>
 
 <script>
-    // ⚠️ 妳的 Cloudflare Worker 網址
     const WORKER_URL = "https://empty-credit-1539.rrong1041.workers.dev"; 
 
-    // BLE 藍牙 UUID (確保全部為純小寫英文與數字)
+    // 嚴格規定全部小寫的標準 BLE UUID
     const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aae";
 
     let bluetoothDevice = null;
     let bluetoothCharacteristic = null;
     let currentStoryContext = ""; 
-    let currentStoryMode = "KIDS"; // 預設孩童模式
+    let currentStoryMode = "KIDS";
 
     function log(message) {
         const box = document.getElementById("logBox");
@@ -162,31 +161,35 @@
         }
 
         try {
-            log("正在搜尋 ESP32 藍牙裝置...");
+            log("正在搜尋藍牙裝置 (請確保 ESP32 正在廣播)...");
+            
+            // 使用更廣泛的過濾條件，只要名稱含有 SmartStory 或 ESP32 都能被抓到
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: "SmartStory" }, { namePrefix: "ESP32" }],
+                filters: [
+                    { namePrefix: "SmartStory" }, 
+                    { namePrefix: "ESP32" }
+                ],
                 optionalServices: [SERVICE_UUID.toLowerCase().trim()]
             });
 
             bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-            log("正在連線到硬體...請稍候");
+            log("正在建立 GATT 連線...");
             const server = await bluetoothDevice.gatt.connect();
 
-            log("正在讀取藍牙服務與特徵值...");
+            log("正在獲取藍牙服務...");
             const service = await server.getPrimaryService(SERVICE_UUID.toLowerCase().trim());
             
-            // 強制轉小寫並去除前後空白，防止瀏覽器快取或格式誤判
-            const targetUuid = CHARACTERISTIC_UUID.toLowerCase().trim();
-            log(`正在尋找特徵值: ${targetUuid}`);
+            const targetCharUuid = CHARACTERISTIC_UUID.toLowerCase().trim();
+            log(`正在綁定特徵值: ${targetCharUuid}`);
             
-            bluetoothCharacteristic = await service.getCharacteristic(targetUuid);
+            bluetoothCharacteristic = await service.getCharacteristic(targetCharUuid);
 
             await bluetoothCharacteristic.startNotifications();
             bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
 
             updateConnectionState(true);
-            log("藍牙連線成功！實體裝置已與網頁同步。");
+            log("藍牙連線與特徵值綁定成功！");
 
         } catch (error) {
             log("連線失敗: " + error);
