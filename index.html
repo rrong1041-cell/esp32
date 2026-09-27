@@ -27,7 +27,7 @@
     <header class="w-full max-w-4xl text-center my-4">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
             <i class="fa-solid font-bold fa-headphones-simple text-amber-400"></i>
-            <span class="text-amber-300 font-semibold text-sm">硬體互動連動中・搖晃裝置即可自動解鎖下一段</span>
+            <span class="text-amber-300 font-semibold text-sm">沈浸式故事繪本・聽完精彩情節後配合動作互動</span>
         </div>
         <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
             聲動奇境 ✨ 智慧互動繪本
@@ -57,7 +57,7 @@
             <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
                 <h3 class="text-sm font-bold text-purple-300 mb-2">手動測試互動</h3>
                 <button id="btnManualAction" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
-                    ✨ 模擬做完動作 (解鎖下一段)
+                    ✨ 完成動作 (解鎖下一段)
                 </button>
             </div>
         </section>
@@ -68,8 +68,8 @@
                 <div class="overflow-y-auto max-h-[320px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-10">
                         <div class="text-5xl mb-3">📖✨</div>
-                        <h3 class="text-lg font-bold text-purple-300">準備好體驗硬體互動了嗎？</h3>
-                        <p class="text-sm text-slate-400 mt-1">故事唸到互動點時會暫停，此時只要搖晃你的 ESP32 裝置，即可自動繼續播放！</p>
+                        <h3 class="text-lg font-bold text-purple-300">準備好聽故事了嗎？</h3>
+                        <p class="text-sm text-slate-400 mt-1">每段故事會完整講完一段精采情節，結尾會提示對應動作，做完動作後自動繼續！</p>
                     </div>
                     <div id="storyDisplay" class="text-lg leading-relaxed text-slate-300 hidden whitespace-pre-line"></div>
                 </div>
@@ -77,7 +77,7 @@
                 <div id="actionPrompt" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
                         <i class="fa-solid fa-hand-sparkles text-lg"></i>
-                        <span id="promptText">🛑 請搖晃硬體裝置來繼續故事...</span>
+                        <span id="promptText">🛑 請依照故事指示做出對應動作來繼續...</span>
                     </div>
                 </div>
             </div>
@@ -92,7 +92,7 @@
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
                         <i id="btnIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnText">開始互動冒險繪本</span>
+                        <span id="btnText">開始精彩故事冒險</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
                         <i class="fa-solid fa-play"></i>
@@ -113,8 +113,8 @@
 
         let bleDevice = null, bleCharacteristic = null;
         let selectedTheme = "勇敢的小騎士與巨龍";
-        let storyParts = [];
-        let currentPartIndex = 0;
+        let storyChapters = [];
+        let currentChapterIndex = 0;
         let waitingForAction = false;
 
         function showToast(msg) {
@@ -132,40 +132,39 @@
                 const service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
                 bleCharacteristic = await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
 
-                // 關鍵：啟動藍牙通知監聽，接收來自 ESP32 的搖晃訊號！
                 await bleCharacteristic.startNotifications();
                 bleCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
                     const decoder = new TextDecoder();
                     const value = decoder.decode(event.target.value);
-                    console.log("收到 ESP32 訊號: ", value);
+                    console.log("收到硬體訊號: ", value);
 
                     if (value === "SWIPE" || value === "START_TRIGGER") {
-                        showToast("✨ 偵測到硬體動作！");
-                        resumeNextPart();
+                        showToast("✨ 動作完成！");
+                        resumeNextChapter();
                     }
                 });
 
                 document.getElementById('statusIndicator').className = 'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
                 document.getElementById('statusText').textContent = '已連線';
-                showToast('藍牙連線成功，已啟用硬體監聽！');
+                showToast('藍牙連線成功！');
             } catch (e) {
                 showToast('連線失敗: ' + e.message);
             }
         }
 
-        function resumeNextPart() {
+        function resumeNextChapter() {
             if (waitingForAction) {
                 waitingForAction = false;
                 document.getElementById('actionPrompt').classList.add('hidden');
-                showToast('✨ 動作完成！繼續冒險');
-                currentPartIndex++;
-                playNextPart();
+                showToast('✨ 進入下一段精彩故事');
+                currentChapterIndex++;
+                playCurrentChapter();
             }
         }
 
         async function generateStory() {
             const btn = document.getElementById('btnGenerate');
-            document.getElementById('btnText').textContent = "正在編寫互動故事...";
+            document.getElementById('btnText').textContent = "正在編寫精采故事...";
             document.getElementById('btnIcon').className = "fa-solid fa-spinner animate-spin";
             btn.disabled = true;
 
@@ -178,37 +177,38 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
 
-                storyParts = data.story.split('[ACTION]').map(s => s.trim()).filter(s => s.length > 0);
-                currentPartIndex = 0;
+                // 以 ---CHAPTER--- 切割成 4-5 個完整大段落
+                storyChapters = data.story.split('---CHAPTER---').map(s => s.trim()).filter(s => s.length > 0);
+                currentChapterIndex = 0;
                 
                 document.getElementById('welcomeMessage').classList.add('hidden');
                 const display = document.getElementById('storyDisplay');
-                display.textContent = data.story.replace(/\[ACTION\]/g, '\n\n🛑 【搖晃互動點】\n\n');
+                display.textContent = data.story.replace(/---CHAPTER---/g, '\n\n📖 【情節段落分隔】\n\n');
                 display.classList.remove('hidden');
                 document.getElementById('btnSpeak').disabled = false;
 
-                showToast('故事生成完畢！');
-                playNextPart();
+                showToast('故事生成完畢！準備開講');
+                playCurrentChapter();
             } catch (e) {
                 showToast('錯誤: ' + e.message);
             } finally {
-                document.getElementById('btnText').textContent = "開始互動冒險繪本";
+                document.getElementById('btnText').textContent = "開始精彩故事冒險";
                 document.getElementById('btnIcon').className = "fa-solid fa-wand-magic-sparkles";
                 btn.disabled = false;
             }
         }
 
-        function playNextPart() {
-            if (currentPartIndex >= storyParts.length) {
-                showToast('🎉 恭喜完成所有冒險！');
+        function playCurrentChapter() {
+            if (currentChapterIndex >= storyChapters.length) {
+                showToast('🎉 恭喜完成整篇精彩故事！');
                 document.getElementById('actionPrompt').classList.remove('hidden');
-                document.getElementById('promptText').textContent = "🎉 恭喜！所有互動冒險圓滿達成！";
+                document.getElementById('promptText').textContent = "🎉 恭喜！冒險故事圓滿達成！";
                 return;
             }
 
             if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
 
-            const text = storyParts[currentPartIndex];
+            const text = storyChapters[currentChapterIndex];
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-TW';
             utterance.rate = 0.95;
@@ -216,11 +216,11 @@
             document.getElementById('actionPrompt').classList.add('hidden');
 
             utterance.onend = function() {
-                if (currentPartIndex < storyParts.length - 1) {
+                if (currentChapterIndex < storyChapters.length - 1) {
                     waitingForAction = true;
                     document.getElementById('actionPrompt').classList.remove('hidden');
-                    document.getElementById('promptText').textContent = `🛑 請搖晃 ESP32 裝置來解鎖下一段故事...`;
-                    showToast('🛑 故事已暫停，等待搖晃硬體...');
+                    document.getElementById('promptText').textContent = `🛑 本段故事講完了！請依照提示做出對應動作...`;
+                    showToast('🛑 等待互動動作...');
                 } else {
                     document.getElementById('actionPrompt').classList.remove('hidden');
                     document.getElementById('promptText').textContent = "🎉 故事全部講完了！";
@@ -232,7 +232,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btnConnect').addEventListener('click', connectBLE);
-            document.getElementById('btnManualAction').addEventListener('click', resumeNextPart);
+            document.getElementById('btnManualAction').addEventListener('click', resumeNextChapter);
             document.getElementById('btnGenerate').addEventListener('click', generateStory);
             
             document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -246,8 +246,8 @@
             document.getElementById('btnSpeak').addEventListener('click', () => {
                 if (window.speechSynthesis.speaking) {
                     window.speechSynthesis.cancel();
-                } else if (storyParts.length > 0) {
-                    playNextPart();
+                } else if (storyChapters.length > 0) {
+                    playCurrentChapter();
                 }
             });
         });
