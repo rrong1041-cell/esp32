@@ -129,6 +129,7 @@ let history = [];
 let waitingForAction = false;
 let expectedAction = "";
 let busy = false;
+let lastActionTime = 0; // 新增：防止重複觸發的冷卻計時器
 
 const $ = id => document.getElementById(id);
 
@@ -226,16 +227,24 @@ async function connectBLE() {
     }
 }
 
-// 已經加入大小寫轉換與去除空白的防呆接收函式
+// 加入 2 秒冷卻防呆的藍牙事件接收函式
 function onBleEvent(event) {
     const value = new TextDecoder().decode(event.target.value).trim().toUpperCase();
     console.log("收到處理後的硬體訊號:", value);
 
-    if (!waitingForAction) return;
+    if (!waitingForAction || busy) return;
+
+    // 檢查冷卻時間（2秒內重複傳送會被忽略）
+    const now = Date.now();
+    if (now - lastActionTime < 2000) {
+        console.log("動作太頻繁，忽略此次重複訊號");
+        return;
+    }
 
     const cleanExpected = (expectedAction || "").trim().toUpperCase();
 
     if (value === cleanExpected) {
+        lastActionTime = now; // 記錄本次觸發時間
         showToast('✨ 動作正確！AI 正在繼續故事...');
         handleAction(expectedAction);
     } else {
