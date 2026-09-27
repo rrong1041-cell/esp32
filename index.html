@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - 多重互動有聲繪本</title>
+    <title>聲動奇境 - 智慧互動有聲繪本</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
     <header class="w-full max-w-4xl text-center my-4">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
             <i class="fa-solid font-bold fa-headphones-simple text-amber-400"></i>
-            <span class="text-amber-300 font-semibold text-sm">多重動作模式・故事中隨時暫停與自動續播</span>
+            <span class="text-amber-300 font-semibold text-sm">硬體互動連動中・搖晃裝置即可自動解鎖下一段</span>
         </div>
         <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
             聲動奇境 ✨ 智慧互動繪本
@@ -52,7 +52,6 @@
                     <i id="statusIcon" class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"></i>
                 </div>
                 <button id="btnConnect" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">連接故事裝置</button>
-                <button id="btnDisconnect" class="w-full hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm mt-2">中斷連線</button>
             </div>
 
             <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
@@ -69,8 +68,8 @@
                 <div class="overflow-y-auto max-h-[320px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-10">
                         <div class="text-5xl mb-3">📖✨</div>
-                        <h3 class="text-lg font-bold text-purple-300">準備好體驗多重互動了嗎？</h3>
-                        <p class="text-sm text-slate-400 mt-1">故事中會有多個動作點，唸到該處會自動暫停，等待小朋友做動作後自動續播！</p>
+                        <h3 class="text-lg font-bold text-purple-300">準備好體驗硬體互動了嗎？</h3>
+                        <p class="text-sm text-slate-400 mt-1">故事唸到互動點時會暫停，此時只要搖晃你的 ESP32 裝置，即可自動繼續播放！</p>
                     </div>
                     <div id="storyDisplay" class="text-lg leading-relaxed text-slate-300 hidden whitespace-pre-line"></div>
                 </div>
@@ -78,7 +77,7 @@
                 <div id="actionPrompt" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
                         <i class="fa-solid fa-hand-sparkles text-lg"></i>
-                        <span id="promptText">🛑 請小朋友做動作來繼續故事...</span>
+                        <span id="promptText">🛑 請搖晃硬體裝置來繼續故事...</span>
                     </div>
                 </div>
             </div>
@@ -93,7 +92,7 @@
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
                         <i id="btnIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnText">開始多重互動繪本</span>
+                        <span id="btnText">開始互動冒險繪本</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
                         <i class="fa-solid fa-play"></i>
@@ -132,25 +131,25 @@
                 const server = await bleDevice.gatt.connect();
                 const service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
                 bleCharacteristic = await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
+
+                // 關鍵：啟動藍牙通知監聽，接收來自 ESP32 的搖晃訊號！
+                await bleCharacteristic.startNotifications();
+                bleCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const decoder = new TextDecoder();
+                    const value = decoder.decode(event.target.value);
+                    console.log("收到 ESP32 訊號: ", value);
+
+                    if (value === "SWIPE" || value === "START_TRIGGER") {
+                        showToast("✨ 偵測到硬體動作！");
+                        resumeNextPart();
+                    }
+                });
+
                 document.getElementById('statusIndicator').className = 'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
                 document.getElementById('statusText').textContent = '已連線';
-                showToast('藍牙連線成功！');
+                showToast('藍牙連線成功，已啟用硬體監聽！');
             } catch (e) {
                 showToast('連線失敗: ' + e.message);
-            }
-        }
-
-        async function sendBleSwipe() {
-            if (bleCharacteristic) {
-                try {
-                    const encoder = new TextEncoder();
-                    await bleCharacteristic.writeValue(encoder.encode("SWIPE"));
-                    showToast("✨ 已發送藍牙動作至 ESP32！");
-                } catch (err) {
-                    console.error("藍牙發送失敗", err);
-                }
-            } else {
-                showToast("（未連接藍牙，已模擬動作訊號）");
             }
         }
 
@@ -166,7 +165,7 @@
 
         async function generateStory() {
             const btn = document.getElementById('btnGenerate');
-            document.getElementById('btnText').textContent = "正在編寫多互動點故事...";
+            document.getElementById('btnText').textContent = "正在編寫互動故事...";
             document.getElementById('btnIcon').className = "fa-solid fa-spinner animate-spin";
             btn.disabled = true;
 
@@ -179,22 +178,21 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
 
-                // 透過 [ACTION] 精準拆解成多個小片段
                 storyParts = data.story.split('[ACTION]').map(s => s.trim()).filter(s => s.length > 0);
                 currentPartIndex = 0;
                 
                 document.getElementById('welcomeMessage').classList.add('hidden');
                 const display = document.getElementById('storyDisplay');
-                display.textContent = data.story.replace(/\[ACTION\]/g, '\n\n🛑 【動作互動點】\n\n');
+                display.textContent = data.story.replace(/\[ACTION\]/g, '\n\n🛑 【搖晃互動點】\n\n');
                 display.classList.remove('hidden');
                 document.getElementById('btnSpeak').disabled = false;
 
-                showToast('故事生成完畢！包含多個互動點');
+                showToast('故事生成完畢！');
                 playNextPart();
             } catch (e) {
                 showToast('錯誤: ' + e.message);
             } finally {
-                document.getElementById('btnText').textContent = "開始多重互動繪本";
+                document.getElementById('btnText').textContent = "開始互動冒險繪本";
                 document.getElementById('btnIcon').className = "fa-solid fa-wand-magic-sparkles";
                 btn.disabled = false;
             }
@@ -202,7 +200,7 @@
 
         function playNextPart() {
             if (currentPartIndex >= storyParts.length) {
-                showToast('🎉 恭喜完成所有冒險與動作！');
+                showToast('🎉 恭喜完成所有冒險！');
                 document.getElementById('actionPrompt').classList.remove('hidden');
                 document.getElementById('promptText').textContent = "🎉 恭喜！所有互動冒險圓滿達成！";
                 return;
@@ -218,13 +216,11 @@
             document.getElementById('actionPrompt').classList.add('hidden');
 
             utterance.onend = function() {
-                // 如果後面還有片段，唸到這裡就自動發送藍牙並暫停！
                 if (currentPartIndex < storyParts.length - 1) {
-                    sendBleSwipe();
                     waitingForAction = true;
                     document.getElementById('actionPrompt').classList.remove('hidden');
-                    document.getElementById('promptText').textContent = `🛑 互動點 ${currentPartIndex + 1} 達成！請做動作解鎖下一段故事...`;
-                    showToast('🛑 故事已暫停，等待動作...');
+                    document.getElementById('promptText').textContent = `🛑 請搖晃 ESP32 裝置來解鎖下一段故事...`;
+                    showToast('🛑 故事已暫停，等待搖晃硬體...');
                 } else {
                     document.getElementById('actionPrompt').classList.remove('hidden');
                     document.getElementById('promptText').textContent = "🎉 故事全部講完了！";
