@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - 長篇沈浸式有聲繪本</title>
+    <title>聲動奇境 - 互動式有聲繪本</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        magic: { dark: '#0f172a', card: '#1e1b4b', purple: '#8b5cf6', pink: '#ec4899', yellow: '#f59e0b', cyan: '#06b6d4', emerald: '#10b981' }
-                    },
+                    colors: { magic: { dark: '#0f172a', card: '#1e1b4b', purple: '#8b5cf6', pink: '#ec4899', cyan: '#06b6d4' } },
                     fontFamily: { fredoka: ['Fredoka', 'Noto Sans TC', 'sans-serif'] }
                 }
             }
@@ -23,118 +20,82 @@
     <style>
         body { font-family: 'Fredoka', 'Noto Sans TC', sans-serif; background: radial-gradient(circle at top, #2e1065 0%, #0f172a 100%); min-height: 100vh; }
         .glow-button { box-shadow: 0 4px 20px rgba(236, 72, 153, 0.5); transition: all 0.3s ease; }
-        .glow-button:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(236, 72, 153, 0.7); }
-        @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
-        .animate-float { animation: float 4s ease-in-out infinite; }
     </style>
 </head>
 <body class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between">
 
-    <header class="w-full max-w-4xl text-center my-4 animate-float">
+    <header class="w-full max-w-4xl text-center my-4">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
-            <i class="fa-solid font-bold fa-headphones-simple text-amber-400 text-xl"></i>
-            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">10分鐘沉浸式冒險・每1分半互動一次</span>
+            <i class="fa-solid font-bold fa-headphones-simple text-amber-400"></i>
+            <span class="text-amber-300 font-semibold text-sm">劇情互動模式・到點自動暫停、做完動作續播</span>
         </div>
-        <h1 class="text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300 tracking-wide drop-shadow-md">
-            聲動奇境 ✨ 長篇有聲繪本
+        <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
+            聲動奇境 ✨ 互動繪本
         </h1>
     </header>
 
     <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
-
-        <!-- 左側：藍牙連線控制 -->
-        <section class="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
+        <!-- 藍牙控制區 -->
+        <section class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
             <div>
                 <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
-                    <i class="fa-bluetooth-b fab text-cyan-400"></i> 藍牙裝置連線
+                    <i class="fa-bluetooth-b fab text-cyan-400"></i> 藍牙連線
                 </h2>
-                
-                <div id="connectionStatusCard" class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
+                <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <span id="statusIndicator" class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow"></span>
                         <div>
-                            <div class="text-xs text-slate-400">連線狀態</div>
-                            <div id="statusText" class="font-bold text-slate-200">尚未連線</div>
+                            <div class="text-xs text-slate-400">狀態</div>
+                            <div id="statusText" class="font-bold text-slate-200 text-sm">尚未連線</div>
                         </div>
                     </div>
                     <i id="statusIcon" class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"></i>
                 </div>
-
-                <button id="btnConnect" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-base">
-                    <i class="fa-solid fa-wifi"></i> 連接故事裝置
-                </button>
-                <button id="btnDisconnect" class="w-full hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3.5 px-4 rounded-2xl shadow-lg transition duration-200 flex items-center justify-center gap-2 text-base mt-2">
-                    <i class="fa-solid fa-power-off"></i> 中斷藍牙連線
-                </button>
+                <button id="btnConnect" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">連接故事裝置</button>
+                <button id="btnDisconnect" class="w-full hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm mt-2">中斷連線</button>
             </div>
 
             <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
-                <h3 class="text-sm font-bold text-purple-300 mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-hand-sparkles"></i> 測試藍牙動作
-                </h3>
-                <button id="btnManualSwipe" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2 text-sm">
-                    <i class="fa-solid fa-wand-magic"></i> 測試揮動信號 (SWIPE)
+                <h3 class="text-sm font-bold text-purple-300 mb-2">手動模擬動作</h3>
+                <button id="btnManualSwipe" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
+                    ✨ 模擬完成動作 (SWIPE)
                 </button>
             </div>
         </section>
 
-        <!-- 右側：故事內容與朗讀 -->
-        <section class="md:col-span-2 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
-            <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[280px]">
-                <div id="storyContainer" class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
-                    <div id="welcomeMessage" class="text-center py-8">
-                        <div class="text-5xl mb-3">🎧✨📖</div>
-                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好展開 10 分鐘沉浸式冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400">系統將自動定時發送互動動作，陪伴孩子一邊聽故事一邊揮動！</p>
+        <!-- 故事與朗讀顯示區 -->
+        <section class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6">
+            <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
+                <div class="overflow-y-auto max-h-[320px] pr-2 space-y-4">
+                    <div id="welcomeMessage" class="text-center py-10">
+                        <div class="text-5xl mb-3">📖✨</div>
+                        <h3 class="text-lg font-bold text-purple-300">準備好體驗劇情互動了嗎？</h3>
+                        <p class="text-sm text-slate-400 mt-1">點擊下方按鈕，故事將在關鍵劇情處自動暫停，等待小朋友做動作！</p>
                     </div>
-                    <div id="storyText" class="text-lg leading-relaxed text-slate-300 hidden whitespace-pre-line"></div>
+                    <div id="storyDisplay" class="text-lg leading-relaxed text-slate-300 hidden whitespace-pre-line"></div>
                 </div>
 
-                <div id="actionIndicator" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
+                <div id="actionPrompt" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
-                        <i class="fa-solid fa-volume-high text-lg"></i>
-                        <span id="speechStatusText">正在聆聽長篇故事與動作指引...</span>
+                        <i class="fa-solid fa-hand-sparkles text-lg"></i>
+                        <span id="promptText">🛑 劇情暫停：請小朋友對著裝置做動作來解鎖下一段！</span>
                     </div>
                 </div>
             </div>
 
             <div class="space-y-4">
-                <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
-                    <button id="tabAiMode" class="flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI 故事主題
-                    </button>
-                    <button id="tabCustomMode" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1">
-                        <i class="fa-solid fa-pen-to-square"></i> 自訂/貼上故事
-                    </button>
+                <div class="grid grid-cols-3 gap-2">
+                    <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-3 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
+                    <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
+                    <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
                 </div>
-
-                <div id="aiModeContainer" class="space-y-3">
-                    <div class="grid grid-cols-3 gap-2">
-                        <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-3 rounded-xl text-xs md:text-sm font-semibold hover:bg-purple-800/50 transition">
-                            ⚔️ 騎士巨龍
-                        </button>
-                        <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs md:text-sm font-semibold hover:bg-slate-700 transition">
-                            🌲 魔法森林
-                        </button>
-                        <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs md:text-sm font-semibold hover:bg-slate-700 transition">
-                            🐬 海底寶藏
-                        </button>
-                    </div>
-                    <div class="relative">
-                        <input type="text" id="customThemeInput" placeholder="✍️ 或輸入您想發想的主題..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl px-3 py-2.5 text-xs md:text-sm text-slate-200 outline-none transition">
-                    </div>
-                </div>
-
-                <div id="customModeContainer" class="hidden space-y-2">
-                    <textarea id="manualStoryInput" rows="3" placeholder="請輸入故事..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
-                </div>
-
+                
                 <div class="flex gap-3">
-                    <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-3">
-                        <i id="btnGenerateIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnGenerateText">開始 10 分鐘沉浸式聽故事</span>
+                    <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
+                        <i id="btnIcon" class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span id="btnText">開始互動冒險繪本</span>
                     </button>
-                    <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 flex items-center justify-center text-xl transition">
+                    <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
                         <i class="fa-solid fa-play"></i>
                     </button>
                 </div>
@@ -142,228 +103,114 @@
         </section>
     </main>
 
-    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 z-50">
-        <i id="toastIcon" class="fa-solid fa-circle-info text-cyan-400 text-lg"></i>
-        <span id="toastMessage" class="text-sm font-semibold">提示訊息</span>
-    </div>
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 text-sm font-semibold"></div>
 
     <script>
         const BLE_CONFIG = {
-            deviceName: '聲動奇境_BLE',
             serviceUuid: '4fa8691a-136d-4560-84ed-01354051b785',
             characteristicUuid: 'beb5483e-36e1-4688-b7f5-ea07361b26a8'
         };
-
         const WORKER_URL = 'https://empty-credit-1539.rrong1041.workers.dev';
 
-        let bleDevice = null;
-        let bleServer = null;
-        let bleCharacteristic = null;
+        let bleDevice = null, bleCharacteristic = null;
         let selectedTheme = "勇敢的小騎士與巨龍";
-        let currentStory = "";
-        let currentMode = 'ai';
-        let storyHistory = ""; 
-        let chapterCount = 0;
-        const MAX_CHAPTERS = 6; // 總共約 6 個章節，總時長可達 10 分鐘以上
+        let storyChapters = [];
+        let currentChapter = 0;
+        let waitingForAction = false;
 
-        const btnConnect = document.getElementById('btnConnect');
-        const btnDisconnect = document.getElementById('btnDisconnect');
-        const btnManualSwipe = document.getElementById('btnManualSwipe');
-        const btnGenerate = document.getElementById('btnGenerate');
-        const btnGenerateText = document.getElementById('btnGenerateText');
-        const btnGenerateIcon = document.getElementById('btnGenerateIcon');
-        const btnSpeak = document.getElementById('btnSpeak');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
-        const statusIcon = document.getElementById('statusIcon');
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        const storyTextDiv = document.getElementById('storyText');
-        const actionIndicator = document.getElementById('actionIndicator');
-        const speechStatusText = document.getElementById('speechStatusText');
-        const toast = document.getElementById('toast');
-        const toastMessage = document.getElementById('toastMessage');
-        const toastIcon = document.getElementById('toastIcon');
-
-        const tabAiMode = document.getElementById('tabAiMode');
-        const tabCustomMode = document.getElementById('tabCustomMode');
-        const aiModeContainer = document.getElementById('aiModeContainer');
-        const customModeContainer = document.getElementById('customModeContainer');
-        const customThemeInput = document.getElementById('customThemeInput');
-        const manualStoryInput = document.getElementById('manualStoryInput');
-        const themeButtons = document.querySelectorAll('.theme-btn');
-
-        function showToast(message, type = 'info') {
-            toastMessage.textContent = message;
-            toastIcon.className = type === 'error' ? 'fa-solid fa-circle-exclamation text-rose-400 text-lg' : 
-                                  type === 'success' ? 'fa-solid fa-circle-check text-emerald-400 text-lg' : 
-                                  'fa-solid fa-circle-info text-cyan-400 text-lg';
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            toast.classList.add('opacity-100');
-            setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0', 'pointer-events-none'); }, 3000);
-        }
-
-        function updateConnectionState(state) {
-            if (state === 'connected') {
-                statusIndicator.className = 'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg shadow-emerald-500/50 animate-pulse';
-                statusText.textContent = bleDevice ? bleDevice.name || '已連線' : '已連線';
-                statusIcon.className = 'fa-solid fa-bluetooth text-cyan-400 text-xl';
-                btnConnect.classList.add('hidden');
-                btnDisconnect.classList.remove('hidden');
-            } else if (state === 'connecting') {
-                statusIndicator.className = 'w-4 h-4 rounded-full bg-amber-500 inline-block shadow animate-ping';
-                statusText.textContent = '連線中...';
-                statusIcon.className = 'fa-solid fa-spinner animate-spin text-amber-400 text-xl';
-            } else {
-                statusIndicator.className = 'w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
-                statusText.textContent = '尚未連線';
-                statusIcon.className = 'fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
-                btnConnect.classList.remove('hidden');
-                btnDisconnect.classList.add('hidden');
-            }
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('opacity-0', 'pointer-events-none');
+            t.classList.add('opacity-100');
+            setTimeout(() => { t.classList.remove('opacity-100'); t.classList.add('opacity-0', 'pointer-events-none'); }, 3000);
         }
 
         async function connectBLE() {
-            if (!navigator.bluetooth) { showToast('瀏覽器不支援藍牙', 'error'); return; }
             try {
-                updateConnectionState('connecting');
                 bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [BLE_CONFIG.serviceUuid] });
-                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-                bleServer = await bleDevice.gatt.connect();
-                const service = await bleServer.getPrimaryService(BLE_CONFIG.serviceUuid);
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
                 bleCharacteristic = await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
-                updateConnectionState('connected');
-                showToast('藍牙裝置連線成功！', 'success');
-            } catch (error) {
-                updateConnectionState('disconnected');
-                if (error.name !== 'NotFoundError') showToast('連線失敗：' + error.message, 'error');
+                document.getElementById('statusIndicator').className = 'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
+                document.getElementById('statusText').textContent = '已連線';
+                showToast('藍牙連線成功！');
+            } catch (e) {
+                showToast('連線失敗: ' + e.message);
             }
         }
 
-        function disconnectBLE() {
-            if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
-            onDisconnected();
-        }
-
-        function onDisconnected() {
-            bleCharacteristic = null;
-            bleServer = null;
-            updateConnectionState('disconnected');
-            showToast('藍牙已中斷連線', 'info');
-        }
-
-        async function sendBleCommand(commandStr) {
-            if (!bleCharacteristic) {
-                showToast("尚未連接藍牙裝置（已模擬觸發）", "info");
-                return false;
-            }
-            try {
-                const encoder = new TextEncoder();
-                await bleCharacteristic.writeValue(encoder.encode(commandStr));
-                showToast("✨ 已成功發送藍牙動作至 ESP32！", "success");
-                return true;
-            } catch (error) {
-                showToast("藍牙發送失敗: " + error.message, "error");
-                return false;
+        // 模擬動作或藍牙接收到完成訊號時觸發續播
+        function handleActionCompleted() {
+            if (waitingForAction) {
+                waitingForAction = false;
+                document.getElementById('actionPrompt').classList.add('hidden');
+                showToast('✨ 動作完成！繼續接下來的冒險');
+                currentChapter++;
+                playChapter();
             }
         }
 
-        async function generateAdventureStory(isNextChapter = false, actionTaken = "SWIPE") {
-            if (isNextChapter && chapterCount >= MAX_CHAPTERS) {
-                showToast("🎉 恭喜！10分鐘冒險旅程已圓滿完成！", "success");
-                speechStatusText.textContent = "🎉 10分鐘冒險已順利完整結束！";
-                return;
-            }
-
-            const activeTopic = customThemeInput.value.trim() || selectedTheme;
-
-            btnGenerate.disabled = true;
-            btnGenerateText.textContent = isNextChapter ? `正在編織第 ${chapterCount + 1} 章...` : "正在規劃 10 分鐘長篇故事...";
-            btnGenerateIcon.className = "fa-solid fa-spinner animate-spin";
+        async function generateStory() {
+            const btn = document.getElementById('btnGenerate');
+            document.getElementById('btnText').textContent = "正在編寫互動冒險...";
+            document.getElementById('btnIcon').className = "fa-solid fa-spinner animate-spin";
+            btn.disabled = true;
 
             try {
-                const response = await fetch(WORKER_URL, {
+                const res = await fetch(WORKER_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'Application/json' },
-                    body: JSON.stringify({ 
-                        topic: activeTopic,
-                        history: isNextChapter ? storyHistory : "",
-                        action: actionTaken
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic: selectedTheme })
                 });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
 
-                const data = await response.json();
-                if (!response.ok || !data.story) throw new Error(data.error || "無法取得故事");
-
-                if (isNextChapter) {
-                    currentStory += "\n\n" + data.story;
-                    chapterCount++;
-                } else {
-                    currentStory = data.story;
-                    chapterCount = 1;
-                }
-                storyHistory = currentStory;
-
-                storyTextDiv.textContent = currentStory;
-                welcomeMessage.classList.add('hidden');
-                storyTextDiv.classList.remove('hidden');
-                btnSpeak.disabled = false;
+                // 透過 ---CHAPTER--- 精準拆解成段落
+                storyChapters = data.story.split('---CHAPTER---').map(s => s.trim()).filter(s => s.length > 0);
+                currentChapter = 0;
                 
-                showToast(isNextChapter ? `第 ${chapterCount} 章解鎖！繼續沉浸朗讀...` : "長篇故事生成完畢，開始 10 分鐘旅程！", "success");
-                speakStory();
+                document.getElementById('welcomeMessage').classList.add('hidden');
+                const display = document.getElementById('storyDisplay');
+                display.textContent = data.story.replace(/---CHAPTER---/g, '\n\n-------------------\n\n');
+                display.classList.remove('hidden');
+                document.getElementById('btnSpeak').disabled = false;
 
-            } catch (error) {
-                showToast("生成失敗：" + error.message, "error");
+                showToast('故事生成完畢！準備開講');
+                playChapter();
+            } catch (e) {
+                showToast('錯誤: ' + e.message);
             } finally {
-                btnGenerate.disabled = false;
-                btnGenerateText.textContent = "開始 10 分鐘沉浸式聽故事";
-                btnGenerateIcon.className = "fa-solid fa-wand-magic-sparkles";
+                document.getElementById('btnText').textContent = "開始互動冒險繪本";
+                document.getElementById('btnIcon').className = "fa-solid fa-wand-magic-sparkles";
+                btn.disabled = false;
             }
         }
 
-        function speakStory() {
-            if (!currentStory) return;
-
-            if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.cancel();
-                actionIndicator.classList.add('hidden');
-                btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
+        function playChapter() {
+            if (currentChapter >= storyChapters.length) {
+                showToast('🎉 恭喜完成 10 分鐘冒險！');
+                document.getElementById('actionPrompt').classList.remove('hidden');
+                document.getElementById('promptText').textContent = "🎉 恭喜！精彩冒險圓滿達成！";
                 return;
             }
 
-            const utterance = new SpeechSynthesisUtterance(currentStory);
+            if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+
+            const text = storyChapters[currentChapter];
+            const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-TW';
-            utterance.rate = 0.95; 
+            utterance.rate = 0.95;
 
-            let hasTriggered = false;
-            actionIndicator.classList.remove('hidden');
-            speechStatusText.textContent = `🎧 正在朗讀第 ${chapterCount}/${MAX_CHAPTERS} 章與互動指引...`;
-            btnSpeak.innerHTML = `<i class="fa-solid fa-stop text-pink-400"></i>`;
-
-            utterance.onboundary = function(event) {
-                if (event.charIndex !== undefined) {
-                    const spokeTextSoFar = currentStory.substring(0, event.charIndex + (event.charLength || 1));
-                    
-                    // 偵測到互動關鍵字時，發送藍牙信號給 ESP32
-                    if (!hasTriggered && (spokeTextSoFar.includes("互動") || spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動") || spokeTextSoFar.includes("左側") || spokeTextSoFar.includes("右側"))) {
-                        hasTriggered = true;
-                        sendBleCommand("SWIPE");
-                    }
-                }
-            };
+            document.getElementById('actionPrompt').classList.add('hidden');
 
             utterance.onend = function() {
-                actionIndicator.classList.add('hidden');
-                btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
-                
-                // 每一章節朗讀結束後，如果還沒到達 10 分鐘上限，自動解鎖並產生下一章！
-                if (chapterCount < MAX_CHAPTERS) {
-                    speechStatusText.textContent = "✨ 互動完成！正在自動產生下一分鐘的冒險...";
-                    setTimeout(() => {
-                        generateAdventureStory(true, "SWIPE");
-                    }, 2000);
-                } else {
-                    speechStatusText.textContent = "🎉 10分鐘精彩冒險圓滿達成！";
-                    showToast("🎉 10分鐘精彩冒險圓滿達成！", "success");
+                // 如果不是最後一段，唸完後精準暫停，等待小朋友動作！
+                if (currentChapter < storyChapters.length - 1) {
+                    waitingForAction = true;
+                    document.getElementById('actionPrompt').classList.remove('hidden');
+                    document.getElementById('promptText').textContent = `🛑 第 ${currentChapter + 1} 段完成！請做動作解鎖下一段！`;
+                    showToast('🛑 故事已暫停，等待互動動作...');
                 }
             };
 
@@ -371,41 +218,25 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            btnConnect.addEventListener('click', connectBLE);
-            btnDisconnect.addEventListener('click', disconnectBLE);
-
-            themeButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    themeButtons.forEach(b => {
-                        b.classList.remove('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
-                        b.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-300');
-                    });
-                    btn.classList.add('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
-                    btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-300');
-                    selectedTheme = btn.getAttribute('data-theme');
-                    customThemeInput.value = '';
+            document.getElementById('btnConnect').addEventListener('click', connectBLE);
+            document.getElementById('btnManualSwipe').addEventListener('click', handleActionCompleted);
+            document.getElementById('btnGenerate').addEventListener('click', generateStory);
+            
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.theme-btn').forEach(b => b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs font-semibold');
+                    e.target.className = 'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-3 rounded-xl text-xs font-semibold';
+                    selectedTheme = e.target.getAttribute('data-theme');
                 });
             });
 
-            tabAiMode.addEventListener('click', () => {
-                currentMode = 'ai';
-                tabAiMode.className = 'flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1';
-                tabCustomMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
-                aiModeContainer.classList.remove('hidden');
-                customModeContainer.classList.add('hidden');
+            document.getElementById('btnSpeak').addEventListener('click', () => {
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                } else if (storyChapters.length > 0) {
+                    playChapter();
+                }
             });
-
-            tabCustomMode.addEventListener('click', () => {
-                currentMode = 'custom';
-                tabCustomMode.className = 'flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1';
-                tabAiMode.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1';
-                customModeContainer.classList.remove('hidden');
-                aiModeContainer.classList.add('hidden');
-            });
-
-            btnManualSwipe.addEventListener('click', () => { sendBleCommand("SWIPE"); });
-            btnGenerate.addEventListener('click', () => { chapterCount = 0; generateAdventureStory(false); });
-            btnSpeak.addEventListener('click', () => { speakStory(); });
         });
     </script>
 </body>
