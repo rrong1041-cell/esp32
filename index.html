@@ -135,6 +135,7 @@
 </div>
 
 <script>
+    // ⚠️ 妳的 Cloudflare Worker 網址
     const WORKER_URL = "https://empty-credit-1539.rrong1041.workers.dev"; 
 
     // BLE 藍牙 UUID (確保全部為純小寫英文與數字)
@@ -164,7 +165,7 @@
             log("正在搜尋 ESP32 藍牙裝置...");
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: "SmartStory" }, { namePrefix: "ESP32" }],
-                optionalServices: [SERVICE_UUID]
+                optionalServices: [SERVICE_UUID.toLowerCase().trim()]
             });
 
             bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
@@ -173,8 +174,13 @@
             const server = await bluetoothDevice.gatt.connect();
 
             log("正在讀取藍牙服務與特徵值...");
-            const service = await server.getPrimaryService(SERVICE_UUID);
-            bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+            const service = await server.getPrimaryService(SERVICE_UUID.toLowerCase().trim());
+            
+            // 強制轉小寫並去除前後空白，防止瀏覽器快取或格式誤判
+            const targetUuid = CHARACTERISTIC_UUID.toLowerCase().trim();
+            log(`正在尋找特徵值: ${targetUuid}`);
+            
+            bluetoothCharacteristic = await service.getCharacteristic(targetUuid);
 
             await bluetoothCharacteristic.startNotifications();
             bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
