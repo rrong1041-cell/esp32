@@ -27,7 +27,7 @@
     <header class="w-full max-w-4xl text-center my-4">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
             <i class="fa-solid font-bold fa-headphones-simple text-amber-400"></i>
-            <span class="text-amber-300 font-semibold text-sm">沈浸式故事繪本・聽完段落後搖晃硬體繼續</span>
+            <span class="text-amber-300 font-semibold text-sm">沈浸式互動繪本・聽完段落指示後搖晃硬體繼續</span>
         </div>
         <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
             聲動奇境 ✨ 智慧互動繪本
@@ -62,14 +62,14 @@
             </div>
         </section>
 
-        <!-- 故事顯示區 -->
+        <!-- 故事顯示與互動區 -->
         <section class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6">
             <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
-                <div class="overflow-y-auto max-h-[320px] pr-2 space-y-4">
+                <div class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-10">
                         <div class="text-5xl mb-3">📖✨</div>
                         <h3 class="text-lg font-bold text-purple-300">準備好開始冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400 mt-1">故事會分段播放，唸完一段後會暫停，請搖晃硬體來解鎖下一段！</p>
+                        <p class="text-sm text-slate-400 mt-1">故事將分段進行，聽完各段指令後請搖晃硬體來過關！</p>
                     </div>
                     <div id="storyDisplay" class="text-lg leading-relaxed text-slate-300 hidden whitespace-pre-line"></div>
                 </div>
@@ -77,7 +77,7 @@
                 <div id="actionPrompt" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
                         <i class="fa-solid fa-hand-sparkles text-lg"></i>
-                        <span id="promptText">🛑 請搖晃硬體裝置來繼續故事...</span>
+                        <span id="promptText">🛑 請依照語音指示做出動作，並搖晃硬體裝置繼續...</span>
                     </div>
                 </div>
             </div>
@@ -115,7 +115,7 @@
         let selectedTheme = "勇敢的小騎士與巨龍";
         let storyChapters = [];
         let currentChapterIndex = 0;
-        let waitingForAction = false;
+        let waitingForAction = false; // 用來標記目前是否正在等待硬體動作
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -135,11 +135,12 @@
                 await bleCharacteristic.startNotifications();
                 bleCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
                     const decoder = new TextDecoder();
-                    const value = decoder.decode(event.target.value);
+                    const value = decoder.decode(event.target.value).trim();
                     console.log("收到硬體訊號: ", value);
 
-                    if (value === "SWIPE" || value === "START_TRIGGER") {
-                        showToast("✨ 動作完成！");
+                    // 只要收到硬體發出的訊號，就直接觸發下一段
+                    if (value === "SWIPE" || value === "START_TRIGGER" || value.length > 0) {
+                        showToast("✨ 動作成功！進入下一關");
                         resumeNextChapter();
                     }
                 });
@@ -153,18 +154,16 @@
         }
 
         function resumeNextChapter() {
-            if (waitingForAction) {
-                waitingForAction = false;
-                document.getElementById('actionPrompt').classList.add('hidden');
-                showToast('✨ 進入下一段精彩故事');
-                currentChapterIndex++;
-                playCurrentChapter();
-            }
+            // 不管三七二十一，只要收到硬號訊號或點擊手動按鈕，就強行推進下一段
+            waitingForAction = false;
+            document.getElementById('actionPrompt').classList.add('hidden');
+            currentChapterIndex++;
+            playCurrentChapter();
         }
 
         async function generateStory() {
             const btn = document.getElementById('btnGenerate');
-            document.getElementById('btnText').textContent = "正在編寫精采故事...";
+            document.getElementById('btnText').textContent = "正在編寫互動冒險...";
             document.getElementById('btnIcon').className = "fa-solid fa-spinner animate-spin";
             btn.disabled = true;
 
@@ -179,28 +178,29 @@
 
                 let rawText = data.story;
 
-                // 智慧防禦切段：如果 AI 有寫 ---CHAPTER--- 就用它；如果沒有，我們用標點符號「。」每 2 到 3 句自動強行切成 4 個段落！
-                if (rawText.includes('---CHAPTER---')) {
-                    storyChapters = rawText.split('---CHAPTER---').map(s => s.trim()).filter(s => s.length > 0);
-                } else {
+                // 切割段落
+                storyChapters = rawText.split('---CHAPTER---').map(s => s.trim()).filter(s => s.length > 0);
+                
+                // 保險機制：如果沒抓到分隔符號，用句號平分
+                if (storyChapters.length < 2) {
                     let sentences = rawText.split('。').filter(s => s.trim().length > 0);
                     storyChapters = [];
                     let chunkSize = Math.max(1, Math.ceil(sentences.length / 4));
                     for (let i = 0; i < sentences.length; i += chunkSize) {
-                        let chunk = sentences.slice(i, i + chunkSize).join('。') + '。';
-                        storyChapters.push(chunk);
+                        storyChapters.push(sentences.slice(i, i + chunkSize).join('。') + '。');
                     }
                 }
 
                 currentChapterIndex = 0;
+                waitingForAction = false;
                 
                 document.getElementById('welcomeMessage').classList.add('hidden');
                 const display = document.getElementById('storyDisplay');
-                display.textContent = storyChapters.join('\n\n🛑 --------------------\n\n');
+                display.textContent = storyChapters.join('\n\n🎯 --------------------\n\n');
                 display.classList.remove('hidden');
                 document.getElementById('btnSpeak').disabled = false;
 
-                showToast('故事生成完畢！準備開講');
+                showToast('互動故事生成完畢！準備開始');
                 playCurrentChapter();
             } catch (e) {
                 showToast('錯誤: ' + e.message);
@@ -213,9 +213,9 @@
 
         function playCurrentChapter() {
             if (currentChapterIndex >= storyChapters.length) {
-                showToast('🎉 恭喜完成整篇精彩故事！');
+                showToast('🎉 恭喜完成所有冒險關卡！');
                 document.getElementById('actionPrompt').classList.remove('hidden');
-                document.getElementById('promptText').textContent = "🎉 恭喜！冒險故事圓滿達成！";
+                document.getElementById('promptText').textContent = "🎉 太棒了！冒險任務圓滿成功！";
                 return;
             }
 
@@ -228,15 +228,16 @@
 
             document.getElementById('actionPrompt').classList.add('hidden');
 
+            // 當這一段語音唸完時觸發
             utterance.onend = function() {
                 if (currentChapterIndex < storyChapters.length - 1) {
                     waitingForAction = true;
                     document.getElementById('actionPrompt').classList.remove('hidden');
-                    document.getElementById('promptText').textContent = `🛑 本段故事講完了！請搖晃硬體裝置來解鎖下一段...`;
-                    showToast('🛑 故事已暫停，等待搖晃硬體...');
+                    document.getElementById('promptText').textContent = `🛑 本關結束！請依照指示做動作並搖晃硬體解鎖下一關...`;
+                    showToast('🛑 請做出動作並搖晃硬體...');
                 } else {
                     document.getElementById('actionPrompt').classList.remove('hidden');
-                    document.getElementById('promptText').textContent = "🎉 故事全部講完了！";
+                    document.getElementById('promptText').textContent = "🎉 故事冒險全部完成！";
                 }
             };
 
