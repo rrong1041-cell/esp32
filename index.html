@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - 藍牙繪本與 AI 故事生成</title>
+    <title>SmartStoryBook - 智慧有聲繪本機</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #0f172a;
-            color: #f8fafc;
+            background: #f0f2f5;
+            color: #333;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -16,73 +16,88 @@
             align-items: center;
         }
         .container {
+            max-width: 600px;
             width: 100%;
-            max-width: 480px;
-            background: #1e293b;
+            background: white;
             padding: 24px;
             border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            box-sizing: border-box;
-            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-        h1 { font-size: 1.4rem; margin-top: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
-        .card {
-            background: #334155;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
+        h1 { font-size: 1.5rem; text-align: center; color: #2563eb; margin-top: 0; }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            border: 1px solid #e2e8f0;
         }
         .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: #ef4444;
-            margin-right: 8px;
         }
-        .status-indicator.connected { background: #22c55e; }
-        input, button {
-            width: 100%;
-            padding: 12px;
+        .dot.connected { background: #22c55e; }
+        button {
+            background: #3b82f6;
+            color: white;
             border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        button:hover { background: #2563eb; }
+        .mode-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+        .input-group {
+            margin-bottom: 16px;
+        }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-size: 1rem;
-            box-sizing: border-box;
-            margin-top: 8px;
         }
-        input {
-            background: #1e293b;
-            color: #fff;
-            border: 1px solid #475569;
-        }
-        button {
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        button:active { opacity: 0.8; }
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-ai { background: linear-gradient(135deg, #a855f7, #ec4899); color: white; }
-        .btn-secondary { background: #475569; color: white; }
-        .log-box, .story-box {
-            background: #0f172a;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            margin-top: 12px;
-            line-height: 1.5;
+        .story-card {
+            background: #fafaf9;
+            border-left: 4px solid #3b82f6;
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 20px;
+            min-height: 120px;
+            line-height: 1.6;
+            white-space: pre-wrap;
         }
         .log-box {
+            margin-top: 20px;
+            background: #1e293b;
+            color: #38bdf8;
+            padding: 12px;
+            border-radius: 8px;
             font-family: monospace;
-            font-size: 0.85rem;
-            height: 100px;
-            overflow-y: auto;
-            color: #34d399;
-        }
-        .story-box {
-            color: #e2e8f0;
-            min-height: 80px;
-            max-height: 200px;
+            font-size: 0.8rem;
+            max-height: 120px;
             overflow-y: auto;
         }
     </style>
@@ -90,46 +105,47 @@
 <body>
 
 <div class="container">
-    <h1>🔮 聲動奇境 AI 繪本</h1>
-    
-    <!-- 藍牙連線卡片 -->
-    <div class="card">
-        <h3>硬體連線狀態</h3>
-        <p style="display: flex; align-items: center; margin: 8px 0;">
-            <span id="statusDot" class="status-indicator"></span>
+    <h1>📖 智慧有聲繪本互動控制台</h1>
+
+    <!-- 狀態與連線列 -->
+    <div class="status-bar">
+        <div class="status-indicator">
+            <div id="statusDot" class="dot"></div>
             <span id="statusText">尚未連線</span>
-        </p>
-        <button id="connectBtn" class="btn-primary" onclick="toggleConnection()">連接故事裝置 (ESP32)</button>
+        </div>
+        <div>
+            目前模式: <span id="currentModeBadge" class="mode-badge">孩童模式</span>
+        </div>
+        <button id="connectBtn" onclick="toggleConnection()">連接故事裝置</button>
     </div>
 
-    <!-- AI 故事生成卡片 -->
-    <div class="card">
-        <h3>✨ AI 故事生成</h3>
-        <label style="font-size: 0.85rem; color: #94a3b8;">輸入故事主題：</label>
-        <input type="text" id="storyTopic" value="騎士與巨龍的奇幻冒險" placeholder="例如：尋找彩虹山頂的棉花糖巨龍">
-        <button class="btn-ai" onclick="generateAIStory()">🪄 開始 AI 冒險生成</button>
-        
-        <div id="storyOutput" class="story-box">點擊上方按鈕開始生成故事內容...</div>
+    <!-- 故事主題設定 -->
+    <div class="input-group">
+        <label for="storyTopic">繪本冒險主題：</label>
+        <input type="text" id="storyTopic" value="小熊的魔法森林探險" placeholder="例如：太空冒險、神祕城堡...">
     </div>
 
-    <!-- 測試與通訊紀錄 -->
-    <div class="card">
-        <h3>即時通訊與硬體紀錄</h3>
-        <button class="btn-secondary" onclick="sendSwipeSignal()">⚡ 測試發送震動信號</button>
-        <div id="logBox" class="log-box">等待藍牙指令與 AI 狀態...</div>
-    </div>
+    <button onclick="generateAIStory('start')" style="width: 100%; background: #10b981;">✨ 開始全新故事</button>
+
+    <!-- 故事內容呈現區 -->
+    <div id="storyOutput" class="story-card">點擊上方「開始全新故事」或按下硬體按鈕來展開冒險吧！</div>
+
+    <!-- 系統日誌 -->
+    <div id="logBox" class="log-box">[系統] 網頁介面已就緒，請點擊連線並配對 ESP32...</div>
 </div>
 
 <script>
-    // 請將這裡替換成妳實際部署好的 Cloudflare Worker 網址
+    // ⚠️ 請換成妳實際部署好的 Cloudflare Worker 網址
     const WORKER_URL = "https://empty-credit-1539.rrong1041.workers.dev"; 
 
-    // Web Bluetooth UUID 宣告
+    // BLE 藍牙 UUID (必須與 ESP32 韌體完全一致)
     const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aae";
 
     let bluetoothDevice = null;
     let bluetoothCharacteristic = null;
+    let currentStoryContext = ""; 
+    let currentStoryMode = "KIDS"; // 預設孩童模式
 
     function log(message) {
         const box = document.getElementById("logBox");
@@ -147,6 +163,7 @@
 
         try {
             log("正在搜尋 ESP32 藍牙裝置...");
+            // 透過 Bluefy (iOS) 或 Chrome (PC/Android) 搜尋裝置
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: "SmartStory" }, { namePrefix: "ESP32" }],
                 optionalServices: [SERVICE_UUID]
@@ -154,10 +171,10 @@
 
             bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-            log("正在連線到 GATT 伺服器...");
+            log("正在連線到硬體...請稍候");
             const server = await bluetoothDevice.gatt.connect();
 
-            log("正在尋找服務與特徵值...");
+            log("正在讀取藍牙服務與特徵值...");
             const service = await server.getPrimaryService(SERVICE_UUID);
             bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
@@ -165,7 +182,7 @@
             bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
 
             updateConnectionState(true);
-            log("藍牙連線成功！");
+            log("藍牙連線成功！實體裝置已與網頁同步。");
 
         } catch (error) {
             log("連線失敗: " + error);
@@ -187,7 +204,7 @@
         } else {
             dot.classList.remove("connected");
             text.innerText = "尚未連線";
-            btn.innerText = "連接故事裝置 (ESP32)";
+            btn.innerText = "連接故事裝置";
             btn.style.background = "#3b82f6";
             bluetoothCharacteristic = null;
         }
@@ -198,59 +215,81 @@
         updateConnectionState(false);
     }
 
+    // 接收硬體（按鈕或 MPU6050 揮動）傳來的訊號
     function handleNotifications(event) {
         const value = new TextDecoder().decode(event.target.value);
-        log(`收到硬體訊號: ${value}`);
-        if (value.includes("SWIPE")) {
-            log("偵測到揮動，自動推進故事！");
-        }
-    }
-
-    async function sendSwipeSignal() {
-        if (!bluetoothCharacteristic) {
-            log("錯誤：尚未連接藍牙裝置");
-            alert("請先連接故事裝置！");
-            return;
-        }
-        try {
-            const encoder = new TextEncoder();
-            await bluetoothCharacteristic.writeValue(encoder.encode("TRIGGER_HAPTIC"));
-            log("已發送震動/觸發信號至 ESP32");
-        } catch (error) {
-            log("發送失敗: " + error);
+        log(`收到硬體指令: ${value}`);
+        
+        if (value.startsWith("MODE:")) {
+            // 收到實體按鈕切換模式的訊號
+            currentStoryMode = value.split(":")[1];
+            const badge = document.getElementById("currentModeBadge");
+            if (currentStoryMode === "KIDS") {
+                badge.innerText = "孩童模式";
+                badge.style.background = "#e0f2fe";
+                badge.style.color = "#0369a1";
+            } else {
+                badge.innerText = "長輩模式";
+                badge.style.background = "#fee2e2";
+                badge.style.color = "#991b1b";
+            }
+            log(`系統模式已切換為：${badge.innerText}`);
+        } 
+        else if (value === "START_TRIGGER" || value === "SWIPE_ACTION") {
+            // 收到開始按鈕或體感揮動訊號 ➔ 自動推動故事下一步！
+            log("偵測到實體互動觸發！AI 正在編寫下一步冒險...");
+            generateAIStory("continue");
         }
     }
 
     // 呼叫 Cloudflare Worker AI 生成故事
-    async function generateAIStory() {
+    async function generateAIStory(actionType = "start") {
         const topic = document.getElementById("storyTopic").value;
         const outputBox = document.getElementById("storyOutput");
         
-        outputBox.innerText = "AI 正在努力編織故事中，請稍候...";
-        log(`正在向 Cloudflare AI 請求主題：${topic}`);
+        outputBox.innerText = "✨ AI 正在用心編織精彩情節中...";
+        log(`向 Worker 發送請求 [模式: ${currentStoryMode}, 動作: ${actionType}]`);
 
         try {
             const response = await fetch(WORKER_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: "start", topic: topic })
+                body: JSON.stringify({ 
+                    action: actionType, 
+                    topic: topic,
+                    mode: currentStoryMode, // 傳遞目前是 孩童 或 長輩 模式
+                    context: currentStoryContext 
+                })
             });
 
             const data = await response.json();
             if (data.story) {
                 outputBox.innerText = data.story;
-                log("AI 故事生成成功！");
+                currentStoryContext = data.story; // 儲存脈絡給下次延伸
+                log("AI 故事更新成功！");
+
+                // 回傳震動訊號給硬體，給予成功互動的物理反饋
+                sendHapticFeedback();
             } else {
-                outputBox.innerText = "生成結果：" + JSON.stringify(data);
-                log("AI 回應格式異常");
+                outputBox.innerText = "回傳結果：" + JSON.stringify(data);
             }
         } catch (error) {
-            outputBox.innerText = "AI 連線失敗：" + error;
-            log("AI 請求錯誤: " + error);
+            outputBox.innerText = "AI 連線發生錯誤：" + error;
+            log("請求錯誤: " + error);
+        }
+    }
+
+    // 發送震動觸發指令回硬體
+    async function sendHapticFeedback() {
+        if (!bluetoothCharacteristic) return;
+        try {
+            const encoder = new TextEncoder();
+            await bluetoothCharacteristic.writeValue(encoder.encode("TRIGGER_HAPTIC"));
+        } catch (error) {
+            console.log("發送震動指令失敗", error);
         }
     }
 </script>
 
 </body>
 </html>
-
