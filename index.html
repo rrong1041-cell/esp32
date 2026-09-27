@@ -2,294 +2,73 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartStoryBook - 智慧有聲繪本機</title>
+    <title>聲動奇境互動控制台</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #f0f2f5;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            max-width: 600px;
-            width: 100%;
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        h1 { font-size: 1.5rem; text-align: center; color: #2563eb; margin-top: 0; }
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f8fafc;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-            border: 1px solid #e2e8f0;
-        }
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #ef4444;
-        }
-        .dot.connected { background: #22c55e; }
-        button {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-        button:hover { background: #2563eb; }
-        .mode-badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            background: #e0f2fe;
-            color: #0369a1;
-        }
-        .input-group {
-            margin-bottom: 16px;
-        }
-        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        .story-card {
-            background: #fafaf9;
-            border-left: 4px solid #3b82f6;
-            padding: 16px;
-            border-radius: 0 8px 8px 0;
-            margin-top: 20px;
-            min-height: 120px;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-        .log-box {
-            margin-top: 20px;
-            background: #1e293b;
-            color: #38bdf8;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 0.8rem;
-            max-height: 120px;
-            overflow-y: auto;
-        }
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; background: #f4f7f6; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #0056b3; }
+        #log { margin: 20px auto; width: 80%; height: 150px; background: #222; color: #00ff00; text-align: left; padding: 10px; font-family: monospace; overflow-y: scroll; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>📖 聲動奇境互動控制台</h1>
+    <h1>聲動奇境互動控制台</h1>
+    <p id="status">狀態：尚未連線</p>
+    <button id="connectBtn" onclick="connectBLE()">連接故事裝置</button>
 
-    <!-- 狀態與連線列 -->
-    <div class="status-bar">
-        <div class="status-indicator">
-            <div id="statusDot" class="dot"></div>
-            <span id="statusText">尚未連線</span>
-        </div>
-        <div>
-            目前模式: <span id="currentModeBadge" class="mode-badge">孩童模式</span>
-        </div>
-        <button id="connectBtn" onclick="toggleConnection()">連接故事裝置</button>
-    </div>
+    <div id="log"></div>
 
-    <!-- 故事主題設定 -->
-    <div class="input-group">
-        <label for="storyTopic">繪本冒險主題：</label>
-        <input type="text" id="storyTopic" value="" placeholder="例如：太空冒險、神祕城堡...">
-    </div>
+    <script>
+        // 與 ESP32 完全相符的全新 UUID
+        const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914c";
+        const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aaf";
 
-    <button onclick="generateAIStory('start')" style="width: 100%; background: #10b981;">✨ 開始全新故事</button>
+        let bluetoothDevice;
+        let bluetoothCharacteristic;
 
-    <!-- 故事內容呈現區 -->
-    <div id="storyOutput" class="story-card">點擊上方「開始全新故事」或按下硬體按鈕來展開冒險吧！</div>
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += `[${time}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
 
-    <!-- 系統日誌 -->
-    <div id="logBox" class="log-box">[系統] 新版 UUID 介面已就緒，等待連線...</div>
-</div>
+        async function connectBLE() {
+            try {
+                log("正在尋找藍牙裝置 (SmartStory-ESP32)...");
+                
+                // 請求藍牙裝置
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'SmartStory-ESP32' }],
+                    optionalServices: [SERVICE_UUID]
+                });
 
-<script>
-    const WORKER_URL = "https://empty-credit-1539.rrong1041.workers.dev"; 
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-    // 🔑 對應的新版 BLE UUID (確保與 ESP32 一致且全小寫)
-    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914c";
-    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aaf";
+                log("正在連線到 GATT 伺服器...");
+                const server = await bluetoothDevice.gatt.connect();
 
-    let bluetoothDevice = null;
-    let bluetoothCharacteristic = null;
-    let currentStoryContext = ""; 
-    let currentStoryMode = "KIDS";
+                log("正在取得藍牙服務...");
+                const service = await server.getPrimaryService(SERVICE_UUID);
 
-    function log(message) {
-        const box = document.getElementById("logBox");
-        box.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${message}</div>`;
-        box.scrollTop = box.scrollHeight;
-    }
+                log("正在綁定特徵值...");
+                bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-    async function toggleConnection() {
-        if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-            await bluetoothDevice.gatt.disconnect();
-            updateConnectionState(false);
+                document.getElementById('status').innerText = "狀態：已連線";
+                document.getElementById('status').style.color = "green";
+                log("藍牙連線成功！");
+
+            } catch (error) {
+                log(`連線失敗: ${error}`);
+                console.error(error);
+            }
+        }
+
+        function onDisconnected(event) {
+            document.getElementById('status').innerText = "狀態：已斷線";
+            document.getElementById('status').style.color = "red";
             log("已中斷藍牙連線");
-            return;
         }
-
-        try {
-            log("正在搜尋藍牙裝置 (SmartStory-ESP32)...");
-            
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { namePrefix: "SmartStory" }, 
-                    { namePrefix: "ESP32" }
-                ],
-                optionalServices: [SERVICE_UUID.toLowerCase().trim()]
-            });
-
-            bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
-
-            log("正在建立 GATT 連線...");
-            const server = await bluetoothDevice.gatt.connect();
-
-            log("正在獲取藍牙服務...");
-            const service = await server.getPrimaryService(SERVICE_UUID.toLowerCase().trim());
-            
-            const targetCharUuid = CHARACTERISTIC_UUID.toLowerCase().trim();
-            log(`正在綁定特徵值: ${targetCharUuid}`);
-            
-            bluetoothCharacteristic = await service.getCharacteristic(targetCharUuid);
-
-            await bluetoothCharacteristic.startNotifications();
-            bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
-
-            updateConnectionState(true);
-            log("藍牙連線與特徵值綁定成功！");
-
-        } catch (error) {
-            log("連線失敗: " + error);
-            console.error(error);
-            updateConnectionState(false);
-        }
-    }
-
-    function updateConnectionState(isConnected) {
-        const dot = document.getElementById("statusDot");
-        const text = document.getElementById("statusText");
-        const btn = document.getElementById("connectBtn");
-
-        if (isConnected) {
-            dot.classList.add("connected");
-            text.innerText = "已連線";
-            btn.innerText = "中斷連線";
-            btn.style.background = "#ef4444";
-        } else {
-            dot.classList.remove("connected");
-            text.innerText = "尚未連線";
-            btn.innerText = "連接故事裝置";
-            btn.style.background = "#3b82f6";
-            bluetoothCharacteristic = null;
-        }
-    }
-
-    function onDisconnected() {
-        log("裝置已斷線");
-        updateConnectionState(false);
-    }
-
-    function handleNotifications(event) {
-        const value = new TextDecoder().decode(event.target.value);
-        log(`收到硬體指令: ${value}`);
-        
-        if (value.startsWith("MODE:")) {
-            currentStoryMode = value.split(":")[1];
-            const badge = document.getElementById("currentModeBadge");
-            if (currentStoryMode === "KIDS") {
-                badge.innerText = "孩童模式";
-                badge.style.background = "#e0f2fe";
-                badge.style.color = "#0369a1";
-            } else {
-                badge.innerText = "長輩模式";
-                badge.style.background = "#fee2e2";
-                badge.style.color = "#991b1b";
-            }
-            log(`系統模式已切換為：${badge.innerText}`);
-        } 
-        else if (value === "START_TRIGGER" || value === "SWIPE_ACTION") {
-            log("偵測到實體互動觸發！AI 正在編寫下一步冒險...");
-            generateAIStory("continue");
-        }
-    }
-
-    async function generateAIStory(actionType = "start") {
-        const topic = document.getElementById("storyTopic").value;
-        const outputBox = document.getElementById("storyOutput");
-        
-        outputBox.innerText = "✨ AI 正在用心編織精彩情節中...";
-        log(`向 Worker 發送請求 [模式: ${currentStoryMode}, 動作: ${actionType}]`);
-
-        try {
-            const response = await fetch(WORKER_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    action: actionType, 
-                    topic: topic,
-                    mode: currentStoryMode,
-                    context: currentStoryContext 
-                })
-            });
-
-            const data = await response.json();
-            if (data.story) {
-                outputBox.innerText = data.story;
-                currentStoryContext = data.story;
-                log("AI 故事更新成功！");
-
-                sendHapticFeedback();
-            } else {
-                outputBox.innerText = "回傳結果：" + JSON.stringify(data);
-            }
-        } catch (error) {
-            outputBox.innerText = "AI 連線發生錯誤：" + error;
-            log("請求錯誤: " + error);
-        }
-    }
-
-    async function sendHapticFeedback() {
-        if (!bluetoothCharacteristic) return;
-        try {
-            const encoder = new TextEncoder();
-            await bluetoothCharacteristic.writeValue(encoder.encode("TRIGGER_HAPTIC"));
-        } catch (error) {
-            console.log("發送震動指令失敗", error);
-        }
-    }
-</script>
-
+    </script>
 </body>
 </html>
