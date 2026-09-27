@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - ESP32 互動故事繪本</title>
+    <title>聲動奇境 - 純語音聽覺互動故事書</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -40,12 +40,12 @@
             min-height: 100vh;
         }
         .glow-button {
-            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+            box-shadow: 0 4px 20px rgba(236, 72, 153, 0.5);
             transition: all 0.3s ease;
         }
         .glow-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.6);
+            box-shadow: 0 6px 25px rgba(236, 72, 153, 0.7);
         }
         @keyframes float {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -61,11 +61,11 @@
     <!-- 頁頭與標題區域 -->
     <header class="w-full max-w-4xl text-center my-4 animate-float">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
-            <i class="fa-solid font-bold fa-wand-magic-sparkles text-amber-400 text-xl"></i>
-            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">ESP32 繪本互動夥伴</span>
+            <i class="fa-solid font-bold fa-headphones-simple text-amber-400 text-xl"></i>
+            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">用耳朵聽故事・靠聲音指引動作</span>
         </div>
         <h1 class="text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300 tracking-wide drop-shadow-md">
-            聲動奇境 ✨ 冒險魔法書
+            聲動奇境 ✨ 聲音互動繪本
         </h1>
     </header>
 
@@ -75,7 +75,7 @@
         <section class="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
             <div>
                 <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
-                    <i class="fa-bluetooth-b fab text-cyan-400"></i> 藍牙繪本裝置
+                    <i class="fa-bluetooth-b fab text-cyan-400"></i> 藍牙裝置連線
                 </h2>
                 
                 <div id="connectionStatusCard" class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
@@ -99,41 +99,31 @@
 
             <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
                 <h3 class="text-sm font-bold text-purple-300 mb-2 flex items-center gap-2">
-                    <i class="fa-solid fa-hand-sparkles"></i> 測試/手動觸發模式
+                    <i class="fa-solid fa-hand-sparkles"></i> 測試藍牙動作
                 </h3>
-                <p class="text-xs text-slate-400 mb-3">可手動點擊送出 SWIPE 信號。</p>
                 <button id="btnManualSwipe" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2 text-sm">
-                    <i class="fa-solid fa-wand-magic"></i> 手動觸發 SWIPE 揮動
+                    <i class="fa-solid fa-wand-magic"></i> 測試揮動信號 (SWIPE)
                 </button>
-            </div>
-
-            <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
-                <p class="flex items-center gap-1.5 text-emerald-400 mb-1">
-                    <i class="fa-solid fa-shield-halved"></i> <strong>後端已安全串接</strong>
-                </p>
-                <p>故事生成已透過 Cloudflare Worker 守護，無需在前端設定 API Key。</p>
             </div>
         </section>
 
-        <!-- 右側面板：故事冒險卡片 -->
+        <!-- 右側面板：故事與聲音語音控制 -->
         <section class="md:col-span-2 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
             <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[280px]">
                 <div id="storyContainer" class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-8">
-                        <div class="text-5xl mb-3">🗡️✨📖</div>
-                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好開始奇幻冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400">點擊下方「生成冒險故事」，將透過 Cloudflare 召喚專屬故事！</p>
+                        <div class="text-5xl mb-3">🎧✨📖</div>
+                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好用耳朵展開冒險了嗎？</h3>
+                        <p class="text-sm text-slate-400">點擊下方按鈕，語音會自動朗讀故事，並在需要時用聲音告訴你做動作！</p>
                     </div>
-                    <p id="storyText" class="text-lg md:text-xl leading-relaxed text-slate-100 hidden font-medium"></p>
+                    <!-- 故事文字保留 (大人備用) -->
+                    <div id="storyText" class="text-lg leading-relaxed text-slate-300 hidden"></div>
                 </div>
 
-                <div id="actionIndicator" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm">
+                <div id="actionIndicator" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
-                        <i class="fa-solid fa-volume-high"></i>
-                        <span id="speechStatusText">正在朗讀故事中...</span>
-                    </div>
-                    <div id="swipeBadge" class="hidden bg-amber-500/20 border border-amber-500/50 text-amber-300 px-3 py-1 rounded-full text-xs font-bold animate-bounce flex items-center gap-1">
-                        <i class="fa-solid fa-bolt"></i> 送出 SWIPE 訊號！
+                        <i class="fa-solid fa-volume-high text-lg"></i>
+                        <span id="speechStatusText">正在聆聽故事與語音提示...</span>
                     </div>
                 </div>
             </div>
@@ -141,7 +131,7 @@
             <div class="space-y-4">
                 <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold">
                     <button id="tabAiMode" class="flex-1 py-2 rounded-lg bg-purple-600 text-white transition flex items-center justify-center gap-1">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI 靈感主題
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI 故事主題
                     </button>
                     <button id="tabCustomMode" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1">
                         <i class="fa-solid fa-pen-to-square"></i> 自訂/貼上故事
@@ -166,13 +156,13 @@
                 </div>
 
                 <div id="customModeContainer" class="hidden space-y-2">
-                    <textarea id="manualStoryInput" rows="3" placeholder="貼上或輸入您自己的故事文字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
+                    <textarea id="manualStoryInput" rows="3" placeholder="請輸入故事。當需要小朋友做動作時，請在文字中加入例如：『小朋友！快揮動你的寶劍！』並確保包含 SWIPE 關鍵字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
                 </div>
 
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-3">
                         <i id="btnGenerateIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnGenerateText">生成冒險故事</span>
+                        <span id="btnGenerateText">生成並開始聽故事</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 flex items-center justify-center text-xl transition">
                         <i class="fa-solid fa-play"></i>
@@ -192,14 +182,12 @@
     </footer>
 
     <script>
-        // 藍牙 UUID 設定（與 ESP32 完全對應）
         const BLE_CONFIG = {
             deviceName: '聲動奇境_BLE',
             serviceUuid: '4fa8691a-136d-4560-84ed-01354051b785',
             characteristicUuid: 'beb5483e-36e1-4688-b7f5-ea07361b26a8'
         };
 
-        // 妳的 Cloudflare Worker 網址
         const WORKER_URL = 'https://empty-credit-1539.rrong1041.workers.dev';
 
         let bleDevice = null;
@@ -207,7 +195,6 @@
         let bleCharacteristic = null;
         let selectedTheme = "勇敢的小騎士與巨龍";
         let currentStory = "";
-        let hasTriggeredSwipe = false;
         let currentMode = 'ai';
 
         const btnConnect = document.getElementById('btnConnect');
@@ -221,10 +208,9 @@
         const statusText = document.getElementById('statusText');
         const statusIcon = document.getElementById('statusIcon');
         const welcomeMessage = document.getElementById('welcomeMessage');
-        const storyText = document.getElementById('storyText');
+        const storyTextDiv = document.getElementById('storyText');
         const actionIndicator = document.getElementById('actionIndicator');
         const speechStatusText = document.getElementById('speechStatusText');
-        const swipeBadge = document.getElementById('swipeBadge');
         const toast = document.getElementById('toast');
         const toastMessage = document.getElementById('toastMessage');
         const toastIcon = document.getElementById('toastIcon');
@@ -279,37 +265,28 @@
                 showToast('您的瀏覽器不支援 Web Bluetooth', 'error');
                 return;
             }
-
             try {
                 updateConnectionState('connecting');
                 showToast('尋找 ESP32 裝置中...', 'info');
-
                 bleDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
                     optionalServices: [BLE_CONFIG.serviceUuid]
                 });
-
                 bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
                 bleServer = await bleDevice.gatt.connect();
                 const service = await bleServer.getPrimaryService(BLE_CONFIG.serviceUuid);
                 bleCharacteristic = await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
-
                 updateConnectionState('connected');
-                showToast(`已成功連接至 ${bleDevice.name || 'ESP32 繪本'}！`, 'success');
-
+                showToast(`藍牙裝置連線成功！`, 'success');
             } catch (error) {
-                console.error('BLE 連線失敗:', error);
+                console.error(error);
                 updateConnectionState('disconnected');
-                if (error.name !== 'NotFoundError') {
-                    showToast('藍牙連線失敗：' + error.message, 'error');
-                }
+                if (error.name !== 'NotFoundError') showToast('連線失敗：' + error.message, 'error');
             }
         }
 
         function disconnectBLE() {
-            if (bleDevice && bleDevice.gatt.connected) {
-                bleDevice.gatt.disconnect();
-            }
+            if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
             onDisconnected();
         }
 
@@ -317,46 +294,32 @@
             bleCharacteristic = null;
             bleServer = null;
             updateConnectionState('disconnected');
-            showToast('藍牙裝置已中斷連線', 'info');
+            showToast('藍牙已中斷連線', 'info');
         }
 
         async function sendBleCommand(commandStr) {
-            if (!bleCharacteristic) {
-                triggerVisualSwipeEffect();
-                return false;
-            }
-
+            if (!bleCharacteristic) return false;
             try {
                 const encoder = new TextEncoder();
-                const data = encoder.encode(commandStr);
-                await bleCharacteristic.writeValue(data);
-                triggerVisualSwipeEffect();
+                await bleCharacteristic.writeValue(encoder.encode(commandStr));
                 return true;
             } catch (error) {
-                console.error('BLE 送出指令錯誤:', error);
-                showToast('指令傳送失敗: ' + error.message, 'error');
+                console.error(error);
                 return false;
             }
-        }
-
-        function triggerVisualSwipeEffect() {
-            swipeBadge.classList.remove('hidden');
-            setTimeout(() => {
-                swipeBadge.classList.add('hidden');
-            }, 3000);
         }
 
         async function generateAdventureStory() {
             if (currentMode === 'custom') {
                 const manualText = manualStoryInput.value.trim();
                 if (!manualText) {
-                    showToast("請先輸入或貼上故事內容喔！", "error");
+                    showToast("請先輸入或貼上故事內容！", "error");
                     return;
                 }
                 currentStory = manualText;
+                storyTextDiv.textContent = currentStory;
                 welcomeMessage.classList.add('hidden');
-                storyText.textContent = currentStory;
-                storyText.classList.remove('hidden');
+                storyTextDiv.classList.remove('hidden');
                 btnSpeak.disabled = false;
                 showToast("自訂故事已載入！", "success");
                 speakStory();
@@ -378,25 +341,23 @@
                 });
 
                 const data = await response.json();
-                if (!response.ok || !data.story) {
-                    throw new Error(data.error || "無法取得故事內容");
-                }
+                if (!response.ok || !data.story) throw new Error(data.error || "無法取得故事");
 
                 currentStory = data.story;
+                storyTextDiv.textContent = currentStory;
                 welcomeMessage.classList.add('hidden');
-                storyText.textContent = currentStory;
-                storyText.classList.remove('hidden');
+                storyTextDiv.classList.remove('hidden');
                 btnSpeak.disabled = false;
                 
-                showToast("冒險故事已透過 Cloudflare 生成！", "success");
+                showToast("故事生成完畢，開始朗讀！", "success");
                 speakStory();
 
             } catch (error) {
-                console.error("Worker Error:", error);
-                showToast("生成故事失敗：" + error.message, "error");
+                console.error(error);
+                showToast("生成失敗：" + error.message, "error");
             } finally {
                 btnGenerate.disabled = false;
-                btnGenerateText.textContent = "生成冒險故事";
+                btnGenerateText.textContent = "生成並開始聽故事";
                 btnGenerateIcon.className = "fa-solid fa-wand-magic-sparkles";
             }
         }
@@ -415,17 +376,18 @@
             utterance.lang = 'zh-TW';
             utterance.rate = 0.95; 
 
-            hasTriggeredSwipe = false;
+            let hasTriggered = false;
             actionIndicator.classList.remove('hidden');
-            speechStatusText.textContent = "正在為你講故事...";
+            speechStatusText.textContent = "🎧 正在朗讀故事與語音動作指引...";
             btnSpeak.innerHTML = `<i class="fa-solid fa-stop text-pink-400"></i>`;
 
             utterance.onboundary = function(event) {
-                if (event.name === 'word' || event.name === 'sentence') {
-                    const spokeTextSoFar = currentStory.substring(0, event.charIndex + event.charLength);
-                    if (!hasTriggeredSwipe && (spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動"))) {
-                        hasTriggeredSwipe = true;
-                        showToast("偵測到動作關鍵字！發送藍牙 SWIPE 信號", "success");
+                if (event.charIndex !== undefined) {
+                    const spokeTextSoFar = currentStory.substring(0, event.charIndex + (event.charLength || 1));
+                    
+                    // 當語音唸到設定的指令關鍵字時，自動發送藍牙給 ESP32
+                    if (!hasTriggered && (spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動") || spokeTextSoFar.includes("動作"))) {
+                        hasTriggered = true;
                         sendBleCommand("SWIPE");
                     }
                 }
@@ -473,7 +435,7 @@
             });
 
             btnManualSwipe.addEventListener('click', () => {
-                showToast("手動發送 SWIPE 指令！", "info");
+                showToast("手動發送藍牙測試信號", "info");
                 sendBleCommand("SWIPE");
             });
 
