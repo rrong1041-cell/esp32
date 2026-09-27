@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - 純語音聽覺互動故事書</title>
-    <!-- Tailwind CSS -->
+    <title>聲動奇境 - 長篇沈浸式有聲繪本</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     
     <script>
@@ -16,62 +13,36 @@
             theme: {
                 extend: {
                     colors: {
-                        magic: {
-                            dark: '#0f172a',
-                            card: '#1e1b4b',
-                            purple: '#8b5cf6',
-                            pink: '#ec4899',
-                            yellow: '#f59e0b',
-                            cyan: '#06b6d4',
-                            emerald: '#10b981'
-                        }
+                        magic: { dark: '#0f172a', card: '#1e1b4b', purple: '#8b5cf6', pink: '#ec4899', yellow: '#f59e0b', cyan: '#06b6d4', emerald: '#10b981' }
                     },
-                    fontFamily: {
-                        fredoka: ['Fredoka', 'Noto Sans TC', 'sans-serif']
-                    }
+                    fontFamily: { fredoka: ['Fredoka', 'Noto Sans TC', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
-        body {
-            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
-            background: radial-gradient(circle at top, #2e1065 0%, #0f172a 100%);
-            min-height: 100vh;
-        }
-        .glow-button {
-            box-shadow: 0 4px 20px rgba(236, 72, 153, 0.5);
-            transition: all 0.3s ease;
-        }
-        .glow-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(236, 72, 153, 0.7);
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-8px) rotate(2deg); }
-        }
-        .animate-float {
-            animation: float 4s ease-in-out infinite;
-        }
+        body { font-family: 'Fredoka', 'Noto Sans TC', sans-serif; background: radial-gradient(circle at top, #2e1065 0%, #0f172a 100%); min-height: 100vh; }
+        .glow-button { box-shadow: 0 4px 20px rgba(236, 72, 153, 0.5); transition: all 0.3s ease; }
+        .glow-button:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(236, 72, 153, 0.7); }
+        @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
+        .animate-float { animation: float 4s ease-in-out infinite; }
     </style>
 </head>
 <body class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between">
 
-    <!-- 頁頭與標題區域 -->
     <header class="w-full max-w-4xl text-center my-4 animate-float">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
             <i class="fa-solid font-bold fa-headphones-simple text-amber-400 text-xl"></i>
-            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">用耳朵聽故事・靠聲音指引動作</span>
+            <span class="text-amber-300 font-semibold tracking-wider text-sm md:text-base">10分鐘沉浸式冒險・每1分半互動一次</span>
         </div>
         <h1 class="text-4xl md:text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300 tracking-wide drop-shadow-md">
-            聲動奇境 ✨ 聲音互動繪本
+            聲動奇境 ✨ 長篇有聲繪本
         </h1>
     </header>
 
     <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
 
-        <!-- 左側面板：藍牙與設定控制 -->
+        <!-- 左側：藍牙連線控制 -->
         <section class="md:col-span-1 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
             <div>
                 <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
@@ -107,22 +78,22 @@
             </div>
         </section>
 
-        <!-- 右側面板：故事與聲音語音控制 -->
+        <!-- 右側：故事內容與朗讀 -->
         <section class="md:col-span-2 bg-slate-900/80 backdrop-blur-md p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
             <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[280px]">
                 <div id="storyContainer" class="overflow-y-auto max-h-[300px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-8">
                         <div class="text-5xl mb-3">🎧✨📖</div>
-                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好用耳朵展開冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400">點擊下方按鈕，語音會自動朗讀故事，並在遇到互動時發送藍牙信號！</p>
+                        <h3 class="text-lg font-bold text-purple-300 mb-1">準備好展開 10 分鐘沉浸式冒險了嗎？</h3>
+                        <p class="text-sm text-slate-400">系統將自動定時發送互動動作，陪伴孩子一邊聽故事一邊揮動！</p>
                     </div>
-                    <div id="storyText" class="text-lg leading-relaxed text-slate-300 hidden"></div>
+                    <div id="storyText" class="text-lg leading-relaxed text-slate-300 hidden whitespace-pre-line"></div>
                 </div>
 
                 <div id="actionIndicator" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
                         <i class="fa-solid fa-volume-high text-lg"></i>
-                        <span id="speechStatusText">正在聆聽故事與語音動作指引...</span>
+                        <span id="speechStatusText">正在聆聽長篇故事與動作指引...</span>
                     </div>
                 </div>
             </div>
@@ -155,13 +126,13 @@
                 </div>
 
                 <div id="customModeContainer" class="hidden space-y-2">
-                    <textarea id="manualStoryInput" rows="3" placeholder="請輸入故事。包含 SWIPE 或 互動 關鍵字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
+                    <textarea id="manualStoryInput" rows="3" placeholder="請輸入故事..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
                 </div>
 
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-lg flex items-center justify-center gap-3">
                         <i id="btnGenerateIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnGenerateText">生成並開始聽故事</span>
+                        <span id="btnGenerateText">開始 10 分鐘沉浸式聽故事</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 flex items-center justify-center text-xl transition">
                         <i class="fa-solid fa-play"></i>
@@ -175,10 +146,6 @@
         <i id="toastIcon" class="fa-solid fa-circle-info text-cyan-400 text-lg"></i>
         <span id="toastMessage" class="text-sm font-semibold">提示訊息</span>
     </div>
-
-    <footer class="w-full max-w-4xl text-center py-4 text-xs text-slate-500">
-        <p>聲動奇境 Web BLE App &copy; 2026 - Powered by Cloudflare Workers & Web Speech</p>
-    </footer>
 
     <script>
         const BLE_CONFIG = {
@@ -195,6 +162,9 @@
         let selectedTheme = "勇敢的小騎士與巨龍";
         let currentStory = "";
         let currentMode = 'ai';
+        let storyHistory = ""; 
+        let chapterCount = 0;
+        const MAX_CHAPTERS = 6; // 總共約 6 個章節，總時長可達 10 分鐘以上
 
         const btnConnect = document.getElementById('btnConnect');
         const btnDisconnect = document.getElementById('btnDisconnect');
@@ -224,19 +194,12 @@
 
         function showToast(message, type = 'info') {
             toastMessage.textContent = message;
-            if (type === 'error') {
-                toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400 text-lg';
-            } else if (type === 'success') {
-                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
-            } else {
-                toastIcon.className = 'fa-solid fa-circle-info text-cyan-400 text-lg';
-            }
+            toastIcon.className = type === 'error' ? 'fa-solid fa-circle-exclamation text-rose-400 text-lg' : 
+                                  type === 'success' ? 'fa-solid fa-circle-check text-emerald-400 text-lg' : 
+                                  'fa-solid fa-circle-info text-cyan-400 text-lg';
             toast.classList.remove('opacity-0', 'pointer-events-none');
             toast.classList.add('opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 3000);
+            setTimeout(() => { toast.classList.remove('opacity-100'); toast.classList.add('opacity-0', 'pointer-events-none'); }, 3000);
         }
 
         function updateConnectionState(state) {
@@ -260,25 +223,17 @@
         }
 
         async function connectBLE() {
-            if (!navigator.bluetooth) {
-                showToast('您的瀏覽器不支援 Web Bluetooth', 'error');
-                return;
-            }
+            if (!navigator.bluetooth) { showToast('瀏覽器不支援藍牙', 'error'); return; }
             try {
                 updateConnectionState('connecting');
-                showToast('尋找 ESP32 裝置中...', 'info');
-                bleDevice = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [BLE_CONFIG.serviceUuid]
-                });
+                bleDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [BLE_CONFIG.serviceUuid] });
                 bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
                 bleServer = await bleDevice.gatt.connect();
                 const service = await bleServer.getPrimaryService(BLE_CONFIG.serviceUuid);
                 bleCharacteristic = await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
                 updateConnectionState('connected');
-                showToast(`藍牙裝置連線成功！`, 'success');
+                showToast('藍牙裝置連線成功！', 'success');
             } catch (error) {
-                console.error(error);
                 updateConnectionState('disconnected');
                 if (error.name !== 'NotFoundError') showToast('連線失敗：' + error.message, 'error');
             }
@@ -298,70 +253,69 @@
 
         async function sendBleCommand(commandStr) {
             if (!bleCharacteristic) {
-                showToast("尚未連接藍牙裝置，無法發送指令", "error");
+                showToast("尚未連接藍牙裝置（已模擬觸發）", "info");
                 return false;
             }
             try {
                 const encoder = new TextEncoder();
                 await bleCharacteristic.writeValue(encoder.encode(commandStr));
-                showToast("✨ 已發送藍牙動作指令至 ESP32！", "success");
+                showToast("✨ 已成功發送藍牙動作至 ESP32！", "success");
                 return true;
             } catch (error) {
-                console.error(error);
                 showToast("藍牙發送失敗: " + error.message, "error");
                 return false;
             }
         }
 
-        async function generateAdventureStory() {
-            if (currentMode === 'custom') {
-                const manualText = manualStoryInput.value.trim();
-                if (!manualText) {
-                    showToast("請先輸入或貼上故事內容！", "error");
-                    return;
-                }
-                currentStory = manualText;
-                storyTextDiv.textContent = currentStory;
-                welcomeMessage.classList.add('hidden');
-                storyTextDiv.classList.remove('hidden');
-                btnSpeak.disabled = false;
-                showToast("自訂故事已載入！", "success");
-                speakStory();
+        async function generateAdventureStory(isNextChapter = false, actionTaken = "SWIPE") {
+            if (isNextChapter && chapterCount >= MAX_CHAPTERS) {
+                showToast("🎉 恭喜！10分鐘冒險旅程已圓滿完成！", "success");
+                speechStatusText.textContent = "🎉 10分鐘冒險已順利完整結束！";
                 return;
             }
 
-            const userCustomTopic = customThemeInput.value.trim();
-            const activeTopic = userCustomTopic || selectedTheme;
+            const activeTopic = customThemeInput.value.trim() || selectedTheme;
 
             btnGenerate.disabled = true;
-            btnGenerateText.textContent = "雲端故事編織中...";
+            btnGenerateText.textContent = isNextChapter ? `正在編織第 ${chapterCount + 1} 章...` : "正在規劃 10 分鐘長篇故事...";
             btnGenerateIcon.className = "fa-solid fa-spinner animate-spin";
 
             try {
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic: activeTopic })
+                    headers: { 'Content-Type': 'Application/json' },
+                    body: JSON.stringify({ 
+                        topic: activeTopic,
+                        history: isNextChapter ? storyHistory : "",
+                        action: actionTaken
+                    })
                 });
 
                 const data = await response.json();
                 if (!response.ok || !data.story) throw new Error(data.error || "無法取得故事");
 
-                currentStory = data.story;
+                if (isNextChapter) {
+                    currentStory += "\n\n" + data.story;
+                    chapterCount++;
+                } else {
+                    currentStory = data.story;
+                    chapterCount = 1;
+                }
+                storyHistory = currentStory;
+
                 storyTextDiv.textContent = currentStory;
                 welcomeMessage.classList.add('hidden');
                 storyTextDiv.classList.remove('hidden');
                 btnSpeak.disabled = false;
                 
-                showToast("故事生成完畢，開始朗讀！", "success");
+                showToast(isNextChapter ? `第 ${chapterCount} 章解鎖！繼續沉浸朗讀...` : "長篇故事生成完畢，開始 10 分鐘旅程！", "success");
                 speakStory();
 
             } catch (error) {
-                console.error(error);
                 showToast("生成失敗：" + error.message, "error");
             } finally {
                 btnGenerate.disabled = false;
-                btnGenerateText.textContent = "生成並開始聽故事";
+                btnGenerateText.textContent = "開始 10 分鐘沉浸式聽故事";
                 btnGenerateIcon.className = "fa-solid fa-wand-magic-sparkles";
             }
         }
@@ -382,15 +336,15 @@
 
             let hasTriggered = false;
             actionIndicator.classList.remove('hidden');
-            speechStatusText.textContent = "🎧 正在朗讀故事與語音動作指引...";
+            speechStatusText.textContent = `🎧 正在朗讀第 ${chapterCount}/${MAX_CHAPTERS} 章與互動指引...`;
             btnSpeak.innerHTML = `<i class="fa-solid fa-stop text-pink-400"></i>`;
 
             utterance.onboundary = function(event) {
                 if (event.charIndex !== undefined) {
                     const spokeTextSoFar = currentStory.substring(0, event.charIndex + (event.charLength || 1));
                     
-                    // 擴大觸發關鍵字：只要唸到「互動」、「SWIPE」、「揮動」、「選項」就會自動傳送藍牙給 ESP32
-                    if (!hasTriggered && (spokeTextSoFar.includes("互動") || spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動") || spokeTextSoFar.includes("選項"))) {
+                    // 偵測到互動關鍵字時，發送藍牙信號給 ESP32
+                    if (!hasTriggered && (spokeTextSoFar.includes("互動") || spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動") || spokeTextSoFar.includes("左側") || spokeTextSoFar.includes("右側"))) {
                         hasTriggered = true;
                         sendBleCommand("SWIPE");
                     }
@@ -400,6 +354,17 @@
             utterance.onend = function() {
                 actionIndicator.classList.add('hidden');
                 btnSpeak.innerHTML = `<i class="fa-solid fa-play"></i>`;
+                
+                // 每一章節朗讀結束後，如果還沒到達 10 分鐘上限，自動解鎖並產生下一章！
+                if (chapterCount < MAX_CHAPTERS) {
+                    speechStatusText.textContent = "✨ 互動完成！正在自動產生下一分鐘的冒險...";
+                    setTimeout(() => {
+                        generateAdventureStory(true, "SWIPE");
+                    }, 2000);
+                } else {
+                    speechStatusText.textContent = "🎉 10分鐘精彩冒險圓滿達成！";
+                    showToast("🎉 10分鐘精彩冒險圓滿達成！", "success");
+                }
             };
 
             window.speechSynthesis.speak(utterance);
@@ -438,12 +403,9 @@
                 aiModeContainer.classList.add('hidden');
             });
 
-            btnManualSwipe.addEventListener('click', () => {
-                sendBleCommand("SWIPE");
-            });
-
-            btnGenerate.addEventListener('click', generateAdventureStory);
-            btnSpeak.addEventListener('click', speakStory);
+            btnManualSwipe.addEventListener('click', () => { sendBleCommand("SWIPE"); });
+            btnGenerate.addEventListener('click', () => { chapterCount = 0; generateAdventureStory(false); });
+            btnSpeak.addEventListener('click', () => { speakStory(); });
         });
     </script>
 </body>
