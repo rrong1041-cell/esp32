@@ -114,16 +114,15 @@
                     <div id="welcomeMessage" class="text-center py-8">
                         <div class="text-5xl mb-3">🎧✨📖</div>
                         <h3 class="text-lg font-bold text-purple-300 mb-1">準備好用耳朵展開冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400">點擊下方按鈕，語音會自動朗讀故事，並在需要時用聲音告訴你做動作！</p>
+                        <p class="text-sm text-slate-400">點擊下方按鈕，語音會自動朗讀故事，並在遇到互動時發送藍牙信號！</p>
                     </div>
-                    <!-- 故事文字保留 (大人備用) -->
                     <div id="storyText" class="text-lg leading-relaxed text-slate-300 hidden"></div>
                 </div>
 
                 <div id="actionIndicator" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
                         <i class="fa-solid fa-volume-high text-lg"></i>
-                        <span id="speechStatusText">正在聆聽故事與語音提示...</span>
+                        <span id="speechStatusText">正在聆聽故事與語音動作指引...</span>
                     </div>
                 </div>
             </div>
@@ -156,7 +155,7 @@
                 </div>
 
                 <div id="customModeContainer" class="hidden space-y-2">
-                    <textarea id="manualStoryInput" rows="3" placeholder="請輸入故事。當需要小朋友做動作時，請在文字中加入例如：『小朋友！快揮動你的寶劍！』並確保包含 SWIPE 關鍵字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
+                    <textarea id="manualStoryInput" rows="3" placeholder="請輸入故事。包含 SWIPE 或 互動 關鍵字..." class="w-full bg-slate-800/90 border border-slate-700 focus:border-purple-400 rounded-xl p-3 text-xs md:text-sm text-slate-200 outline-none transition resize-none"></textarea>
                 </div>
 
                 <div class="flex gap-3">
@@ -298,13 +297,18 @@
         }
 
         async function sendBleCommand(commandStr) {
-            if (!bleCharacteristic) return false;
+            if (!bleCharacteristic) {
+                showToast("尚未連接藍牙裝置，無法發送指令", "error");
+                return false;
+            }
             try {
                 const encoder = new TextEncoder();
                 await bleCharacteristic.writeValue(encoder.encode(commandStr));
+                showToast("✨ 已發送藍牙動作指令至 ESP32！", "success");
                 return true;
             } catch (error) {
                 console.error(error);
+                showToast("藍牙發送失敗: " + error.message, "error");
                 return false;
             }
         }
@@ -385,8 +389,8 @@
                 if (event.charIndex !== undefined) {
                     const spokeTextSoFar = currentStory.substring(0, event.charIndex + (event.charLength || 1));
                     
-                    // 當語音唸到設定的指令關鍵字時，自動發送藍牙給 ESP32
-                    if (!hasTriggered && (spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動") || spokeTextSoFar.includes("動作"))) {
+                    // 擴大觸發關鍵字：只要唸到「互動」、「SWIPE」、「揮動」、「選項」就會自動傳送藍牙給 ESP32
+                    if (!hasTriggered && (spokeTextSoFar.includes("互動") || spokeTextSoFar.includes("SWIPE") || spokeTextSoFar.includes("揮動") || spokeTextSoFar.includes("選項"))) {
                         hasTriggered = true;
                         sendBleCommand("SWIPE");
                     }
@@ -435,7 +439,6 @@
             });
 
             btnManualSwipe.addEventListener('click', () => {
-                showToast("手動發送藍牙測試信號", "info");
                 sendBleCommand("SWIPE");
             });
 
