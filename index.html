@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - ESP32 藍牙繪本裝置</title>
+    <title>聲動奇境 - 藍牙繪本與 AI 故事生成</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -23,8 +23,9 @@
             border-radius: 16px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             box-sizing: border-box;
+            margin-bottom: 20px;
         }
-        h1 { font-size: 1.5rem; margin-top: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+        h1 { font-size: 1.4rem; margin-top: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
         .card {
             background: #334155;
             padding: 16px;
@@ -40,61 +41,90 @@
             margin-right: 8px;
         }
         .status-indicator.connected { background: #22c55e; }
-        button {
+        input, button {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             border: none;
             border-radius: 8px;
             font-size: 1rem;
+            box-sizing: border-box;
+            margin-top: 8px;
+        }
+        input {
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid #475569;
+        }
+        button {
             font-weight: bold;
             cursor: pointer;
-            margin-top: 8px;
             transition: opacity 0.2s;
         }
         button:active { opacity: 0.8; }
         .btn-primary { background: #3b82f6; color: white; }
+        .btn-ai { background: linear-gradient(135deg, #a855f7, #ec4899); color: white; }
         .btn-secondary { background: #475569; color: white; }
-        .log-box {
+        .log-box, .story-box {
             background: #0f172a;
             padding: 12px;
             border-radius: 8px;
+            font-size: 0.9rem;
+            margin-top: 12px;
+            line-height: 1.5;
+        }
+        .log-box {
             font-family: monospace;
             font-size: 0.85rem;
-            height: 120px;
+            height: 100px;
             overflow-y: auto;
             color: #34d399;
-            margin-top: 12px;
+        }
+        .story-box {
+            color: #e2e8f0;
+            min-height: 80px;
+            max-height: 200px;
+            overflow-y: auto;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🔮 藍牙繪本裝置</h1>
+    <h1>🔮 聲動奇境 AI 繪本</h1>
     
+    <!-- 藍牙連線卡片 -->
     <div class="card">
-        <h3>連線狀態</h3>
+        <h3>硬體連線狀態</h3>
         <p style="display: flex; align-items: center; margin: 8px 0;">
             <span id="statusDot" class="status-indicator"></span>
             <span id="statusText">尚未連線</span>
         </p>
-        <button id="connectBtn" class="btn-primary" onclick="toggleConnection()">連接故事裝置</button>
+        <button id="connectBtn" class="btn-primary" onclick="toggleConnection()">連接故事裝置 (ESP32)</button>
     </div>
 
+    <!-- AI 故事生成卡片 -->
     <div class="card">
-        <h3>測試 / 手動觸發模式</h3>
-        <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 0;">可手動點擊送出 SWIPE 信號或觸發震動。</p>
-        <button class="btn-secondary" onclick="sendSwipeSignal()">⚡ 手動觸發 SWIPE 揮動</button>
+        <h3>✨ AI 故事生成</h3>
+        <label style="font-size: 0.85rem; color: #94a3b8;">輸入故事主題：</label>
+        <input type="text" id="storyTopic" value="騎士與巨龍的奇幻冒險" placeholder="例如：尋找彩虹山頂的棉花糖巨龍">
+        <button class="btn-ai" onclick="generateAIStory()">🪄 開始 AI 冒險生成</button>
+        
+        <div id="storyOutput" class="story-box">點擊上方按鈕開始生成故事內容...</div>
     </div>
 
+    <!-- 測試與通訊紀錄 -->
     <div class="card">
-        <h3>即時通訊紀錄</h3>
-        <div id="logBox" class="log-box">等待藍牙指令與狀態...</div>
+        <h3>即時通訊與硬體紀錄</h3>
+        <button class="btn-secondary" onclick="sendSwipeSignal()">⚡ 測試發送震動信號</button>
+        <div id="logBox" class="log-box">等待藍牙指令與 AI 狀態...</div>
     </div>
 </div>
 
 <script>
-    // Web Bluetooth UUID 宣告 (需與 ESP32 端一致)
+    // 請將這裡替換成妳實際部署好的 Cloudflare Worker 網址
+    const WORKER_URL = "https://your-worker-subdomain.workers.dev"; 
+
+    // Web Bluetooth UUID 宣告
     const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aae";
 
@@ -131,7 +161,6 @@
             const service = await server.getPrimaryService(SERVICE_UUID);
             bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-            // 啟用通知以接收來自 ESP32 的訊息
             await bluetoothCharacteristic.startNotifications();
             bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
 
@@ -158,7 +187,7 @@
         } else {
             dot.classList.remove("connected");
             text.innerText = "尚未連線";
-            btn.innerText = "連接故事裝置";
+            btn.innerText = "連接故事裝置 (ESP32)";
             btn.style.background = "#3b82f6";
             bluetoothCharacteristic = null;
         }
@@ -173,8 +202,7 @@
         const value = new TextDecoder().decode(event.target.value);
         log(`收到硬體訊號: ${value}`);
         if (value.includes("SWIPE")) {
-            // 觸發後續動作
-            triggerStoryAdvance();
+            log("偵測到揮動，自動推進故事！");
         }
     }
 
@@ -193,10 +221,36 @@
         }
     }
 
-    function triggerStoryAdvance() {
-        log("觸發故事換頁 / 推進劇情！");
+    // 呼叫 Cloudflare Worker AI 生成故事
+    async function generateAIStory() {
+        const topic = document.getElementById("storyTopic").value;
+        const outputBox = document.getElementById("storyOutput");
+        
+        outputBox.innerText = "AI 正在努力編織故事中，請稍候...";
+        log(`正在向 Cloudflare AI 請求主題：${topic}`);
+
+        try {
+            const response = await fetch(WORKER_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "start", topic: topic })
+            });
+
+            const data = await response.json();
+            if (data.story) {
+                outputBox.innerText = data.story;
+                log("AI 故事生成成功！");
+            } else {
+                outputBox.innerText = "生成結果：" + JSON.stringify(data);
+                log("AI 回應格式異常");
+            }
+        } catch (error) {
+            outputBox.innerText = "AI 連線失敗：" + error;
+            log("AI 請求錯誤: " + error);
+        }
     }
 </script>
 
 </body>
 </html>
+
