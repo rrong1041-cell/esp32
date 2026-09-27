@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - 互動式有聲繪本</title>
+    <title>聲動奇境 - 多重互動有聲繪本</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -27,10 +27,10 @@
     <header class="w-full max-w-4xl text-center my-4">
         <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
             <i class="fa-solid font-bold fa-headphones-simple text-amber-400"></i>
-            <span class="text-amber-300 font-semibold text-sm">劇情互動模式・到點自動暫停、做完動作續播</span>
+            <span class="text-amber-300 font-semibold text-sm">多重動作模式・故事中隨時暫停與自動續播</span>
         </div>
         <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
-            聲動奇境 ✨ 互動繪本
+            聲動奇境 ✨ 智慧互動繪本
         </h1>
     </header>
 
@@ -56,21 +56,21 @@
             </div>
 
             <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
-                <h3 class="text-sm font-bold text-purple-300 mb-2">手動模擬動作</h3>
-                <button id="btnManualSwipe" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
-                    ✨ 模擬完成動作 (SWIPE)
+                <h3 class="text-sm font-bold text-purple-300 mb-2">手動測試互動</h3>
+                <button id="btnManualAction" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
+                    ✨ 模擬做完動作 (解鎖下一段)
                 </button>
             </div>
         </section>
 
-        <!-- 故事與朗讀顯示區 -->
+        <!-- 故事顯示區 -->
         <section class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6">
             <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
                 <div class="overflow-y-auto max-h-[320px] pr-2 space-y-4">
                     <div id="welcomeMessage" class="text-center py-10">
                         <div class="text-5xl mb-3">📖✨</div>
-                        <h3 class="text-lg font-bold text-purple-300">準備好體驗劇情互動了嗎？</h3>
-                        <p class="text-sm text-slate-400 mt-1">點擊下方按鈕，故事將在關鍵劇情處自動暫停，等待小朋友做動作！</p>
+                        <h3 class="text-lg font-bold text-purple-300">準備好體驗多重互動了嗎？</h3>
+                        <p class="text-sm text-slate-400 mt-1">故事中會有多個動作點，唸到該處會自動暫停，等待小朋友做動作後自動續播！</p>
                     </div>
                     <div id="storyDisplay" class="text-lg leading-relaxed text-slate-300 hidden whitespace-pre-line"></div>
                 </div>
@@ -78,7 +78,7 @@
                 <div id="actionPrompt" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
                         <i class="fa-solid fa-hand-sparkles text-lg"></i>
-                        <span id="promptText">🛑 劇情暫停：請小朋友對著裝置做動作來解鎖下一段！</span>
+                        <span id="promptText">🛑 請小朋友做動作來繼續故事...</span>
                     </div>
                 </div>
             </div>
@@ -93,7 +93,7 @@
                 <div class="flex gap-3">
                     <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
                         <i id="btnIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span id="btnText">開始互動冒險繪本</span>
+                        <span id="btnText">開始多重互動繪本</span>
                     </button>
                     <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
                         <i class="fa-solid fa-play"></i>
@@ -114,8 +114,8 @@
 
         let bleDevice = null, bleCharacteristic = null;
         let selectedTheme = "勇敢的小騎士與巨龍";
-        let storyChapters = [];
-        let currentChapter = 0;
+        let storyParts = [];
+        let currentPartIndex = 0;
         let waitingForAction = false;
 
         function showToast(msg) {
@@ -140,20 +140,33 @@
             }
         }
 
-        // 模擬動作或藍牙接收到完成訊號時觸發續播
-        function handleActionCompleted() {
+        async function sendBleSwipe() {
+            if (bleCharacteristic) {
+                try {
+                    const encoder = new TextEncoder();
+                    await bleCharacteristic.writeValue(encoder.encode("SWIPE"));
+                    showToast("✨ 已發送藍牙動作至 ESP32！");
+                } catch (err) {
+                    console.error("藍牙發送失敗", err);
+                }
+            } else {
+                showToast("（未連接藍牙，已模擬動作訊號）");
+            }
+        }
+
+        function resumeNextPart() {
             if (waitingForAction) {
                 waitingForAction = false;
                 document.getElementById('actionPrompt').classList.add('hidden');
-                showToast('✨ 動作完成！繼續接下來的冒險');
-                currentChapter++;
-                playChapter();
+                showToast('✨ 動作完成！繼續冒險');
+                currentPartIndex++;
+                playNextPart();
             }
         }
 
         async function generateStory() {
             const btn = document.getElementById('btnGenerate');
-            document.getElementById('btnText').textContent = "正在編寫互動冒險...";
+            document.getElementById('btnText').textContent = "正在編寫多互動點故事...";
             document.getElementById('btnIcon').className = "fa-solid fa-spinner animate-spin";
             btn.disabled = true;
 
@@ -166,38 +179,38 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
 
-                // 透過 ---CHAPTER--- 精準拆解成段落
-                storyChapters = data.story.split('---CHAPTER---').map(s => s.trim()).filter(s => s.length > 0);
-                currentChapter = 0;
+                // 透過 [ACTION] 精準拆解成多個小片段
+                storyParts = data.story.split('[ACTION]').map(s => s.trim()).filter(s => s.length > 0);
+                currentPartIndex = 0;
                 
                 document.getElementById('welcomeMessage').classList.add('hidden');
                 const display = document.getElementById('storyDisplay');
-                display.textContent = data.story.replace(/---CHAPTER---/g, '\n\n-------------------\n\n');
+                display.textContent = data.story.replace(/\[ACTION\]/g, '\n\n🛑 【動作互動點】\n\n');
                 display.classList.remove('hidden');
                 document.getElementById('btnSpeak').disabled = false;
 
-                showToast('故事生成完畢！準備開講');
-                playChapter();
+                showToast('故事生成完畢！包含多個互動點');
+                playNextPart();
             } catch (e) {
                 showToast('錯誤: ' + e.message);
             } finally {
-                document.getElementById('btnText').textContent = "開始互動冒險繪本";
+                document.getElementById('btnText').textContent = "開始多重互動繪本";
                 document.getElementById('btnIcon').className = "fa-solid fa-wand-magic-sparkles";
                 btn.disabled = false;
             }
         }
 
-        function playChapter() {
-            if (currentChapter >= storyChapters.length) {
-                showToast('🎉 恭喜完成 10 分鐘冒險！');
+        function playNextPart() {
+            if (currentPartIndex >= storyParts.length) {
+                showToast('🎉 恭喜完成所有冒險與動作！');
                 document.getElementById('actionPrompt').classList.remove('hidden');
-                document.getElementById('promptText').textContent = "🎉 恭喜！精彩冒險圓滿達成！";
+                document.getElementById('promptText').textContent = "🎉 恭喜！所有互動冒險圓滿達成！";
                 return;
             }
 
             if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
 
-            const text = storyChapters[currentChapter];
+            const text = storyParts[currentPartIndex];
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-TW';
             utterance.rate = 0.95;
@@ -205,12 +218,16 @@
             document.getElementById('actionPrompt').classList.add('hidden');
 
             utterance.onend = function() {
-                // 如果不是最後一段，唸完後精準暫停，等待小朋友動作！
-                if (currentChapter < storyChapters.length - 1) {
+                // 如果後面還有片段，唸到這裡就自動發送藍牙並暫停！
+                if (currentPartIndex < storyParts.length - 1) {
+                    sendBleSwipe();
                     waitingForAction = true;
                     document.getElementById('actionPrompt').classList.remove('hidden');
-                    document.getElementById('promptText').textContent = `🛑 第 ${currentChapter + 1} 段完成！請做動作解鎖下一段！`;
-                    showToast('🛑 故事已暫停，等待互動動作...');
+                    document.getElementById('promptText').textContent = `🛑 互動點 ${currentPartIndex + 1} 達成！請做動作解鎖下一段故事...`;
+                    showToast('🛑 故事已暫停，等待動作...');
+                } else {
+                    document.getElementById('actionPrompt').classList.remove('hidden');
+                    document.getElementById('promptText').textContent = "🎉 故事全部講完了！";
                 }
             };
 
@@ -219,7 +236,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btnConnect').addEventListener('click', connectBLE);
-            document.getElementById('btnManualSwipe').addEventListener('click', handleActionCompleted);
+            document.getElementById('btnManualAction').addEventListener('click', resumeNextPart);
             document.getElementById('btnGenerate').addEventListener('click', generateStory);
             
             document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -233,8 +250,8 @@
             document.getElementById('btnSpeak').addEventListener('click', () => {
                 if (window.speechSynthesis.speaking) {
                     window.speechSynthesis.cancel();
-                } else if (storyChapters.length > 0) {
-                    playChapter();
+                } else if (storyParts.length > 0) {
+                    playNextPart();
                 }
             });
         });
