@@ -135,10 +135,9 @@
 </div>
 
 <script>
-    // ⚠️ 請換成妳實際部署好的 Cloudflare Worker 網址
     const WORKER_URL = "https://empty-credit-1539.rrong1041.workers.dev"; 
 
-    // BLE 藍牙 UUID (必須與 ESP32 韌體完全一致)
+    // BLE 藍牙 UUID (確保全部為純小寫英文與數字)
     const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aae";
 
@@ -163,7 +162,6 @@
 
         try {
             log("正在搜尋 ESP32 藍牙裝置...");
-            // 透過 Bluefy (iOS) 或 Chrome (PC/Android) 搜尋裝置
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: "SmartStory" }, { namePrefix: "ESP32" }],
                 optionalServices: [SERVICE_UUID]
@@ -215,13 +213,11 @@
         updateConnectionState(false);
     }
 
-    // 接收硬體（按鈕或 MPU6050 揮動）傳來的訊號
     function handleNotifications(event) {
         const value = new TextDecoder().decode(event.target.value);
         log(`收到硬體指令: ${value}`);
         
         if (value.startsWith("MODE:")) {
-            // 收到實體按鈕切換模式的訊號
             currentStoryMode = value.split(":")[1];
             const badge = document.getElementById("currentModeBadge");
             if (currentStoryMode === "KIDS") {
@@ -236,13 +232,11 @@
             log(`系統模式已切換為：${badge.innerText}`);
         } 
         else if (value === "START_TRIGGER" || value === "SWIPE_ACTION") {
-            // 收到開始按鈕或體感揮動訊號 ➔ 自動推動故事下一步！
             log("偵測到實體互動觸發！AI 正在編寫下一步冒險...");
             generateAIStory("continue");
         }
     }
 
-    // 呼叫 Cloudflare Worker AI 生成故事
     async function generateAIStory(actionType = "start") {
         const topic = document.getElementById("storyTopic").value;
         const outputBox = document.getElementById("storyOutput");
@@ -257,7 +251,7 @@
                 body: JSON.stringify({ 
                     action: actionType, 
                     topic: topic,
-                    mode: currentStoryMode, // 傳遞目前是 孩童 或 長輩 模式
+                    mode: currentStoryMode,
                     context: currentStoryContext 
                 })
             });
@@ -265,10 +259,9 @@
             const data = await response.json();
             if (data.story) {
                 outputBox.innerText = data.story;
-                currentStoryContext = data.story; // 儲存脈絡給下次延伸
+                currentStoryContext = data.story;
                 log("AI 故事更新成功！");
 
-                // 回傳震動訊號給硬體，給予成功互動的物理反饋
                 sendHapticFeedback();
             } else {
                 outputBox.innerText = "回傳結果：" + JSON.stringify(data);
@@ -279,7 +272,6 @@
         }
     }
 
-    // 發送震動觸發指令回硬體
     async function sendHapticFeedback() {
         if (!bluetoothCharacteristic) return;
         try {
