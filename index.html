@@ -1,193 +1,202 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark">
-<title>聲動奇境｜AI互動式冒險裝置</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top,#312e81,#111827 70%);color:#fff;min-height:100vh;padding:18px}
-.card{max-width:560px;margin:auto;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:20px;backdrop-filter:blur(12px);box-shadow:0 18px 50px #0006}
-h1{font-size:25px;margin:0 0 4px} .sub{color:#c7d2fe;font-size:13px;margin-bottom:16px}
-.row{display:flex;gap:8px}.row>*{flex:1}
-button,input{font:inherit}button{border:0;border-radius:12px;padding:12px;cursor:pointer}
-.connect{background:#2563eb;color:white;font-weight:700}.start{background:linear-gradient(135deg,#ec4899,#7c3aed);color:#fff;font-weight:800;width:100%;margin-top:10px}
-select,input{width:100%;padding:11px;border-radius:11px;border:1px solid #ffffff33;background:#fff;color:#111827}
-label{display:block;font-size:13px;color:#cbd5e1;margin:12px 0 6px}
-.status{padding:9px 12px;border-radius:10px;background:#0005;margin:10px 0;font-size:13px}
-.ok{color:#86efac}.bad{color:#fca5a5}.story{margin-top:14px;background:#0f172acc;border-radius:16px;padding:17px;line-height:1.65;min-height:170px;white-space:pre-wrap}
-.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.choice{background:#ffffff18;color:#fff;border:1px solid #ffffff33}.choice:disabled{opacity:.35}
-.log{font-size:12px;color:#94a3b8;margin-top:12px;min-height:18px}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#4f46e533;color:#c7d2fe;font-size:12px;margin-top:4px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聲動奇境 - ESP32 藍牙繪本裝置</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: #1e293b;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+        h1 { font-size: 1.5rem; margin-top: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+        .card {
+            background: #334155;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+            margin-right: 8px;
+        }
+        .status-indicator.connected { background: #22c55e; }
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+        button:active { opacity: 0.8; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-secondary { background: #475569; color: white; }
+        .log-box {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            height: 120px;
+            overflow-y: auto;
+            color: #34d399;
+            margin-top: 12px;
+        }
+    </style>
 </head>
 <body>
-<div class="card">
-  <h1>✨ 聲動奇境</h1>
-  <div class="sub">AI互動式冒險裝置｜AI即時生成故事 × BLE體感互動</div>
 
-  <div class="row">
-    <button class="connect" id="bleBtn">🔗 連線 ESP32</button>
-    <div class="status" id="status">尚未連線</div>
-  </div>
+<div class="container">
+    <h1>🔮 藍牙繪本裝置</h1>
+    
+    <div class="card">
+        <h3>連線狀態</h3>
+        <p style="display: flex; align-items: center; margin: 8px 0;">
+            <span id="statusDot" class="status-indicator"></span>
+            <span id="statusText">尚未連線</span>
+        </p>
+        <button id="connectBtn" class="btn-primary" onclick="toggleConnection()">連接故事裝置</button>
+    </div>
 
-  <label>故事主題</label>
-  <select id="theme">
-    <option>騎士與巨龍</option>
-    <option>魔法森林</option>
-    <option>海底寶藏</option>
-    <option>太空探險</option>
-    <option>神秘古堡</option>
-  </select>
+    <div class="card">
+        <h3>測試 / 手動觸發模式</h3>
+        <p style="font-size: 0.9rem; color: #94a3b8; margin-top: 0;">可手動點擊送出 SWIPE 信號或觸發震動。</p>
+        <button class="btn-secondary" onclick="sendSwipeSignal()">⚡ 手動觸發 SWIPE 揮動</button>
+    </div>
 
-  <label>自訂主題（可留空）</label>
-  <input id="custom" placeholder="例如：尋找彩虹山頂的棉花糖巨龍">
-
-  <button class="start" id="startBtn">🪄 開始 AI 冒險</button>
-
-  <div class="badge" id="mode">等待開始</div>
-  <div class="story" id="story">按下「開始 AI 冒險」，AI 會真正生成第一段故事。接著你可以直接用 ESP32 的按鈕或體感動作決定故事走向。</div>
-  <div class="choices">
-    <button class="choice" id="a" disabled>A</button>
-    <button class="choice" id="b" disabled>B</button>
-    <button class="choice" id="c" disabled>C</button>
-  </div>
-  <div class="log" id="log"></div>
+    <div class="card">
+        <h3>即時通訊紀錄</h3>
+        <div id="logBox" class="log-box">等待藍牙指令與狀態...</div>
+    </div>
 </div>
 
 <script>
-const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a9";
-let characteristic = null;
-let history = [];
-let busy = false;
-let connectedDevice = null;
+    // Web Bluetooth UUID 宣告 (需與 ESP32 端一致)
+    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aae";
 
-// 已經幫妳填好正確的 Worker 網址了！
-const WORKER_API_URL = "https://empty-credit-1539.rrong1041.workers.dev/"; 
+    let bluetoothDevice = null;
+    let bluetoothCharacteristic = null;
 
-const $ = id => document.getElementById(id);
-function setStatus(t, cls=""){ $("status").textContent=t; $("status").className="status "+cls; }
-function log(t){ $("log").textContent=t; }
-
-function speak(text){
-  if(!("speechSynthesis" in window)) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "zh-TW";
-  u.rate = 0.95;
-  speechSynthesis.speak(u);
-}
-
-async function sendBLE(text){
-  if(!characteristic) return;
-  try{
-    await characteristic.writeValue(new TextEncoder().encode(text));
-  }catch(e){ log("BLE 傳送失敗："+e.message); }
-}
-
-function setChoices(choices){
-  const ids=["a","b","c"];
-  ids.forEach((id,i)=>{
-    const b=$(id);
-    b.textContent=choices && choices[i] ? choices[i] : ["選擇 A","選擇 B","選擇 C"][i];
-    b.disabled=!choices || !choices[i] || busy;
-  });
-}
-
-async function connectBluetooth(){
-  try{
-    if(!navigator.bluetooth) throw new Error("此瀏覽器不支援 Web Bluetooth。請使用 Android Chrome 或 iOS Bluefy App。");
-    setStatus("搜尋 ESP32…");
-    const device=await navigator.bluetooth.requestDevice({
-      filters:[{name:"SmartStoryBook"}],
-      optionalServices:[SERVICE_UUID]
-    });
-    connectedDevice=device;
-    device.addEventListener("gattserverdisconnected",()=>{ characteristic=null; setStatus("ESP32 已斷線","bad"); });
-    const server=await device.gatt.connect();
-    const service=await server.getPrimaryService(SERVICE_UUID);
-    characteristic=await service.getCharacteristic(CHARACTERISTIC_UUID);
-    if(characteristic.properties.notify){
-      await characteristic.startNotifications();
-      characteristic.addEventListener("characteristicvaluechanged", onBLEMessage);
+    function log(message) {
+        const box = document.getElementById("logBox");
+        box.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${message}</div>`;
+        box.scrollTop = box.scrollHeight;
     }
-    setStatus("✨ ESP32 已連線","ok");
-    log("按鈕／體感事件會自動送給 AI。");
-    await sendBLE("CONNECTED");
-  }catch(e){
-    console.error(e);
-    setStatus("連線失敗","bad");
-    log(e.message);
-  }
-}
 
-function onBLEMessage(event){
-  const value=new TextDecoder().decode(event.target.value).trim();
-  log("裝置事件："+value);
-  if(value==="BTN_A") continueStory("按下左鍵 A");
-  else if(value==="BTN_B") continueStory("按下中鍵 B");
-  else if(value==="BTN_C") continueStory("按下右鍵 C");
-  else if(value==="MOTION_SWING") continueStory("揮動手環");
-  else if(value==="MOTION_JUMP") continueStory("跳動手環");
-}
+    async function toggleConnection() {
+        if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+            await bluetoothDevice.gatt.disconnect();
+            updateConnectionState(false);
+            log("已中斷藍牙連線");
+            return;
+        }
 
-async function callAI(mode, action=""){
-  const theme=$("custom").value.trim() || $("theme").value;
-  const res=await fetch(WORKER_API_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({mode,theme,action,history})
-  });
-  if(!res.ok) throw new Error(await res.text());
-  return await res.json();
-}
+        try {
+            log("正在搜尋 ESP32 藍牙裝置...");
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: "SmartStory" }, { namePrefix: "ESP32" }],
+                optionalServices: [SERVICE_UUID]
+            });
 
-function renderStory(data){
-  $("story").textContent=data.story || "AI 沒有產生故事內容。";
-  $("mode").textContent=data.nextAction ? "🎯 "+data.nextAction : "✨ AI 故事";
-  setChoices(data.choices || []);
-  speak((data.story || "") + (data.choices?.length ? " " + data.choices.join("。") : ""));
-}
+            bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-async function startStory(){
-  if(busy) return;
-  busy=true; setChoices([]); $("story").textContent="🤖 AI 正在編織你的冒險…"; log("正在向 AI 請求第一段故事。");
-  try{
-    history=[];
-    const data=await callAI("start");
-    history.push({role:"assistant",...data});
-    renderStory(data);
-    await sendBLE("START_STORY");
-    log("第一段故事完成。現在直接操作 ESP32。");
-  }catch(e){
-    $("story").textContent="AI 連線失敗："+e.message;
-    log("請確認網路或 Worker 設定。");
-  }finally{busy=false; setChoices(history.at(-1)?.choices || []);}
-}
+            log("正在連線到 GATT 伺服器...");
+            const server = await bluetoothDevice.gatt.connect();
 
-async function continueStory(action){
-  if(busy || history.length===0) return;
-  busy=true; setChoices([]); $("mode").textContent="🤖 AI 正在判斷…"; log("收到："+action+"，AI 正在生成下一段。");
-  try{
-    history.push({role:"user",content:action});
-    const data=await callAI("continue",action);
-    history.push({role:"assistant",...data});
-    renderStory(data);
-    if(data.haptic) await sendBLE(data.haptic);
-    log("AI 已根據你的動作改變故事。");
-  }catch(e){
-    log("AI 生成失敗："+e.message);
-    setChoices(history.at(-2)?.choices || []);
-  }finally{busy=false;}
-}
+            log("正在尋找服務與特徵值...");
+            const service = await server.getPrimaryService(SERVICE_UUID);
+            bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-$("bleBtn").onclick=connectBluetooth;
-$("startBtn").onclick=startStory;
-$("a").onclick=()=>continueStory("按下左鍵 A");
-$("b").onclick=()=>continueStory("按下中鍵 B");
-$("c").onclick=()=>continueStory("按下右鍵 C");
+            // 啟用通知以接收來自 ESP32 的訊息
+            await bluetoothCharacteristic.startNotifications();
+            bluetoothCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
+
+            updateConnectionState(true);
+            log("藍牙連線成功！");
+
+        } catch (error) {
+            log("連線失敗: " + error);
+            console.error(error);
+            updateConnectionState(false);
+        }
+    }
+
+    function updateConnectionState(isConnected) {
+        const dot = document.getElementById("statusDot");
+        const text = document.getElementById("statusText");
+        const btn = document.getElementById("connectBtn");
+
+        if (isConnected) {
+            dot.classList.add("connected");
+            text.innerText = "已連線";
+            btn.innerText = "中斷連線";
+            btn.style.background = "#ef4444";
+        } else {
+            dot.classList.remove("connected");
+            text.innerText = "尚未連線";
+            btn.innerText = "連接故事裝置";
+            btn.style.background = "#3b82f6";
+            bluetoothCharacteristic = null;
+        }
+    }
+
+    function onDisconnected() {
+        log("裝置已斷線");
+        updateConnectionState(false);
+    }
+
+    function handleNotifications(event) {
+        const value = new TextDecoder().decode(event.target.value);
+        log(`收到硬體訊號: ${value}`);
+        if (value.includes("SWIPE")) {
+            // 觸發後續動作
+            triggerStoryAdvance();
+        }
+    }
+
+    async function sendSwipeSignal() {
+        if (!bluetoothCharacteristic) {
+            log("錯誤：尚未連接藍牙裝置");
+            alert("請先連接故事裝置！");
+            return;
+        }
+        try {
+            const encoder = new TextEncoder();
+            await bluetoothCharacteristic.writeValue(encoder.encode("TRIGGER_HAPTIC"));
+            log("已發送震動/觸發信號至 ESP32");
+        } catch (error) {
+            log("發送失敗: " + error);
+        }
+    }
+
+    function triggerStoryAdvance() {
+        log("觸發故事換頁 / 推進劇情！");
+    }
 </script>
+
 </body>
 </html>
-
