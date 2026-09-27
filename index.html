@@ -107,18 +107,11 @@
                 </button>
             </div>
 
-            <div class="space-y-2">
-                <label for="apiKeyInput" class="block text-xs font-semibold text-slate-400 flex items-center gap-1">
-                    <i class="fa-solid fa-key text-amber-400"></i> Gemini API Key (可選)
-                </label>
-                <input type="password" id="apiKeyInput" placeholder="貼上自訂 API Key (預設留空)" class="w-full bg-slate-800/80 border border-slate-700 focus:border-purple-400 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none transition">
-            </div>
-
-            <div id="iosNotice" class="text-xs text-slate-400 bg-slate-950/50 p-3 rounded-xl border border-slate-800">
-                <p class="flex items-start gap-1.5">
-                    <i class="fa-solid fa-circle-info text-cyan-400 mt-0.5"></i>
-                    <span><strong>提示：</strong> iOS 請使用 <a href="https://apps.apple.com/app/blueify-web-ble-browser/id1492822255" target="_blank" class="text-cyan-300 underline">Blueify App</a> 開啟以支援 Web BLE。</span>
+            <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 text-xs text-slate-400">
+                <p class="flex items-center gap-1.5 text-emerald-400 mb-1">
+                    <i class="fa-solid fa-shield-halved"></i> <strong>後端已安全串接</strong>
                 </p>
+                <p>故事生成已透過 Cloudflare Worker 守護，無需在前端設定 API Key。</p>
             </div>
         </section>
 
@@ -129,7 +122,7 @@
                     <div id="welcomeMessage" class="text-center py-8">
                         <div class="text-5xl mb-3">🗡️✨📖</div>
                         <h3 class="text-lg font-bold text-purple-300 mb-1">準備好開始奇幻冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400">點擊下方「生成冒險故事」，將為你召喚專屬的奇境故事！</p>
+                        <p class="text-sm text-slate-400">點擊下方「生成冒險故事」，將透過 Cloudflare 召喚專屬故事！</p>
                     </div>
                     <p id="storyText" class="text-lg md:text-xl leading-relaxed text-slate-100 hidden font-medium"></p>
                 </div>
@@ -195,14 +188,19 @@
     </div>
 
     <footer class="w-full max-w-4xl text-center py-4 text-xs text-slate-500">
-        <p>聲動奇境 Web BLE App &copy; 2026 - Powered by Gemini API & Web Speech</p>
+        <p>聲動奇境 Web BLE App &copy; 2026 - Powered by Cloudflare Workers & Web Speech</p>
     </footer>
+
     <script>
+        // 藍牙 UUID 設定（與 ESP32 完全對應）
         const BLE_CONFIG = {
             deviceName: '聲動奇境_BLE',
             serviceUuid: '4fa8691a-136d-4560-84ed-01354051b785',
             characteristicUuid: 'beb5483e-36e1-4688-b7f5-ea07361b26a8'
         };
+
+        // 妳的 Cloudflare Worker 網址
+        const WORKER_URL = 'https://empty-credit-1539.rrong1041.workers.dev';
 
         let bleDevice = null;
         let bleServer = null;
@@ -227,7 +225,6 @@
         const actionIndicator = document.getElementById('actionIndicator');
         const speechStatusText = document.getElementById('speechStatusText');
         const swipeBadge = document.getElementById('swipeBadge');
-        const apiKeyInput = document.getElementById('apiKeyInput');
         const toast = document.getElementById('toast');
         const toastMessage = document.getElementById('toastMessage');
         const toastIcon = document.getElementById('toastIcon');
@@ -238,6 +235,7 @@
         const customModeContainer = document.getElementById('customModeContainer');
         const customThemeInput = document.getElementById('customThemeInput');
         const manualStoryInput = document.getElementById('manualStoryInput');
+        const themeButtons = document.querySelectorAll('.theme-btn');
 
         function showToast(message, type = 'info') {
             toastMessage.textContent = message;
@@ -256,7 +254,6 @@
             }, 3000);
         }
 
-        // 關鍵：修復 updateConnectionState 未定義之問題
         function updateConnectionState(state) {
             if (state === 'connected') {
                 statusIndicator.className = 'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg shadow-emerald-500/50 animate-pulse';
@@ -368,39 +365,35 @@
 
             const userCustomTopic = customThemeInput.value.trim();
             const activeTopic = userCustomTopic || selectedTheme;
-            const apiKey = apiKeyInput.value.trim() || ""; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
             btnGenerate.disabled = true;
-            btnGenerateText.textContent = "故事編織中...";
+            btnGenerateText.textContent = "雲端故事編織中...";
             btnGenerateIcon.className = "fa-solid fa-spinner animate-spin";
 
-            const prompt = `你是一位充滿童趣的故事繪本大師。請為小朋友創作一段關於「${activeTopic}」的短篇冒險故事。字數約 100~150 字，故事高潮處包含關鍵指示語「揮動寶劍 (SWIPE)」或「揮動魔法棒 (SWIPE)」。`;
-
             try {
-                const response = await fetch(apiUrl, {
+                const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({ topic: activeTopic })
                 });
 
                 const data = await response.json();
-                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!response.ok || !data.story) {
+                    throw new Error(data.error || "無法取得故事內容");
+                }
 
-                if (!generatedText) throw new Error("無法取得故事內容");
-
-                currentStory = generatedText;
+                currentStory = data.story;
                 welcomeMessage.classList.add('hidden');
                 storyText.textContent = currentStory;
                 storyText.classList.remove('hidden');
                 btnSpeak.disabled = false;
                 
-                showToast("冒險故事已生成！", "success");
+                showToast("冒險故事已透過 Cloudflare 生成！", "success");
                 speakStory();
 
             } catch (error) {
-                console.error("Gemini API Error:", error);
-                showToast("生成故事失敗，請檢查網路或 Key", "error");
+                console.error("Worker Error:", error);
+                showToast("生成故事失敗：" + error.message, "error");
             } finally {
                 btnGenerate.disabled = false;
                 btnGenerateText.textContent = "生成冒險故事";
@@ -449,6 +442,19 @@
         document.addEventListener('DOMContentLoaded', () => {
             btnConnect.addEventListener('click', connectBLE);
             btnDisconnect.addEventListener('click', disconnectBLE);
+
+            themeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    themeButtons.forEach(b => {
+                        b.classList.remove('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
+                        b.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-300');
+                    });
+                    btn.classList.add('active', 'bg-purple-900/50', 'border-purple-500', 'text-purple-200');
+                    btn.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-300');
+                    selectedTheme = btn.getAttribute('data-theme');
+                    customThemeInput.value = '';
+                });
+            });
 
             tabAiMode.addEventListener('click', () => {
                 currentMode = 'ai';
