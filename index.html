@@ -69,7 +69,7 @@
                     <div id="welcomeMessage" class="text-center py-10">
                         <div class="text-5xl mb-3">📖✨</div>
                         <h3 class="text-lg font-bold text-purple-300">準備好開始冒險了嗎？</h3>
-                        <p class="text-sm text-slate-400 mt-1">故事將自動在手部動作指令處暫停，請搖晃硬體繼續！</p>
+                        <p class="text-sm text-slate-400 mt-1">選擇或自訂主題，故事將在手部動作處自動暫停！</p>
                     </div>
                     <div id="storyDisplay" class="text-lg leading-relaxed text-slate-300 hidden space-y-4"></div>
                 </div>
@@ -77,16 +77,23 @@
                 <div id="actionPrompt" class="hidden mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-sm bg-pink-950/40 p-3 rounded-xl border border-pink-500/30">
                     <div class="flex items-center gap-2 text-pink-400 font-bold animate-pulse">
                         <i class="fa-solid fa-hand-sparkles text-lg"></i>
-                        <span id="promptText">🛑 請依照上方提示做出動作，並搖晃硬體繼續...</span>
+                        <span id="promptText">🛑 請依照提示做出手部動作，並搖晃硬體繼續...</span>
                     </div>
                 </div>
             </div>
 
             <div class="space-y-4">
-                <div class="grid grid-cols-3 gap-2">
-                    <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-3 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
-                    <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
-                    <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
+                <!-- 主題選擇與自訂輸入 -->
+                <div class="space-y-2">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
+                        <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
+                        <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
+                    </div>
+                    <!-- 自訂主題輸入框 -->
+                    <div class="flex gap-2">
+                        <input type="text" id="customTopicInput" placeholder="或者輸入你想聽的自訂故事主題..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+                    </div>
                 </div>
                 
                 <div class="flex gap-3">
@@ -161,6 +168,10 @@
         }
 
         async function generateStory() {
+            // 優先檢查是否有在自訂輸入框打字，如果有就用自訂的；沒有就用按鈕選的
+            const customInput = document.getElementById('customTopicInput').value.trim();
+            const finalTopic = customInput !== "" ? customInput : selectedTheme;
+
             const btn = document.getElementById('btnGenerate');
             document.getElementById('btnText').textContent = "正在編寫互動冒險...";
             document.getElementById('btnIcon').className = "fa-solid fa-spinner animate-spin";
@@ -170,7 +181,7 @@
                 const res = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ topic: selectedTheme })
+                    body: JSON.stringify({ topic: finalTopic })
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
@@ -184,7 +195,6 @@
                 document.getElementById('welcomeMessage').classList.add('hidden');
                 const display = document.getElementById('storyDisplay');
                 
-                // 畫面渲染：在每一段（動作指令前）自動加上美觀的互動點標籤
                 display.innerHTML = storyChapters.map((chap, idx) => `
                     <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
                         <p class="text-slate-200">${chap}</p>
@@ -195,7 +205,7 @@
                 display.classList.remove('hidden');
                 document.getElementById('btnSpeak').disabled = false;
 
-                showToast('互動故事生成完畢！準備開始');
+                showToast(`以「${finalTopic}」生成故事完畢！`);
                 playCurrentChapter();
             } catch (e) {
                 showToast('錯誤: ' + e.message);
@@ -245,10 +255,16 @@
             
             document.querySelectorAll('.theme-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    document.querySelectorAll('.theme-btn').forEach(b => b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-3 rounded-xl text-xs font-semibold');
-                    e.target.className = 'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-3 rounded-xl text-xs font-semibold';
+                    document.querySelectorAll('.theme-btn').forEach(b => b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold');
+                    e.target.className = 'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold';
                     selectedTheme = e.target.getAttribute('data-theme');
+                    document.getElementById('customTopicInput').value = ""; // 點選預設主題時清空自訂輸入
                 });
+            });
+
+            document.getElementById('customTopicInput').addEventListener('input', () => {
+                // 當使用者在自訂輸入框打字時，取消預設按鈕的高亮
+                document.querySelectorAll('.theme-btn').forEach(b => b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold');
             });
 
             document.getElementById('btnSpeak').addEventListener('click', () => {
