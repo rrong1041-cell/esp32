@@ -260,7 +260,7 @@ async function handleAction(action) {
     await sendBLE("ACTION_OK");
 
     try {
-        const res = await fetch(WORKER_URL + '/api/action', {
+        const res = await fetch(WORKER_URL + '/api/story', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
