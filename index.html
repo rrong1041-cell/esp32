@@ -226,15 +226,18 @@ async function connectBLE() {
     }
 }
 
+// 已經加入大小寫轉換與去除空白的防呆接收函式
 function onBleEvent(event) {
-    const value = new TextDecoder().decode(event.target.value).trim();
-    console.log("收到硬體訊號:", value);
+    const value = new TextDecoder().decode(event.target.value).trim().toUpperCase();
+    console.log("收到處理後的硬體訊號:", value);
 
     if (!waitingForAction) return;
 
-    if (value === expectedAction) {
+    const cleanExpected = (expectedAction || "").trim().toUpperCase();
+
+    if (value === cleanExpected) {
         showToast('✨ 動作正確！AI 正在繼續故事...');
-        handleAction(value);
+        handleAction(expectedAction);
     } else {
         showToast('🫠 收到 ' + value + '，但目前需要：' + actionLabel(expectedAction));
         $('actionSubText').textContent = '目前需要：' + actionLabel(expectedAction);
