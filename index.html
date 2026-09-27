@@ -129,7 +129,7 @@ let history = [];
 let waitingForAction = false;
 let expectedAction = "";
 let busy = false;
-let lastActionTime = 0; // 新增：防止重複觸發的冷卻計時器
+let lastActionTime = 0;
 
 const $ = id => document.getElementById(id);
 
@@ -227,14 +227,12 @@ async function connectBLE() {
     }
 }
 
-// 加入 2 秒冷卻防呆的藍牙事件接收函式
 function onBleEvent(event) {
     const value = new TextDecoder().decode(event.target.value).trim().toUpperCase();
     console.log("收到處理後的硬體訊號:", value);
 
     if (!waitingForAction || busy) return;
 
-    // 檢查冷卻時間（2秒內重複傳送會被忽略）
     const now = Date.now();
     if (now - lastActionTime < 2000) {
         console.log("動作太頻繁，忽略此次重複訊號");
@@ -244,7 +242,7 @@ function onBleEvent(event) {
     const cleanExpected = (expectedAction || "").trim().toUpperCase();
 
     if (value === cleanExpected) {
-        lastActionTime = now; // 記錄本次觸發時間
+        lastActionTime = now;
         showToast('✨ 動作正確！AI 正在繼續故事...');
         handleAction(expectedAction);
     } else {
@@ -261,6 +259,32 @@ async function sendBLE(command) {
     } catch(e) {
         console.error('BLE 傳送失敗', e);
     }
+}
+
+// 🛡️ 輔助函式：安全解析可能被雙重包裝的 AI JSON 回應
+async function parseAIResponse(res) {
+    const rawData = await res.json();
+    if (!res.ok) throw new Error(rawData.error || 'AI 回應失敗');
+
+    // 檢查是不是被 OpenAI/Gemini 格式包裝 (choices[0].message.content)
+    let content = rawData;
+    if (rawData.choices && rawData.choices[0] && rawData.choices[0].message) {
+        content = rawData.choices[0].message.content;
+    }
+
+    // 如果內容是字串，嘗試將其解析為 JSON
+    if (typeof content === 'string') {
+        try {
+            // 清理可能存在的 markdown code block 標記
+            let cleanStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(cleanStr);
+        } catch (err) {
+            console.error("JSON 解析失敗，原始內容：", content);
+            // 如果無法解析成 JSON，退化處理：把整段文字當作故事
+            return { story: content, action: null, done: true };
+        }
+    }
+    return content;
 }
 
 async function handleAction(action) {
@@ -284,8 +308,7 @@ async function handleAction(action) {
             })
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'AI 回應失敗');
+        const data = await parseAIResponse(res);
 
         currentStory = data.story || "";
         history.push({
@@ -340,11 +363,11 @@ async function generateStory() {
             body:JSON.stringify({topic})
         });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'AI 生成失敗');
+        const data = await parseAIResponse(res);
 
         $('welcomeMessage').classList.add('hidden');
         $('storyDisplay').innerHTML = '';
+        $('storyDisplay').classList.remove('hidden');
         currentStory = data.story || '';
         history = [{role:'user', topic}, {role:'assistant', story:currentStory, action:data.action}];
 
