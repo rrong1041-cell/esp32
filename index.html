@@ -63,10 +63,8 @@ let history = [];
 let busy = false;
 let connectedDevice = null;
 
-// ==========================================
-// ⚠️ 重要：請把下方引號內的網址，換成妳自己的 Cloudflare Worker 網址！
-// ==========================================
-const WORKER_API_URL = "https://你的worker名稱.workers.dev/api/story"; 
+// 已經幫妳填好正確的 Worker 網址了！
+const WORKER_API_URL = "https://empty-credit-1539.rrong1041.workers.dev/"; 
 
 const $ = id => document.getElementById(id);
 function setStatus(t, cls=""){ $("status").textContent=t; $("status").className="status "+cls; }
@@ -99,7 +97,7 @@ function setChoices(choices){
 
 async function connectBluetooth(){
   try{
-    if(!navigator.bluetooth) throw new Error("此瀏覽器不支援 Web Bluetooth。如果是手機，請使用 Android Chrome 或 iOS 的 Bluefy App。");
+    if(!navigator.bluetooth) throw new Error("此瀏覽器不支援 Web Bluetooth。請使用 Android Chrome 或 iOS Bluefy App。");
     setStatus("搜尋 ESP32…");
     const device=await navigator.bluetooth.requestDevice({
       filters:[{name:"SmartStoryBook"}],
@@ -164,7 +162,7 @@ async function startStory(){
     log("第一段故事完成。現在直接操作 ESP32。");
   }catch(e){
     $("story").textContent="AI 連線失敗："+e.message;
-    log("請確認 Cloudflare Worker 網址是否正確。");
+    log("請確認網路或 Worker 設定。");
   }finally{busy=false; setChoices(history.at(-1)?.choices || []);}
 }
 
@@ -192,3 +190,4 @@ $("c").onclick=()=>continueStory("按下右鍵 C");
 </script>
 </body>
 </html>
+
