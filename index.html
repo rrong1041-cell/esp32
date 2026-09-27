@@ -131,15 +131,15 @@
     <div id="storyOutput" class="story-card">點擊上方「開始全新故事」或按下硬體按鈕來展開冒險吧！</div>
 
     <!-- 系統日誌 -->
-    <div id="logBox" class="log-box">[系統] 藍牙重構版本已就緒，等待連線...</div>
+    <div id="logBox" class="log-box">[系統] 新版 UUID 介面已就緒，等待連線...</div>
 </div>
 
 <script>
     const WORKER_URL = "https://empty-credit-1539.rrong1041.workers.dev"; 
 
-    // 嚴格規定全部小寫的標準 BLE UUID
-    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
-    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aae";
+    // 🔑 對應的新版 BLE UUID (確保與 ESP32 一致且全小寫)
+    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914c";
+    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26aaf";
 
     let bluetoothDevice = null;
     let bluetoothCharacteristic = null;
@@ -161,9 +161,8 @@
         }
 
         try {
-            log("正在搜尋藍牙裝置 (請確保 ESP32 正在廣播)...");
+            log("正在搜尋藍牙裝置 (SmartStory-ESP32)...");
             
-            // 使用更廣泛的過濾條件，只要名稱含有 SmartStory 或 ESP32 都能被抓到
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 filters: [
                     { namePrefix: "SmartStory" }, 
