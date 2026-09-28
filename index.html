@@ -95,7 +95,7 @@
         // ==========================================
         // 請在此填入您的 Cloudflare Worker 網址
         // ==========================================
-        const WORKER_URL = "https://your-worker-subdomain.workers.dev"; 
+        const WORKER_URL = "https://empty-credit-1539.rrong1041.workers.dev"; 
 
         let currentMode = 'child'; // 'child' 或 'senior'
         let selectedTheme = '魔法森林探險';
@@ -300,8 +300,8 @@
                 });
 
                 const server = await bluetoothDevice.gatt.connect();
-                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
-                rxCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+                const service = await server.getPrimaryService('4fa8691a-136d-4560-84ed-01354051b785');
+                rxCharacteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
 
                 await rxCharacteristic.startNotifications();
                 rxCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
