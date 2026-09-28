@@ -168,12 +168,21 @@ function showToast(msg) {
     }, 3000);
 }
 
-// 切換模式函式 (可由網頁點擊或 ESP32 藍牙觸發)
+// 語音朗讀函式 (確保會把文字與動作唸出來)
+function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel(); // 停止先前的語音，避免重疊
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-TW';
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
+}
+
+// 切換模式函式
 async function switchMode(mode, notifyDevice = true) {
     currentMode = mode;
     const isSenior = (mode === 'senior');
 
-    // 切換樣式
     if (isSenior) {
         $('appBody').classList.add('mode-senior');$('modeChildBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white";
         $('modeSeniorBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md";
@@ -183,7 +192,6 @@ async function switchMode(mode, notifyDevice = true) {
         $('welcomeTitle').textContent = "準備好開始今日健康活動了嗎？";
         $('welcomeDesc').textContent = "選擇安全坐姿伸展主題，跟著語音指示輕鬆活動筋骨。";
         
-        // 長輩模式推薦主題
         selectedTheme = "輕鬆坐姿手部健康伸展";
         $('themeButtonsContainer').innerHTML = `
             <button data-theme="難度1" class="theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">🙌 手部健康伸展</button>
@@ -191,6 +199,7 @@ async function switchMode(mode, notifyDevice = true) {
             <button data-theme="難度3" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌟 活力健康動</button>
         `;
         showToast('已切換至【長輩模式】');
+        speak('已切換至長輩模式');
     } else {
         $('appBody').classList.remove('mode-senior');$('modeChildBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md";
         $('modeSeniorBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white";
@@ -200,7 +209,6 @@ async function switchMode(mode, notifyDevice = true) {
         $('welcomeTitle').textContent = "準備好開始冒險了嗎？";
         $('welcomeDesc').textContent = "選擇或自訂主題，AI 會即時生成故事並在互動處停下。";
 
-        // 兒童模式推薦主題
         selectedTheme = "勇敢的小騎士與巨龍";
         $('themeButtonsContainer').innerHTML = `
             <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
@@ -208,12 +216,11 @@ async function switchMode(mode, notifyDevice = true) {
             <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
         `;
         showToast('已切換至【兒童冒險模式】');
+        speak('已切換至兒童冒險模式');
     }
 
-    // 重新綁定新產生按鈕的點擊事件
     bindThemeButtons();
 
-    // 如果藍牙已連線，發送指令給 ESP32 同步模式
     if (notifyDevice && bleCharacteristic) {
         await sendBLE(isSenior ? "MODE_SENIOR" : "MODE_CHILD");
     }
@@ -223,9 +230,7 @@ function bindThemeButtons() {
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.addEventListener('click', e => {
             document.querySelectorAll('.theme-btn').forEach(b => {
-                b.className = currentMode === 'senior' 
-                    ? 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold'
-                    : 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+                b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
             });
             e.currentTarget.className = currentMode === 'senior'
                 ? 'theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold'
@@ -242,10 +247,10 @@ function actionLabel(action) {
         SWIPE_RIGHT: currentMode === 'senior' ? "請慢慢向右移動手臂" : "請向右揮動手環",
         JUMP:        currentMode === 'senior' ? "請保持坐姿，伸展放鬆" : "請向上跳一下",
         SHAKE:       currentMode === 'senior' ? "請輕輕搖動手臂" : "請搖晃手環",
-        RUN:         currentMode === 'senior' ? "請原地輕鬆擺動雙臂" : "請原地跑步(手臂前後擺動)",
+        RUN:         currentMode === 'senior' ? "請原地輕鬆擺動雙臂" : "請原地跑步",
         ARM_UP:      "請慢慢將雙手抬起來"
     };
-    return map[action] || "📳 請依照提示操作裝置";
+    return map[action] || "請依照提示操作裝置";
 }
 
 function appendStory(title, text, action, resultText="") {
@@ -280,7 +285,7 @@ function appendStory(title, text, action, resultText="") {
 
 async function connectBLE() {
     if (!navigator.bluetooth) {
-        showToast('此瀏覽器不支援 Web Bluetooth，請用支援的瀏覽器。');
+        showToast('此瀏覽器不支援 Web Bluetooth');
         return;
     }
 
@@ -310,18 +315,17 @@ async function connectBLE() {
 
         await sendBLE("READY");
         showToast('藍牙連線成功！');
+        speak('藍牙連線成功');
     } catch (e) {
         console.error(e);
         showToast('藍牙連線失敗：' + e.message);
     }
 }
 
-// 接收來自硬體 ESP32 的藍牙事件
 function onBleEvent(event) {
     const value = new TextDecoder().decode(event.target.value).trim().toUpperCase();
     console.log("收到硬體訊號:", value);
 
-    // 支援從 ESP32 按下按鈕切換模式的訊號
     if (value === "SWITCH_MODE_SENIOR" || value === "MODE_SENIOR") {
         switchMode('senior', false);
         return;
@@ -341,9 +345,11 @@ function onBleEvent(event) {
     if (value === cleanExpected) {
         lastActionTime = now;
         showToast('✨ 動作正確！正在繼續...');
+        speak('動作正確！');
         handleAction(expectedAction);
     } else {
         showToast('收到 ' + value + '，目前需要：' + actionLabel(expectedAction));
+        speak('請依照指示：' + actionLabel(expectedAction));
         $('actionSubText').textContent = '目前需要：' + actionLabel(expectedAction);
     }
 }
@@ -391,7 +397,7 @@ async function handleAction(action) {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
-                mode: currentMode, // 傳遞目前模式給 Worker
+                mode: currentMode,
                 topic: selectedTheme,
                 action,
                 currentStory
@@ -404,7 +410,10 @@ async function handleAction(action) {
         history.push({ role: "assistant", story: currentStory, action: data.action || null });
 
         appendStory(currentMode === 'senior' ? '🌿 AI 健康活動' : '🤖 AI 繼續冒險', currentStory, data.done ? null : data.action);
-        speak(currentStory + (data.actionLabel ? ' ' + data.actionLabel : ''));
+        
+        // 💡 確保故事跟動作指示都被唸出來
+        const actionStr = data.action ? ' ' + (data.actionLabel || actionLabel(data.action)) : '';
+        speak(currentStory + actionStr);
 
         if (data.done) {
             $('actionPrompt').classList.remove('hidden');
@@ -447,9 +456,9 @@ async function generateStory() {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
-                mode: currentMode, // 傳遞目前模式
+                mode: currentMode,
                 topic: topic,
-                difficulty: "easy" // 長輩模式預設難度
+                difficulty: "easy"
             })
         });
 
@@ -462,7 +471,10 @@ async function generateStory() {
         history = [{role:'user', topic}, {role:'assistant', story:currentStory, action:data.action}];
 
         appendStory(currentMode === 'senior' ? '🌿 AI 健康活動開始' : '📖 AI 第一章', currentStory, data.done ? null : data.action);
-        speak(currentStory + (data.actionLabel ? ' ' + data.actionLabel : ''));
+        
+        // 💡 朗讀剛生成的內容與動作提示
+        const actionStr = data.action ? ' ' + (data.actionLabel || actionLabel(data.action)) : '';
+        speak(currentStory + actionStr);
 
         $('btnSpeak').disabled = false;
 
@@ -491,15 +503,6 @@ async function generateStory() {
     }
 }
 
-function speak(text) {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'zh-TW';
-    utterance.rate = 0.95;
-    window.speechSynthesis.speak(utterance);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     $('btnConnect').addEventListener('click', connectBLE);
     $('btnGenerate').addEventListener('click', generateStory);
@@ -519,9 +522,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 播放按鈕：點擊後會重新唸出當前故事與動作指示
     $('btnSpeak').addEventListener('click', () => {
-        if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-        else if (currentStory) speak(currentStory + ' ' + (expectedAction ? actionLabel(expectedAction) : ''));
+        if (currentStory) {
+            const actStr = expectedAction ? ' ' + actionLabel(expectedAction) : '';
+            speak(currentStory + actStr);
+        }
     });
 });
 </script>
