@@ -1,529 +1,332 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聲動奇境 - 智慧互動繪本</title>
+    <title>聲動奇境 - 體感互動系統</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { 
-                        magic: { dark: '#0f172a', card: '#1e1b4b', purple: '#8b5cf6', pink: '#ec4899', cyan: '#06b6d4' },
-                        senior: { dark: '#064e3b', card: '#022c22', green: '#10b981', amber: '#f59e0b' }
-                    },
-                    fontFamily: { fredoka: ['Fredoka', 'Noto Sans TC', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
     <style>
-        body { font-family: 'Fredoka', 'Noto Sans TC', sans-serif; background: radial-gradient(circle at top, #2e1065 0%, #0f172a 100%); min-height: 100vh; transition: background 0.5s ease; }
-        body.mode-senior { background: radial-gradient(circle at top, #064e3b 0%, #022c22 100%); }
-        .glow-button { box-shadow: 0 4px 20px rgba(236, 72, 153, 0.5); transition: all 0.3s ease; }
-        body.mode-senior .glow-button { box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5); background: linear-gradient(to right, #059669, #10b981, #34d399) !important; }
-        .action-big { animation: pulseGlow 1.6s infinite; }
-        @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0 rgba(236,72,153,.1); } 50% { box-shadow: 0 0 24px rgba(236,72,153,.35); } }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body { font-family: 'NotoSans TC', sans-serif; }
     </style>
 </head>
-<body class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between" id="appBody">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between p-4 md:p-8">
 
-<header class="w-full max-w-4xl text-center my-4">
-    <!-- 模式切換橫幅 -->
-    <div class="flex justify-center items-center gap-4 mb-4">
-        <div class="inline-flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 shadow-xl">
-            <button id="modeChildBtn" onclick="switchMode('child')" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md">
-                <i class="fa-solid fa-child"></i> 兒童模式
-            </button>
-            <button id="modeSeniorBtn" onclick="switchMode('senior')" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white">
-                <i class="fa-solid fa-person-cane"></i> 長輩模式 (請坐在有椅背的椅子上)
-            </button>
-        </div>
-    </div>
-
-    <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg" id="topBadge">
-        <i class="fa-solid font-bold fa-headphones-simple text-amber-400"></i>
-        <span class="text-amber-300 font-semibold text-sm" id="badgeText">沈浸式互動繪本・聽完動作指示後完成動作繼續</span>
-    </div>
-    <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300" id="mainTitle">
-        聲動奇境 ✨ 智慧互動繪本
-    </h1>
-</header>
-
-<main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
-    <!-- 左側：藍牙連線區 -->
-    <section class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6" id="leftCard">
-        <div>
-            <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
-                <i class="fa-bluetooth-b fab text-cyan-400"></i> 藍牙連線
-            </h2>
-            <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span id="statusIndicator" class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow"></span>
-                    <div>
-                        <div class="text-xs text-slate-400">狀態</div>
-                        <div id="statusText" class="font-bold text-slate-200 text-sm">尚未連線</div>
-                    </div>
-                </div>
-                <i id="statusIcon" class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"></i>
+    <!-- 頂部標題列 -->
+    <header class="flex justify-between items-center max-w-4xl mx-auto w-full bg-slate-900/80 border border-slate-800 px-6 py-4 rounded-2xl backdrop-blur-md shadow-xl">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-emerald-500/20">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
-            <button id="btnConnect" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">
-                連接故事裝置
+            <div>
+                <h1 class="font-black text-lg tracking-wide bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">聲動奇境</h1>
+                <p class="text-xs text-slate-400" id="modeSubtitle">AI 體感互動冒險系統</p>
+            </div>
+        </div>
+
+        <!-- 模式切換與藍牙狀態 -->
+        <div class="flex items-center gap-3">
+            <div class="flex bg-slate-950 border border-slate-800 p-1 rounded-xl">
+                <button onclick="switchMode('child')" id="btnModeChild" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500 text-slate-950 shadow">兒童模式</button>
+                <button onclick="switchMode('senior')" id="btnModeSenior" class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white">長輩模式</button>
+            </div>
+            <button onclick="connectBluetooth()" id="btnBle" class="flex items-center gap-2 bg-slate-900 border border-slate-700 hover:border-emerald-500 px-4 py-2 rounded-xl text-xs font-bold transition-all">
+                <i class="fa-brands fa-bluetooth text-cyan-400"></i>
+                <span id="bleText">連接手環</span>
             </button>
         </div>
+    </header>
 
-        <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
-            <h3 class="text-sm font-bold text-purple-300 mb-2">手動測試互動</h3>
-            <button id="btnManualAction" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
-                ✨ 模擬做完動作 (解鎖下一段)
-            </button>
-            <p id="deviceHint" class="text-xs text-slate-400 mt-3 leading-relaxed">
-                裝置實體按鈕可切換模式。<br>
-                動作請依照目前模式指示操作 (揮動、跳躍或抬手)。
-            </p>
-        </div>
-    </section>
-
-    <!-- 右側：故事區 -->
-    <section class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6" id="rightCard">
-        <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
-            <div class="overflow-y-auto max-h-[360px] pr-2 space-y-4" id="storyScroll">
-                <div id="welcomeMessage" class="text-center py-10">
-                    <div class="text-5xl mb-3" id="welcomeIcon">📖✨</div>
-                    <h3 class="text-lg font-bold text-purple-300" id="welcomeTitle">準備好開始冒險了嗎？</h3>
-                    <p class="text-sm text-slate-400 mt-1" id="welcomeDesc">選擇或自訂主題，AI 會即時生成故事並在互動處停下。</p>
-                </div>
-                <div id="storyDisplay" class="text-lg leading-relaxed text-slate-300 hidden space-y-4"></div>
-            </div>
-
-            <div id="actionPrompt" class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl border border-pink-500/30 action-big">
-                <div class="flex items-center gap-2 text-pink-300 font-bold" id="actionHeaderBox">
-                    <i class="fa-solid fa-hand-sparkles text-xl"></i>
-                    <span id="promptText">請依照提示做出動作。</span>
-                </div>
-                <div id="actionSubText" class="text-sm text-slate-300 mt-2"></div>
-            </div>
-        </div>
-
-        <div class="space-y-4">
-            <!-- 依據模式變動的主題選項 -->
-            <div class="space-y-2">
-                <div class="grid grid-cols-3 gap-2" id="themeButtonsContainer">
-                    <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
-                    <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
-                    <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="customTopicInput" placeholder="或者輸入故事主題、坐姿健康操" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
-                </div>
-            </div>
-
-            <div class="flex gap-3">
-                <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
-                    <i id="btnIcon" class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span id="btnText">開始精彩故事冒險</span>
-                </button>
-                <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
-                    <i class="fa-solid fa-play"></i>
-                </button>
-            </div>
-        </div>
-    </section>
-</main>
-
-<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 text-sm font-semibold"></div>
-
-<script>
-const BLE_CONFIG = {
-    serviceUuid: '4fa8691a-136d-4560-84ed-01354051b785',
-    characteristicUuid: 'beb5483e-36e1-4688-b7f5-ea07361b26a8'
-};
-
-const WORKER_URL = 'https://empty-credit-1539.rrong1041.workers.dev';
-
-let bleDevice = null;
-let bleCharacteristic = null;
-let currentMode = "child"; // 'child' 或 'senior'
-let selectedTheme = "勇敢的小騎士與巨龍";
-let currentStory = "";
-let history = [];
-let waitingForAction = false;
-let expectedAction = "";
-let busy = false;
-let lastActionTime = 0;
-
-const $ = id => document.getElementById(id);
-
-function showToast(msg) {
-    const t = $('toast');
-    t.textContent = msg;
-    t.classList.remove('opacity-0','pointer-events-none');
-    t.classList.add('opacity-100');
-    setTimeout(() => {
-        t.classList.remove('opacity-100');
-        t.classList.add('opacity-0','pointer-events-none');
-    }, 3000);
-}
-
-// 切換模式函式 (可由網頁點擊或 ESP32 藍牙觸發)
-async function switchMode(mode, notifyDevice = true) {
-    currentMode = mode;
-    const isSenior = (mode === 'senior');
-
-    // 切換樣式
-    if (isSenior) {
-        $('appBody').classList.add('mode-senior');$('modeChildBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white";
-        $('modeSeniorBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md";
-        $('mainTitle').className = "text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300";
-        $('badgeText').textContent = "長輩模式・全程坐姿，輕鬆健康動一動";
-        $('welcomeIcon').textContent = "🌿✨";
-        $('welcomeTitle').textContent = "準備好開始今日健康活動了嗎？";
-        $('welcomeDesc').textContent = "選擇安全坐姿伸展主題，跟著語音指示輕鬆活動筋骨。";
+    <!-- 主畫面容器 -->
+    <main class="max-w-4xl mx-auto w-full my-6 flex-1 flex flex-col justify-center">
         
-        // 長輩模式推薦主題
-        selectedTheme = "輕鬆坐姿手部健康伸展";
-        $('themeButtonsContainer').innerHTML = `
-            <button data-theme="輕鬆坐姿手部健康伸展" class="theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">🙌 手部健康伸展</button>
-            <button data-theme="溫和肩頸放鬆操" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🧘 肩頸放鬆操</button>
-            <button data-theme="快樂活力健康動" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌟 活力健康動</button>
-        `;
-        showToast('已切換至【長輩模式】');
-    } else {
-        $('appBody').classList.remove('mode-senior');$('modeChildBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md";
-        $('modeSeniorBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white";
-        $('mainTitle').className = "text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300";
-        $('badgeText').textContent = "沈浸式互動繪本・聽完動作指示後完成動作繼續";
-        $('welcomeIcon').textContent = "📖✨";
-        $('welcomeTitle').textContent = "準備好開始冒險了嗎？";
-        $('welcomeDesc').textContent = "選擇或自訂主題，AI 會即時生成故事並在互動處停下。";
+        <!-- 初始設定畫面 (選擇主題或難度) -->
+        <section id="setupSection" class="bg-slate-900/60 border border-slate-800 rounded-3xl p-8 backdrop-blur-md shadow-2xl space-y-6">
+            <div class="text-center space-y-2">
+                <div class="inline-flex p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 text-2xl mb-1">
+                    <i class="fa-solid fa-compass" id="setupIcon"></i>
+                </div>
+                <h2 class="text-2xl font-black tracking-wide" id="setupTitle">準備好展開今日冒險了嗎？</h2>
+                <p class="text-sm text-slate-400" id="setupDesc">選擇喜愛的故事主題，跟著語音與體感手環一起探索奇幻世界。</p>
+            </div>
 
-        // 兒童模式推薦主題
-        selectedTheme = "勇敢的小騎士與巨龍";
-        $('themeButtonsContainer').innerHTML = `
-            <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
-            <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
-            <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
-        `;
-        showToast('已切換至【兒童模式】');
-    }
+            <!-- 動態主題或難度選單區塊 -->
+            <div class="space-y-3" id="themeButtonsContainer">
+                <!-- 預設由 JS 渲染 -->
+            </div>
 
-    // 重新綁定新產生按鈕的點擊事件
-    bindThemeButtons();
+            <!-- 開始按鈕 -->
+            <button onclick="generateStory()" id="btnGenerate" class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20 hover:opacity-95 transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play" id="btnIcon"></i>
+                <span id="btnText">開始精彩故事冒險</span>
+            </button>
+        </section>
 
-    // 如果藍牙已連線，發送指令給 ESP32 同步模式
-    if (notifyDevice && bleCharacteristic) {
-        await sendBLE(isSenior ? "MODE_SENIOR" : "MODE_CHILD");
-    }
-}
+        <!-- 互動進行中畫面 (預設隱藏) -->
+        <section id="gameSection" class="hidden bg-slate-900/60 border border-slate-800 rounded-3xl p-8 backdrop-blur-md shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <span id="currentStatusTag" class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">冒險進行中</span>
+                <button onclick="resetGame()" class="text-xs text-slate-400 hover:text-white transition-all"><i class="fa-solid fa-rotate-left mr-1"></i>重新開始</button>
+            </div>
 
-function bindThemeButtons() {
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
-            document.querySelectorAll('.theme-btn').forEach(b => {
-                b.className = currentMode === 'senior' 
-                    ? 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold'
-                    : 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+            <!-- AI 故事文字顯示 -->
+            <div class="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-6 min-h-[140px] flex items-center">
+                <p id="storyText" class="text-lg md:text-xl leading-relaxed text-slate-200 font-medium">載入故事中...</p>
+            </div>
+
+            <!-- 目標動作指示 -->
+            <div class="bg-gradient-to-r from-emerald-950/40 to-cyan-950/40 border border-emerald-500/30 rounded-2xl p-6 text-center space-y-2">
+                <p class="text-xs uppercase tracking-widest text-emerald-400 font-bold">請完成下列動作指令</p>
+                <h3 id="actionLabel" class="text-2xl md:text-3xl font-black text-white">等待指令...</h3>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部資訊 -->
+    <footer class="text-center text-xs text-slate-500 max-w-4xl mx-auto w-full">
+        聲動奇境 AI Interactive System &bull; Powered by Cloudflare Workers AI
+    </footer>
+
+    <!-- JavaScript 邏輯 -->
+    <script>
+        // ==========================================
+        // 請在此填入您的 Cloudflare Worker 網址
+        // ==========================================
+        const WORKER_URL = "https://your-worker-subdomain.workers.dev"; 
+
+        let currentMode = 'child'; // 'child' 或 'senior'
+        let selectedTheme = '魔法森林探險';
+        let selectedDifficulty = 1; // 長輩模式難度 (1, 2, 3)
+        let currentStory = "";
+        let currentAction = "";
+        let isWaitingAI = false;
+
+        // 藍牙變數
+        let bluetoothDevice = null;
+        let rxCharacteristic = null;
+
+        const $ = (id) => document.getElementById(id);
+
+        // 初始化畫面主題按鈕
+        function initThemeButtons() {
+            const container = $('themeButtonsContainer');
+            if (currentMode === 'child') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <button onclick="selectTheme('魔法森林探險')" class="theme-btn p-4 rounded-2xl border text-left transition-all bg-emerald-950/40 border-emerald-500 text-white font-bold text-sm flex flex-col gap-1">
+                            <i class="fa-solid fa-tree text-emerald-400"></i> 魔法森林探險
+                        </button>
+                        <button onclick="selectTheme('太空星際漫遊')" class="theme-btn p-4 rounded-2xl border text-left transition-all bg-slate-900 border-slate-800 text-slate-300 font-bold text-sm flex flex-col gap-1">
+                            <i class="fa-solid fa-rocket text-cyan-400"></i> 太空星際漫遊
+                        </button>
+                        <button onclick="selectTheme('深海尋寶奇航')" class="theme-btn p-4 rounded-2xl border text-left transition-all bg-slate-900 border-slate-800 text-slate-300 font-bold text-sm flex flex-col gap-1">
+                            <i class="fa-solid fa-water text-blue-400"></i> 深海尋寶奇航
+                        </button>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <input type="text" id="customTopicInput" placeholder="或者輸入自訂故事主題..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                `;
+            } else {
+                // 長輩模式：顯示難度 1、2、3 選擇
+                container.innerHTML = `
+                    <div class="space-y-3">
+                        <label class="text-xs text-slate-400 font-bold">選擇坐姿健康操活動難度：</label>
+                        <div class="grid grid-cols-3 gap-2" id="difficultyButtonsContainer">
+                            <button data-difficulty="1" onclick="selectDifficulty(1)" class="diff-btn ${selectedDifficulty === 1 ? 'bg-emerald-900/50 border-emerald-500 text-emerald-200' : 'bg-slate-900 border-slate-800 text-slate-400'} border py-3 px-2 rounded-xl text-xs font-bold transition-all">
+                                🟢 難度 1<br><span class="text-[10px] opacity-80">輕鬆伸展</span>
+                            </button>
+                            <button data-difficulty="2" onclick="selectDifficulty(2)" class="diff-btn ${selectedDifficulty === 2 ? 'bg-emerald-900/50 border-emerald-500 text-emerald-200' : 'bg-slate-900 border-slate-800 text-slate-400'} border py-3 px-2 rounded-xl text-xs font-bold transition-all">
+                                🟡 難度 2<br><span class="text-[10px] opacity-80">標準流暢</span>
+                            </button>
+                            <button data-difficulty="3" onclick="selectDifficulty(3)" class="diff-btn ${selectedDifficulty === 3 ? 'bg-emerald-900/50 border-emerald-500 text-emerald-200' : 'bg-slate-900 border-slate-800 text-slate-400'} border py-3 px-2 rounded-xl text-xs font-bold transition-all">
+                                🔴 難度 3<br><span class="text-[10px] opacity-80">進階挑戰</span>
+                            </button>
+                        </div>
+                        <div class="flex gap-2 pt-1">
+                            <input type="text" id="customTopicInput" placeholder="或者輸入自訂健康操主題..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function selectTheme(theme) {
+            selectedTheme = theme;
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.className = "theme-btn p-4 rounded-2xl border text-left transition-all bg-slate-900 border-slate-800 text-slate-300 font-bold text-sm flex flex-col gap-1";
             });
-            e.currentTarget.className = currentMode === 'senior'
-                ? 'theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold'
-                : 'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold';
-            selectedTheme = e.currentTarget.dataset.theme;
-            $('customTopicInput').value = '';
-        });
-    });
-}
-
-function actionLabel(action) {
-    const map = {
-        SWIPE_LEFT:  currentMode === 'senior' ? "請慢慢向左移動手臂" : "請向左揮動手環",
-        SWIPE_RIGHT: currentMode === 'senior' ? "請慢慢向右移動手臂" : "請向右揮動手環",
-        JUMP:        currentMode === 'senior' ? "請保持坐姿，伸展放鬆" : "請向上跳一下",
-        SHAKE:       currentMode === 'senior' ? "請輕輕搖動手臂" : "請搖晃手環",
-        RUN:         currentMode === 'senior' ? "請原地輕鬆擺動雙臂" : "請原地跑步(手臂前後擺動)",
-        ARM_UP:      "請慢慢將雙手抬起來"
-    };
-    return map[action] || "📳 請依照提示操作裝置";
-}
-
-function appendStory(title, text, action, resultText="") {
-    const display = $('storyDisplay');
-    const box = document.createElement('div');
-    box.className = 'p-4 rounded-xl bg-slate-900/70 border border-slate-800';
-    const safeTitle = document.createElement('div');
-    safeTitle.className = currentMode === 'senior' ? 'text-xs font-bold text-emerald-300 mb-2' : 'text-xs font-bold text-purple-300 mb-2';
-    safeTitle.textContent = title;
-    const p = document.createElement('p');
-    p.className = 'text-slate-200';
-    p.textContent = text;
-    box.appendChild(safeTitle);
-    box.appendChild(p);
-
-    if (action) {
-        const a = document.createElement('div');
-        a.className = 'mt-3 text-sm font-bold text-pink-400';
-        a.textContent = '🎯 ' + actionLabel(action);
-        box.appendChild(a);
-    }
-    if (resultText) {
-        const r = document.createElement('div');
-        r.className = 'mt-2 text-sm text-emerald-300';
-        r.textContent = resultText;
-        box.appendChild(r);
-    }
-
-    display.appendChild(box);
-    $('storyScroll').scrollTop =$('storyScroll').scrollHeight;
-}
-
-async function connectBLE() {
-    if (!navigator.bluetooth) {
-        showToast('此瀏覽器不支援 Web Bluetooth，請用支援的瀏覽器。');
-        return;
-    }
-
-    try {
-        showToast('正在搜尋故事裝置...');
-        bleDevice = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [BLE_CONFIG.serviceUuid]
-        });
-
-        bleDevice.addEventListener('gattserverdisconnected', () => {
-            $('statusIndicator').className = 'w-4 h-4 rounded-full bg-slate-500 inline-block shadow';$('statusText').textContent = '已斷線';
-            $('statusIcon').className = 'fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
-            bleCharacteristic = null;
-            showToast('故事裝置已斷線');
-        });
-
-        const server = await bleDevice.gatt.connect();
-        const service = await server.getPrimaryService(BLE_CONFIG.serviceUuid);
-        bleCharacteristic = await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
-
-        await bleCharacteristic.startNotifications();
-        bleCharacteristic.addEventListener('characteristicvaluechanged', onBleEvent);
-
-        $('statusIndicator').className = 'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';$('statusText').textContent = '已連線';
-        $('statusIcon').className = 'fa-solid fa-plug-circle-check text-emerald-400 text-xl';
-
-        await sendBLE("READY");
-        showToast('藍牙連線成功！');
-    } catch (e) {
-        console.error(e);
-        showToast('藍牙連線失敗：' + e.message);
-    }
-}
-
-// 接收來自硬體 ESP32 的藍牙事件
-function onBleEvent(event) {
-    const value = new TextDecoder().decode(event.target.value).trim().toUpperCase();
-    console.log("收到硬體訊號:", value);
-
-    // 支援從 ESP32 按下按鈕切換模式的訊號
-    if (value === "SWITCH_MODE_SENIOR" || value === "MODE_SENIOR") {
-        switchMode('senior', false);
-        return;
-    }
-    if (value === "SWITCH_MODE_CHILD" || value === "MODE_CHILD") {
-        switchMode('child', false);
-        return;
-    }
-
-    if (!waitingForAction || busy) return;
-
-    const now = Date.now();
-    if (now - lastActionTime < 2000) return;
-
-    const cleanExpected = (expectedAction || "").trim().toUpperCase();
-
-    if (value === cleanExpected) {
-        lastActionTime = now;
-        showToast('✨ 動作正確！正在繼續...');
-        handleAction(expectedAction);
-    } else {
-        showToast('收到 ' + value + '，目前需要：' + actionLabel(expectedAction));
-        $('actionSubText').textContent = '目前需要：' + actionLabel(expectedAction);
-    }
-}
-
-async function sendBLE(command) {
-    if (!bleCharacteristic) return;
-    try {
-        const encoder = new TextEncoder();
-        await bleCharacteristic.writeValue(encoder.encode(command));
-    } catch(e) {
-        console.error('BLE 傳送失敗', e);
-    }
-}
-
-async function parseAIResponse(res) {
-    const rawData = await res.json();
-    if (!res.ok) throw new Error(rawData.error || 'AI 回應失敗');
-
-    let content = rawData;
-    if (rawData.choices && rawData.choices[0] && rawData.choices[0].message) {
-        content = rawData.choices[0].message.content;
-    }
-
-    if (typeof content === 'string') {
-        try {
-            let cleanStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(cleanStr);
-        } catch (err) {
-            return { story: content, action: null, done: true };
-        }
-    }
-    return content;
-}
-
-async function handleAction(action) {
-    if (!waitingForAction || busy) return;
-    waitingForAction = false;
-    $('actionPrompt').classList.add('hidden');
-    busy = true;
-
-    await sendBLE("ACTION_OK");
-
-    try {
-        const res = await fetch(WORKER_URL + '/api/story', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({
-                mode: currentMode, // 傳遞目前模式給 Worker
-                topic: selectedTheme,
-                action,
-                currentStory
-            })
-        });
-
-        const data = await parseAIResponse(res);
-
-        currentStory = data.story || "";
-        history.push({ role: "assistant", story: currentStory, action: data.action || null });
-
-        appendStory(currentMode === 'senior' ? '🌿 AI 健康活動' : '🤖 AI 繼續冒險', currentStory, data.done ? null : data.action);
-        speak(currentStory + (data.actionLabel ? ' ' + data.actionLabel : ''));
-
-        if (data.done) {
-            $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = currentMode === 'senior' ? '🎉 活動圓滿完成！' : '🎉 太棒了！冒險任務完成！';
-            $('actionSubText').textContent = '內容已完整結束。';
-            waitingForAction = false;
-        } else {
-            expectedAction = data.action;
-            waitingForAction = true;
-            $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = data.actionLabel || actionLabel(data.action);
-            $('actionSubText').textContent = '完成動作後，系統將自動解鎖下一步。';
-        }
-    } catch(e) {
-        console.error(e);
-        showToast('連線失敗：' + e.message);
-        waitingForAction = true;
-        $('actionPrompt').classList.remove('hidden');
-    } finally {
-        busy = false;
-    }
-}
-
-async function generateStory() {
-    const custom = $('customTopicInput').value.trim();
-    const topic = custom || selectedTheme;
-
-    if (!topic) {
-        showToast('請先選擇或輸入主題');
-        return;
-    }
-
-    const btn = $('btnGenerate');
-    $('btnText').textContent = currentMode === 'senior' ? '正在規劃健康活動...' : 'AI 正在編寫冒險...';
-    $('btnIcon').className = 'fa-solid fa-spinner animate-spin';
-    btn.disabled = true;
-
-    try {
-        const res = await fetch(WORKER_URL + '/api/story', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                mode: currentMode, // 傳遞目前模式
-                topic: topic,
-                difficulty: "easy" // 長輩模式預設難度
-            })
-        });
-
-        const data = await parseAIResponse(res);
-
-        $('welcomeMessage').classList.add('hidden');
-        $('storyDisplay').innerHTML = '';
-        $('storyDisplay').classList.remove('hidden');
-        currentStory = data.story || '';
-        history = [{role:'user', topic}, {role:'assistant', story:currentStory, action:data.action}];
-
-        appendStory(currentMode === 'senior' ? '🌿 AI 健康活動開始' : '📖 AI 第一章', currentStory, data.done ? null : data.action);
-        speak(currentStory + (data.actionLabel ? ' ' + data.actionLabel : ''));
-
-        $('btnSpeak').disabled = false;
-
-        if (data.done) {
-            $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = '🎉 內容已完成！';
-            $('actionSubText').textContent = '';
-            waitingForAction = false;
-        } else {
-            expectedAction = data.action;
-            waitingForAction = true;
-            $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = data.actionLabel || actionLabel(data.action);
-            $('actionSubText').textContent = '請完成這個動作，ESP32 藍牙將自動通知。';
-            if (bleCharacteristic) await sendBLE('START_STORY');
+            event.currentTarget.className = "theme-btn p-4 rounded-2xl border text-left transition-all bg-emerald-950/40 border-emerald-500 text-white font-bold text-sm flex flex-col gap-1";
         }
 
-        showToast('✨ 內容生成完成！');
-    } catch(e) {
-        console.error(e);
-        showToast('錯誤：' + e.message);
-    } finally {
-        $('btnText').textContent = '開始精彩故事冒險';
-        $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
-        btn.disabled = false;
-    }
-}
-
-function speak(text) {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'zh-TW';
-    utterance.rate = 0.95;
-    window.speechSynthesis.speak(utterance);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    $('btnConnect').addEventListener('click', connectBLE);
-    $('btnGenerate').addEventListener('click', generateStory);
-    bindThemeButtons();
-
-    $('btnManualAction').addEventListener('click', () => {
-        if (!waitingForAction) {
-            showToast('目前沒有等待中的互動。');
-            return;
+        function selectDifficulty(diff) {
+            selectedDifficulty = diff;
+            initThemeButtons(); // 重新渲染以更新樣式
         }
-        handleAction(expectedAction);
-    });
 
-    $('customTopicInput').addEventListener('input', () => {
-        document.querySelectorAll('.theme-btn').forEach(b => {
-            b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
-        });
-    });
+        // 切換兒童 / 長輩模式
+        function switchMode(mode) {
+            currentMode = mode;
+            if (mode === 'child') {
+                $('btnModeChild').className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500 text-slate-950 shadow";
+                $('btnModeSenior').className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white";
+                $('modeSubtitle').textContent = "AI 體感互動冒險系統";
+                $('setupIcon').className = "fa-solid fa-compass";
+                $('setupTitle').textContent = "準備好展開今日冒險了嗎？";
+                $('setupDesc').textContent = "選擇喜愛的故事主題，跟著語音與體感手環一起探索奇幻世界。";
+                $('btnText').textContent = "開始精彩故事冒險";
+            } else {
+                $('btnModeSenior').className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-500 text-slate-950 shadow";
+                $('btnModeChild').className = "px-4 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white";
+                $('modeSubtitle').textContent = "AI 坐姿健康操與關節伸展";
+                $('setupIcon').className = "fa-solid fa-heart-pulse";
+                $('setupTitle').textContent = "準備好開始今日健康活動了嗎？";
+                $('setupDesc').textContent = "選擇安全坐姿伸展難度，跟著語音指令輕鬆活動筋骨。";
+                $('btnText').textContent = "開始健康坐姿活動";
+            }
+            initThemeButtons();
+            resetGame();
+        }
 
-    $('btnSpeak').addEventListener('click', () => {
-        if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-        else if (currentStory) speak(currentStory + ' ' + (expectedAction ? actionLabel(expectedAction) : ''));
-    });
-});
-</script>
+        // 產生故事與呼叫 AI
+        async function generateStory() {
+            if (isWaitingAI) return;
+            isWaitingAI = true;
+
+            const custom = $('customTopicInput') ?$('customTopicInput').value.trim() : "";
+            const btn = $('btnGenerate');$('btnText').textContent = currentMode === 'senior' ? `正在規劃難度 ${selectedDifficulty} 健康活動...` : 'AI 正在編寫冒險...';
+            $('btnIcon').className = 'fa-solid fa-spinner animate-spin';
+            btn.disabled = true;
+
+            try {
+                const requestBody = {
+                    mode: currentMode,
+                    difficulty: selectedDifficulty
+                };
+
+                if (currentMode === 'child') {
+                    requestBody.topic = custom || selectedTheme;
+                } else {
+                    requestBody.topic = custom || `長輩坐姿健康操 難度${selectedDifficulty}`;
+                }
+
+                const res = await fetch(WORKER_URL + '/api/story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await res.json();
+                handleStoryResponse(data);
+
+            } catch (error) {
+                console.error("API 錯誤：", error);
+                alert("無法連線到 AI 伺服器，請檢查網路或 Worker 網址。");
+            } finally {
+                isWaitingAI = false;
+                btn.disabled = false;
+                $('btnIcon').className = 'fa-solid fa-play';$('btnText').textContent = currentMode === 'senior' ? '開始健康坐姿活動' : '開始精彩故事冒險';
+            }
+        }
+
+        function handleStoryResponse(data) {
+            currentStory = data.story;
+            currentAction = data.action;
+
+            $('storyText').textContent = currentStory;
+            $('actionLabel').textContent = data.actionLabel || "請依照提示操作";
+
+            // 切換畫面
+            $('setupSection').classList.add('hidden');$('gameSection').classList.remove('hidden');
+        }
+
+        // 接收到手環動作後推進故事
+        async function handleDeviceAction(actionValue) {
+            if (isWaitingAI) return;
+            isWaitingAI = true;
+
+            $('storyText').textContent = "AI 正在接收動作並產生下一段內容...";
+            $('actionLabel').className = "text-2xl md:text-3xl font-black text-emerald-400 animate-pulse";
+
+            try {
+                const requestBody = {
+                    mode: currentMode,
+                    difficulty: selectedDifficulty,
+                    topic: currentMode === 'child' ? selectedTheme : `長輩坐姿健康操 難度${selectedDifficulty}`,
+                    currentStory: currentStory,
+                    action: actionValue
+                };
+
+                const res = await fetch(WORKER_URL + '/api/story', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await res.json();
+                
+                if (data.done) {
+                    $('storyText').textContent = data.story;
+                    $('actionLabel').textContent = "🎉 活動圓滿結束！";
+                    setTimeout(() => { resetGame(); }, 5000);
+                } else {
+                    handleStoryResponse(data);
+                }
+            } catch (error) {
+                console.error("推進故事錯誤：", error);
+            } finally {
+                isWaitingAI = false;
+            }
+        }
+
+        function resetGame() {
+            $('setupSection').classList.remove('hidden');$('gameSection').classList.add('hidden');
+            currentStory = "";
+            currentAction = "";
+        }
+
+        // ==========================================
+        // 藍牙連線與接收 ESP32 資料
+        // ==========================================
+        async function connectBluetooth() {
+            try {
+                $('bleText').textContent = "搜尋中...";
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['6e400001-b5a3-f393-e0a9-e50e24dcca9e'] // 通常 Nordic UART Service
+                });
+
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+                rxCharacteristic = await service.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e');
+
+                await rxCharacteristic.startNotifications();
+                rxCharacteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const decoder = new TextDecoder('utf-8');
+                    const value = decoder.decode(event.target.value).trim();
+                    console.log("收到手環訊號:", value);
+                    
+                    // 當收到 ESP32 傳來的動作代碼時，自動推進劇情
+                    if (value) {
+                        handleDeviceAction(value);
+                    }
+                });
+
+                $('bleText').textContent = "手環已連線";
+                $('btnBle').classList.add('border-emerald-500', 'bg-emerald-950/40');
+            } catch (error) {
+                console.error("藍牙連線失敗:", error);
+                $('bleText').textContent = "連接失敗";
+            }
+        }
+
+        // 頁面載入初始化
+        window.onload = () => {
+            initThemeButtons();
+        };
+    </script>
 </body>
 </html>
