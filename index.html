@@ -29,7 +29,7 @@
 <header class="w-full max-w-4xl text-center my-4">
     <div class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
         <i class="fa-solid font-bold fa-headphones-simple text-amber-400"></i>
-        <span class="text-amber-300 font-semibold text-sm">沈浸式互動繪本・聽完手部動作指示後搖晃硬體繼續</span>
+        <span class="text-amber-300 font-semibold text-sm">沈浸式互動繪本・聽完動作指示後完成動作繼續</span>
     </div>
     <h1 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
         聲動奇境 ✨ 智慧互動繪本
@@ -37,6 +37,7 @@
 </header>
 
 <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+    <!-- 左側：藍牙連線區 -->
     <section class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
         <div>
             <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
@@ -52,7 +53,9 @@
                 </div>
                 <i id="statusIcon" class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"></i>
             </div>
-            <button id="btnConnect" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">連接故事裝置</button>
+            <button id="btnConnect" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">
+                連接故事裝置
+            </button>
         </div>
 
         <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
@@ -61,11 +64,13 @@
                 ✨ 模擬做完動作 (解鎖下一段)
             </button>
             <p id="deviceHint" class="text-xs text-slate-400 mt-3 leading-relaxed">
-                連線後，ESP32 的按鈕或 MPU6050 動作會透過藍牙通知網頁。
+                裝置只有兩顆實體按鈕（選模式 / 開始）。<br>
+                故事互動請用 MPU6050 動作：向左揮、向右揮、跳、搖晃。
             </p>
         </div>
     </section>
 
+    <!-- 右側：故事區 -->
     <section class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6">
         <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
             <div class="overflow-y-auto max-h-[360px] pr-2 space-y-4" id="storyScroll">
@@ -144,15 +149,13 @@ function showToast(msg) {
     }, 3000);
 }
 
+// 只保留四個動作（已移除 BUTTON_A/B/C）
 function actionLabel(action) {
     const map = {
-        SWIPE_LEFT: "⬅️ 請向左揮動手環",
+        SWIPE_LEFT:  "⬅️ 請向左揮動手環",
         SWIPE_RIGHT: "➡️ 請向右揮動手環",
-        JUMP: "⬆️ 請向上跳一下",
-        SHAKE: "📳 請搖晃手環",
-        BUTTON_A: "🔘 請按下左邊按鈕",
-        BUTTON_B: "🔘 請按下中間按鈕",
-        BUTTON_C: "🔘 請按下右邊按鈕"
+        JUMP:        "⬆️ 請向上跳一下",
+        SHAKE:       "📳 請搖晃手環"
     };
     return map[action] || "📳 請依照提示操作裝置";
 }
@@ -229,13 +232,13 @@ async function connectBLE() {
 
 function onBleEvent(event) {
     const value = new TextDecoder().decode(event.target.value).trim().toUpperCase();
-    console.log("收到處理後的硬體訊號:", value);
+    console.log("收到硬體訊號:", value);
 
     if (!waitingForAction || busy) return;
 
     const now = Date.now();
     if (now - lastActionTime < 2000) {
-        console.log("動作太頻繁，忽略此次重複訊號");
+        console.log("動作太頻繁，忽略");
         return;
     }
 
@@ -246,7 +249,7 @@ function onBleEvent(event) {
         showToast('✨ 動作正確！AI 正在繼續故事...');
         handleAction(expectedAction);
     } else {
-        showToast('🫠 收到 ' + value + '，但目前需要：' + actionLabel(expectedAction));
+        showToast('收到 ' + value + '，目前需要：' + actionLabel(expectedAction));
         $('actionSubText').textContent = '目前需要：' + actionLabel(expectedAction);
     }
 }
@@ -261,26 +264,22 @@ async function sendBLE(command) {
     }
 }
 
-// 🛡️ 輔助函式：安全解析可能被雙重包裝的 AI JSON 回應
+// 安全解析 AI 回應
 async function parseAIResponse(res) {
     const rawData = await res.json();
     if (!res.ok) throw new Error(rawData.error || 'AI 回應失敗');
 
-    // 檢查是不是被 OpenAI/Gemini 格式包裝 (choices[0].message.content)
     let content = rawData;
     if (rawData.choices && rawData.choices[0] && rawData.choices[0].message) {
         content = rawData.choices[0].message.content;
     }
 
-    // 如果內容是字串，嘗試將其解析為 JSON
     if (typeof content === 'string') {
         try {
-            // 清理可能存在的 markdown code block 標記
             let cleanStr = content.replace(/```json/g, '').replace(/```/g, '').trim();
             return JSON.parse(cleanStr);
         } catch (err) {
-            console.error("JSON 解析失敗，原始內容：", content);
-            // 如果無法解析成 JSON，退化處理：把整段文字當作故事
+            console.error("JSON 解析失敗：", content);
             return { story: content, action: null, done: true };
         }
     }
@@ -302,8 +301,6 @@ async function handleAction(action) {
             body: JSON.stringify({
                 topic: selectedTheme,
                 action,
-                expectedAction,
-                history,
                 currentStory
             })
         });
@@ -323,7 +320,7 @@ async function handleAction(action) {
         if (data.done) {
             $('actionPrompt').classList.remove('hidden');
             $('promptText').textContent = '🎉 太棒了！冒險任務完成！';
-            $('actionSubText').textContent = '這段故事已經由 AI 完整走完。';
+            $('actionSubText').textContent = '這段故事已經完整結束。';
             waitingForAction = false;
         } else {
             expectedAction = data.action;
