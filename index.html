@@ -75,14 +75,25 @@
             </button>
         </div>
 
-        <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
-            <h3 class="text-sm font-bold text-purple-300 mb-2">手動測試互動</h3>
-            <button id="btnManualAction" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
+        <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40 space-y-3">
+            <h3 class="text-sm font-bold text-purple-300">手動測試互動</h3>
+            <button id="btnManualAction" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-3 rounded-xl shadow-md text-sm transition">
                 ✨ 模擬做完動作 (解鎖下一段)
             </button>
-            <p id="deviceHint" class="text-xs text-slate-400 mt-3 leading-relaxed">
+            
+            <!-- 長輩模式專屬：難度切換按鈕區 -->
+            <div id="seniorDifficultyBox" class="hidden space-y-1.5 pt-2 border-t border-indigo-800/60">
+                <div class="text-[11px] text-emerald-300 font-bold">健康操活動難度：</div>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button onclick="setDifficulty(1)" id="diffBtn1" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-emerald-700 text-white shadow">🟢 難度1</button>
+                    <button onclick="setDifficulty(2)" id="diffBtn2" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-white">🟡 難度2</button>
+                    <button onclick="setDifficulty(3)" id="diffBtn3" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-white">🔴 難度3</button>
+                </div>
+            </div>
+
+            <p id="deviceHint" class="text-xs text-slate-400 mt-2 leading-relaxed">
                 裝置實體按鈕可切換模式。<br>
-                動作請依照目前模式指示操作 (揮動、跳躍或抬手)。
+                動作請依照目前模式指示操作。
             </p>
         </div>
     </section>
@@ -148,6 +159,7 @@ let bleDevice = null;
 let bleCharacteristic = null;
 let currentMode = "child"; // 'child' 或 'senior'
 let selectedTheme = "勇敢的小騎士與巨龍";
+let selectedDifficulty = 1; // 長輩模式難度 (1, 2, 3)
 let currentStory = "";
 let history = [];
 let waitingForAction = false;
@@ -168,6 +180,20 @@ function showToast(msg) {
     }, 3000);
 }
 
+// 設定長輩模式難度
+function setDifficulty(diff) {
+    selectedDifficulty = diff;
+    for (let i = 1; i <= 3; i++) {
+        const btn = $(`diffBtn${i}`);
+        if (i === diff) {
+            btn.className = "py-1.5 px-1 rounded-lg text-xs font-bold bg-emerald-700 text-white shadow";
+        } else {
+            btn.className = "py-1.5 px-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-white";
+        }
+    }
+    showToast(`已設定健康操難度：等級 ${diff}`);
+}
+
 // 切換模式函式 (可由網頁點擊或 ESP32 藍牙觸發)
 async function switchMode(mode, notifyDevice = true) {
     currentMode = mode;
@@ -182,6 +208,7 @@ async function switchMode(mode, notifyDevice = true) {
         $('welcomeIcon').textContent = "🌿✨";
         $('welcomeTitle').textContent = "準備好開始今日健康關懷活動了嗎？";
         $('welcomeDesc').textContent = "選擇安全坐姿伸展主題，跟著語音指示輕鬆活動筋骨。";
+        $('seniorDifficultyBox').classList.remove('hidden');
         
         // 長輩模式推薦主題
         selectedTheme = "輕鬆坐姿手部健康伸展";
@@ -199,6 +226,7 @@ async function switchMode(mode, notifyDevice = true) {
         $('welcomeIcon').textContent = "📖✨";
         $('welcomeTitle').textContent = "準備好開始冒險了嗎？";
         $('welcomeDesc').textContent = "選擇或自訂主題，AI 會即時生成故事並在互動處停下。";
+        $('seniorDifficultyBox').classList.add('hidden');
 
         // 兒童模式推薦主題
         selectedTheme = "勇敢的小騎士與巨龍";
@@ -210,10 +238,8 @@ async function switchMode(mode, notifyDevice = true) {
         showToast('已切換至【兒童冒險模式】');
     }
 
-    // 重新綁定新產生按鈕的點擊事件
     bindThemeButtons();
 
-    // 如果藍牙已連線，發送指令給 ESP32 同步模式
     if (notifyDevice && bleCharacteristic) {
         await sendBLE(isSenior ? "MODE_SENIOR" : "MODE_CHILD");
     }
@@ -223,9 +249,7 @@ function bindThemeButtons() {
     document.querySelectorAll('.theme-btn').forEach(btn => {
         btn.addEventListener('click', e => {
             document.querySelectorAll('.theme-btn').forEach(b => {
-                b.className = currentMode === 'senior' 
-                    ? 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold'
-                    : 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+                b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
             });
             e.currentTarget.className = currentMode === 'senior'
                 ? 'theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold'
@@ -316,12 +340,10 @@ async function connectBLE() {
     }
 }
 
-// 接收來自硬體 ESP32 的藍牙事件
 function onBleEvent(event) {
     const value = new TextDecoder().decode(event.target.value).trim().toUpperCase();
     console.log("收到硬體訊號:", value);
 
-    // 支援從 ESP32 按下按鈕切換模式的訊號
     if (value === "SWITCH_MODE_SENIOR" || value === "MODE_SENIOR") {
         switchMode('senior', false);
         return;
@@ -391,7 +413,8 @@ async function handleAction(action) {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
-                mode: currentMode, // 傳遞目前模式給 Worker
+                mode: currentMode,
+                difficulty: selectedDifficulty,
                 topic: selectedTheme,
                 action,
                 currentStory
@@ -403,20 +426,18 @@ async function handleAction(action) {
         currentStory = data.story || "";
         history.push({ role: "assistant", story: currentStory, action: data.action || null });
 
-        appendStory(currentMode === 'senior' ? '🌿 AI 健康活動' : '🤖 AI 繼續冒險', currentStory, data.done ? null : data.action);
+        appendStory(currentMode === 'senior' ? `🌿 AI 健康活動 (難度 ${selectedDifficulty})` : '🤖 AI 繼續冒險', currentStory, data.done ? null : data.action);
         speak(currentStory + (data.actionLabel ? ' ' + data.actionLabel : ''));
 
         if (data.done) {
-            $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = currentMode === 'senior' ? '🎉 活動圓滿完成！' : '🎉 太棒了！冒險任務完成！';
+            $('actionPrompt').classList.remove('hidden');$('promptText').textContent = currentMode === 'senior' ? '🎉 活動圓滿完成！' : '🎉 太棒了！冒險任務完成！';
             $('actionSubText').textContent = '內容已完整結束。';
             waitingForAction = false;
         } else {
             expectedAction = data.action;
             waitingForAction = true;
             $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = data.actionLabel || actionLabel(data.action);
-            $('actionSubText').textContent = '完成動作後，系統將自動解鎖下一步。';
+            $('promptText').textContent = data.actionLabel \vert{}\vert{} actionLabel(data.action);$('actionSubText').textContent = '完成動作後，系統將自動解鎖下一步。';
         }
     } catch(e) {
         console.error(e);
@@ -437,8 +458,7 @@ async function generateStory() {
         return;
     }
 
-    const btn = $('btnGenerate');
-    $('btnText').textContent = currentMode === 'senior' ? '正在規劃健康活動...' : 'AI 正在編寫冒險...';
+    const btn = $('btnGenerate');$('btnText').textContent = currentMode === 'senior' ? `正在規劃難度 ${selectedDifficulty} 健康活動...` : 'AI 正在編寫冒險...';
     $('btnIcon').className = 'fa-solid fa-spinner animate-spin';
     btn.disabled = true;
 
@@ -447,36 +467,33 @@ async function generateStory() {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
-                mode: currentMode, // 傳遞目前模式
-                topic: topic,
-                difficulty: "easy" // 長輩模式預設難度
+                mode: currentMode,
+                difficulty: selectedDifficulty,
+                topic: topic
             })
         });
 
         const data = await parseAIResponse(res);
 
         $('welcomeMessage').classList.add('hidden');
-        $('storyDisplay').innerHTML = '';
-        $('storyDisplay').classList.remove('hidden');
+        $('storyDisplay').innerHTML = '';$('storyDisplay').classList.remove('hidden');
         currentStory = data.story || '';
         history = [{role:'user', topic}, {role:'assistant', story:currentStory, action:data.action}];
 
-        appendStory(currentMode === 'senior' ? '🌿 AI 健康活動開始' : '📖 AI 第一章', currentStory, data.done ? null : data.action);
+        appendStory(currentMode === 'senior' ? `🌿 AI 健康活動開始 (難度 ${selectedDifficulty})` : '📖 AI 第一章', currentStory, data.done ? null : data.action);
         speak(currentStory + (data.actionLabel ? ' ' + data.actionLabel : ''));
 
         $('btnSpeak').disabled = false;
 
         if (data.done) {
-            $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = '🎉 內容已完成！';
+            $('actionPrompt').classList.remove('hidden');$('promptText').textContent = '🎉 內容已完成！';
             $('actionSubText').textContent = '';
             waitingForAction = false;
         } else {
             expectedAction = data.action;
             waitingForAction = true;
             $('actionPrompt').classList.remove('hidden');
-            $('promptText').textContent = data.actionLabel || actionLabel(data.action);
-            $('actionSubText').textContent = '請完成這個動作，ESP32 藍牙將自動通知。';
+            $('promptText').textContent = data.actionLabel \vert{}\vert{} actionLabel(data.action);$('actionSubText').textContent = '請完成這個動作，ESP32 藍牙將自動通知。';
             if (bleCharacteristic) await sendBLE('START_STORY');
         }
 
@@ -485,7 +502,7 @@ async function generateStory() {
         console.error(e);
         showToast('錯誤：' + e.message);
     } finally {
-        $('btnText').textContent = '開始精彩故事冒險';
+        $('btnText').textContent = currentMode === 'senior' ? '開始健康坐姿活動' : '開始精彩故事冒險';
         $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
         btn.disabled = false;
     }
@@ -501,8 +518,7 @@ function speak(text) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    $('btnConnect').addEventListener('click', connectBLE);
-    $('btnGenerate').addEventListener('click', generateStory);
+    $('btnConnect').addEventListener('click', connectBLE);$('btnGenerate').addEventListener('click', generateStory);
     bindThemeButtons();
 
     $('btnManualAction').addEventListener('click', () => {
