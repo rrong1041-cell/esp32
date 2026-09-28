@@ -36,10 +36,10 @@
     <div class="flex justify-center items-center gap-4 mb-4">
         <div class="inline-flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 shadow-xl">
             <button id="modeChildBtn" onclick="switchMode('child')" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md">
-                <i class="fa-solid fa-child"></i> 兒童冒險模式
+                <i class="fa-solid fa-child"></i> 兒童模式
             </button>
             <button id="modeSeniorBtn" onclick="switchMode('senior')" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white">
-                <i class="fa-solid fa-person-cane"></i> 長輩關懷模式 (坐姿)
+                <i class="fa-solid fa-person-cane"></i> 長輩模式 (請坐在有椅背的椅子上)
             </button>
         </div>
     </div>
@@ -178,9 +178,9 @@ async function switchMode(mode, notifyDevice = true) {
         $('appBody').classList.add('mode-senior');$('modeChildBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white";
         $('modeSeniorBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md";
         $('mainTitle').className = "text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300";
-        $('badgeText').textContent = "長輩關懷模式・全程坐姿，輕鬆健康動一動";
+        $('badgeText').textContent = "長輩模式・全程坐姿，輕鬆健康動一動";
         $('welcomeIcon').textContent = "🌿✨";
-        $('welcomeTitle').textContent = "準備好開始今日健康關懷活動了嗎？";
+        $('welcomeTitle').textContent = "準備好開始今日健康活動了嗎？";
         $('welcomeDesc').textContent = "選擇安全坐姿伸展主題，跟著語音指示輕鬆活動筋骨。";
         
         // 長輩模式推薦主題
@@ -190,7 +190,7 @@ async function switchMode(mode, notifyDevice = true) {
             <button data-theme="溫和肩頸放鬆操" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🧘 肩頸放鬆操</button>
             <button data-theme="快樂活力健康動" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌟 活力健康動</button>
         `;
-        showToast('已切換至【長輩關懷模式】');
+        showToast('已切換至【長輩模式】');
     } else {
         $('appBody').classList.remove('mode-senior');$('modeChildBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md";
         $('modeSeniorBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white";
@@ -207,7 +207,7 @@ async function switchMode(mode, notifyDevice = true) {
             <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
             <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
         `;
-        showToast('已切換至【兒童冒險模式】');
+        showToast('已切換至【兒童模式】');
     }
 
     // 重新綁定新產生按鈕的點擊事件
