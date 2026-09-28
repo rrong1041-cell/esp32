@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聲動奇境 - 智慧互動繪本</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -32,13 +33,12 @@
 <body class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between" id="appBody">
 
 <header class="w-full max-w-4xl text-center my-4">
-    <!-- 模式切換橫幅 -->
     <div class="flex justify-center items-center gap-4 mb-4">
         <div class="inline-flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 shadow-xl">
-            <button id="modeChildBtn" onclick="switchMode('child')" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md">
+            <button id="modeChildBtn" type="button" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md">
                 <i class="fa-solid fa-child"></i> 兒童冒險模式
             </button>
-            <button id="modeSeniorBtn" onclick="switchMode('senior')" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white">
+            <button id="modeSeniorBtn" type="button" class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white">
                 <i class="fa-solid fa-person-cane"></i> 長輩關懷模式 (坐姿)
             </button>
         </div>
@@ -54,7 +54,6 @@
 </header>
 
 <main class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
-    <!-- 左側：藍牙連線區 -->
     <section class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6" id="leftCard">
         <div>
             <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
@@ -70,24 +69,23 @@
                 </div>
                 <i id="statusIcon" class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"></i>
             </div>
-            <button id="btnConnect" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">
+            <button id="btnConnect" type="button" class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">
                 連接故事裝置
             </button>
         </div>
 
         <div class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40 space-y-3">
             <h3 class="text-sm font-bold text-purple-300">手動測試互動</h3>
-            <button id="btnManualAction" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-3 rounded-xl shadow-md text-sm transition">
+            <button id="btnManualAction" type="button" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-3 rounded-xl shadow-md text-sm transition">
                 ✨ 模擬做完動作 (解鎖下一段)
             </button>
             
-            <!-- 長輩模式專屬：難度切換按鈕區 -->
             <div id="seniorDifficultyBox" class="hidden space-y-1.5 pt-2 border-t border-indigo-800/60">
                 <div class="text-[11px] text-emerald-300 font-bold">健康操活動難度：</div>
                 <div class="grid grid-cols-3 gap-1.5">
-                    <button onclick="setDifficulty(1)" id="diffBtn1" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-emerald-700 text-white shadow">🟢 難度1</button>
-                    <button onclick="setDifficulty(2)" id="diffBtn2" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-white">🟡 難度2</button>
-                    <button onclick="setDifficulty(3)" id="diffBtn3" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-white">🔴 難度3</button>
+                    <button type="button" id="diffBtn1" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-emerald-700 text-white shadow">🟢 難度1</button>
+                    <button type="button" id="diffBtn2" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-white">🟡 難度2</button>
+                    <button type="button" id="diffBtn3" class="py-1.5 px-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-white">🔴 難度3</button>
                 </div>
             </div>
 
@@ -98,7 +96,6 @@
         </div>
     </section>
 
-    <!-- 右側：故事區 -->
     <section class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6" id="rightCard">
         <div class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
             <div class="overflow-y-auto max-h-[360px] pr-2 space-y-4" id="storyScroll">
@@ -120,12 +117,11 @@
         </div>
 
         <div class="space-y-4">
-            <!-- 依據模式變動的主題選項 -->
             <div class="space-y-2">
                 <div class="grid grid-cols-3 gap-2" id="themeButtonsContainer">
-                    <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
-                    <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
-                    <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
+                    <button type="button" data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
+                    <button type="button" data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
+                    <button type="button" data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
                 </div>
                 <div class="flex gap-2">
                     <input type="text" id="customTopicInput" placeholder="或者輸入你想聽的自訂故事主題..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
@@ -133,11 +129,11 @@
             </div>
 
             <div class="flex gap-3">
-                <button id="btnGenerate" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
+                <button id="btnGenerate" type="button" class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
                     <i id="btnIcon" class="fa-solid fa-wand-magic-sparkles"></i>
                     <span id="btnText">開始精彩故事冒險</span>
                 </button>
-                <button id="btnSpeak" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
+                <button id="btnSpeak" type="button" disabled class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
                     <i class="fa-solid fa-play"></i>
                 </button>
             </div>
@@ -157,9 +153,9 @@ const WORKER_URL = 'https://empty-credit-1539.rrong1041.workers.dev';
 
 let bleDevice = null;
 let bleCharacteristic = null;
-let currentMode = "child"; // 'child' 或 'senior'
+let currentMode = "child"; 
 let selectedTheme = "勇敢的小騎士與巨龍";
-let selectedDifficulty = 1; // 長輩模式難度 (1, 2, 3)
+let selectedDifficulty = 1; 
 let currentStory = "";
 let history = [];
 let waitingForAction = false;
@@ -171,6 +167,7 @@ const $ = id => document.getElementById(id);
 
 function showToast(msg) {
     const t = $('toast');
+    if (!t) return;
     t.textContent = msg;
     t.classList.remove('opacity-0','pointer-events-none');
     t.classList.add('opacity-100');
@@ -180,11 +177,11 @@ function showToast(msg) {
     }, 3000);
 }
 
-// 設定長輩模式難度
 function setDifficulty(diff) {
     selectedDifficulty = diff;
     for (let i = 1; i <= 3; i++) {
         const btn = $(`diffBtn${i}`);
+        if (!btn) continue;
         if (i === diff) {
             btn.className = "py-1.5 px-1 rounded-lg text-xs font-bold bg-emerald-700 text-white shadow";
         } else {
@@ -194,12 +191,10 @@ function setDifficulty(diff) {
     showToast(`已設定健康操難度：等級 ${diff}`);
 }
 
-// 切換模式函式 (可由網頁點擊或 ESP32 藍牙觸發)
 async function switchMode(mode, notifyDevice = true) {
     currentMode = mode;
     const isSenior = (mode === 'senior');
 
-    // 切換樣式
     if (isSenior) {
         $('appBody').classList.add('mode-senior');$('modeChildBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white";
         $('modeSeniorBtn').className = "px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md";
@@ -210,12 +205,11 @@ async function switchMode(mode, notifyDevice = true) {
         $('welcomeDesc').textContent = "選擇安全坐姿伸展主題，跟著語音指示輕鬆活動筋骨。";
         $('seniorDifficultyBox').classList.remove('hidden');
         
-        // 長輩模式推薦主題
         selectedTheme = "輕鬆坐姿手部健康伸展";
         $('themeButtonsContainer').innerHTML = `
-            <button data-theme="輕鬆坐姿手部健康伸展" class="theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">🙌 手部健康伸展</button>
-            <button data-theme="溫和肩頸放鬆操" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🧘 肩頸放鬆操</button>
-            <button data-theme="快樂活力健康動" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌟 活力健康動</button>
+            <button type="button" data-theme="輕鬆坐姿手部健康伸展" class="theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">🙌 手部健康伸展</button>
+            <button type="button" data-theme="溫和肩頸放鬆操" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🧘 肩頸放鬆操</button>
+            <button type="button" data-theme="快樂活力健康動" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌟 活力健康動</button>
         `;
         showToast('已切換至【長輩關懷模式】');
     } else {
@@ -228,12 +222,11 @@ async function switchMode(mode, notifyDevice = true) {
         $('welcomeDesc').textContent = "選擇或自訂主題，AI 會即時生成故事並在互動處停下。";
         $('seniorDifficultyBox').classList.add('hidden');
 
-        // 兒童模式推薦主題
         selectedTheme = "勇敢的小騎士與巨龍";
         $('themeButtonsContainer').innerHTML = `
-            <button data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
-            <button data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
-            <button data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
+            <button type="button" data-theme="勇敢的小騎士與巨龍" class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">⚔️ 騎士巨龍</button>
+            <button type="button" data-theme="神奇魔法森林的密道" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🌲 魔法森林</button>
+            <button type="button" data-theme="海底王國的寶藏探險" class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">🐬 海底寶藏</button>
         `;
         showToast('已切換至【兒童冒險模式】');
     }
@@ -247,7 +240,7 @@ async function switchMode(mode, notifyDevice = true) {
 
 function bindThemeButtons() {
     document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
+        btn.onclick = (e) => {
             document.querySelectorAll('.theme-btn').forEach(b => {
                 b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
             });
@@ -256,7 +249,7 @@ function bindThemeButtons() {
                 : 'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold';
             selectedTheme = e.currentTarget.dataset.theme;
             $('customTopicInput').value = '';
-        });
+        };
     });
 }
 
@@ -365,8 +358,8 @@ function onBleEvent(event) {
         showToast('✨ 動作正確！正在繼續...');
         handleAction(expectedAction);
     } else {
-        showToast('收到 ' + value + '，目前需要：' + actionLabel(expectedAction));
-        $('actionSubText').textContent = '目前需要：' + actionLabel(expectedAction);
+        showToast('收到 ' + value + '，目前需要：' + actionLabel(cleanExpected));
+        $('actionSubText').textContent = '目前需要：' + actionLabel(cleanExpected);
     }
 }
 
@@ -517,28 +510,39 @@ function speak(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    $('btnConnect').addEventListener('click', connectBLE);$('btnGenerate').addEventListener('click', generateStory);
+window.addEventListener('DOMContentLoaded', () => {
+    if ($('modeChildBtn'))$('modeChildBtn').onclick = () => switchMode('child');
+    if ($('modeSeniorBtn'))$('modeSeniorBtn').onclick = () => switchMode('senior');
+    if ($('btnConnect'))$('btnConnect').onclick = connectBLE;
+    if ($('btnGenerate'))$('btnGenerate').onclick = generateStory;
+    
+    if ($('diffBtn1'))$('diffBtn1').onclick = () => setDifficulty(1);
+    if ($('diffBtn2'))$('diffBtn2').onclick = () => setDifficulty(2);
+    if ($('diffBtn3'))$('diffBtn3').onclick = () => setDifficulty(3);
+
     bindThemeButtons();
 
-    $('btnManualAction').addEventListener('click', () => {
-        if (!waitingForAction) {
-            showToast('目前沒有等待中的互動。');
-            return;
-        }
-        handleAction(expectedAction);
-    });
+    if ($('btnManualAction')) {$('btnManualAction').onclick = () => {
+            if (!waitingForAction) {
+                showToast('目前沒有等待中的互動。');
+                return;
+            }
+            handleAction(expectedAction);
+        };
+    }
 
-    $('customTopicInput').addEventListener('input', () => {
-        document.querySelectorAll('.theme-btn').forEach(b => {
-            b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
-        });
-    });
+    if ($('customTopicInput')) {$('customTopicInput').oninput = () => {
+            document.querySelectorAll('.theme-btn').forEach(b => {
+                b.className = 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+            });
+        };
+    }
 
-    $('btnSpeak').addEventListener('click', () => {
-        if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-        else if (currentStory) speak(currentStory + ' ' + (expectedAction ? actionLabel(expectedAction) : ''));
-    });
+    if ($('btnSpeak')) {$('btnSpeak').onclick = () => {
+            if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+            else if (currentStory) speak(currentStory + ' ' + (expectedAction ? actionLabel(expectedAction) : ''));
+        };
+    }
 });
 </script>
 </body>
