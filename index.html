@@ -929,10 +929,6 @@
                     .classList.remove(
                         'hidden'
                     );
-                /*
-                 * 這裡就是原本出錯的地方
-                 * 已經改成合法的 JavaScript || 
-                 */
                 $('promptText').textContent =
                     data.actionLabel ||
                     actionLabel(data.action);
@@ -972,8 +968,7 @@
             return;
         }
         const btn =
-            $('btnGenerate');
-        $('btnText').textContent =
+            $('btnGenerate');$('btnText').textContent =
             'AI 正在編寫冒險...';
         $('btnIcon').className =
             'fa-solid fa-spinner animate-spin';
@@ -1013,6 +1008,11 @@
             }
             $('welcomeMessage')
                 .classList.add(
+                    'hidden'
+                );
+            /* 修正：移除隱藏，讓故事文字能夠正常顯示 */
+            $('storyDisplay')
+                .classList.remove(
                     'hidden'
                 );
             $('storyDisplay').innerHTML =
@@ -1070,10 +1070,6 @@
                     .classList.remove(
                         'hidden'
                     );
-                /*
-                 * 原本的 \vert{}\vert{}
-                 * 已經修正成合法的 ||
-                 */
                 $('promptText').textContent =
                     data.actionLabel ||
                     actionLabel(data.action);
