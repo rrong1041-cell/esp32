@@ -174,7 +174,6 @@ let waitingForAction = false;
 let expectedAction = "";
 let busy = false;
 
-// 長輩模式狀態
 let seniorMode = false;
 let seniorLevel = 'easy';
 let seniorRoundIndex = 0;
@@ -263,6 +262,10 @@ function appendStory(title, text, action, resultText="") {
 
 function setSeniorMode(on) {
     seniorMode = on;
+    selectedDifficulty = on ? seniorLevel : 'easy';
+    waitingForAction = false;
+    expectedAction = '';
+    busy = false;
     document.body.classList.toggle('senior-mode', seniorMode);
     const btn = $('btnModeToggle');
     if (seniorMode) {
@@ -285,6 +288,7 @@ function setSeniorMode(on) {
 
 function selectSeniorLevel(level) {
     seniorLevel = level;
+    selectedDifficulty = level;
     seniorRoundIndex = 0;
     document.querySelectorAll('.senior-level').forEach(b => {
         const active = b.dataset.level === level;
@@ -419,7 +423,9 @@ async function handleAction(action) {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
+                mode: seniorMode ? 'senior' : 'child',
                 topic: selectedTheme,
+                difficulty: seniorLevel,
                 action,
                 expectedAction,
                 history,
@@ -477,7 +483,11 @@ async function generateStory() {
         const res = await fetch(WORKER_URL + '/api/story', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({topic})
+            body:JSON.stringify({
+                mode: seniorMode ? 'senior' : 'child',
+                topic,
+                difficulty: seniorMode ? seniorLevel : 'easy'
+            })
         });
 
         const data = await res.json();
@@ -509,7 +519,7 @@ async function generateStory() {
         console.error(e);
         showToast('錯誤：' + e.message);
     } finally {
-        $('btnText').textContent = '開始精彩故事冒險';
+        $('btnText').textContent = seniorMode ? '開始健康活動' : '開始精彩故事冒險';
         $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
         btn.disabled = false;
     }
@@ -540,15 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
     $('btnConnect').addEventListener('click', connectBLE);$('btnGenerate').addEventListener('click', generateStory);
 
     $('btnManualAction').addEventListener('click', () => {
-        if (seniorMode) {
-            if (!seniorRunning) {
-                showToast('請先在長輩模式中點擊「開始活動」。');
-                return;
-            }
-            handleSeniorAction(seniorExpectedAction);
-            return;
-        }
-
         if (!waitingForAction) {
             showToast('目前沒有等待中的互動。先開始一個故事。');
             return;
