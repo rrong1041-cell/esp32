@@ -2,24 +2,35 @@
 <html lang="zh-TW">
 
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>聲動奇境 - 智慧互動繪本</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 
-<link rel="stylesheet"
-href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link
+rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+>
 
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
-rel="stylesheet">
+<link
+href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+rel="stylesheet"
+>
 
 <script>
+
 tailwind.config = {
+
     theme: {
+
         extend: {
+
             colors: {
+
                 magic: {
                     dark: '#0f172a',
                     card: '#1e1b4b',
@@ -27,57 +38,155 @@ tailwind.config = {
                     pink: '#ec4899',
                     cyan: '#06b6d4'
                 },
+
                 senior: {
                     dark: '#064e3b',
                     card: '#022c22',
                     green: '#10b981',
                     amber: '#f59e0b'
                 }
+
             },
 
             fontFamily: {
                 fredoka: ['Fredoka', 'Noto Sans TC', 'sans-serif']
             }
+
         }
+
     }
+
 }
+
 </script>
+
 
 <style>
 
 body {
+
     font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
-    background: radial-gradient(circle at top, #2e1065 0%, #0f172a 100%);
+
+    background:
+        radial-gradient(
+            circle at top,
+            #2e1065 0%,
+            #0f172a 100%
+        );
+
     min-height: 100vh;
-    transition: background 0.5s ease;
+
+    transition:
+        background 0.5s ease;
+
 }
+
 
 body.mode-senior {
-    background: radial-gradient(circle at top, #064e3b 0%, #022c22 100%);
+
+    background:
+        radial-gradient(
+            circle at top,
+            #064e3b 0%,
+            #022c22 100%
+        );
+
 }
+
 
 .glow-button {
-    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.5);
-    transition: all 0.3s ease;
+
+    box-shadow:
+        0 4px 20px rgba(236, 72, 153, 0.5);
+
+    transition:
+        all 0.3s ease;
+
 }
+
 
 body.mode-senior .glow-button {
-    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.5);
-    background: linear-gradient(to right, #059669, #10b981, #34d399) !important;
+
+    box-shadow:
+        0 4px 20px rgba(16, 185, 129, 0.5);
+
+    background:
+        linear-gradient(
+            to right,
+            #059669,
+            #10b981,
+            #34d399
+        ) !important;
+
 }
+
 
 .action-big {
-    animation: pulseGlow 1.6s infinite;
+
+    animation:
+        pulseGlow 1.6s infinite;
+
 }
 
+
 @keyframes pulseGlow {
+
     0%,100% {
-        box-shadow: 0 0 0 rgba(236,72,153,.1);
+
+        box-shadow:
+            0 0 0 rgba(236,72,153,.1);
+
     }
 
     50% {
-        box-shadow: 0 0 24px rgba(236,72,153,.35);
+
+        box-shadow:
+            0 0 24px rgba(236,72,153,.35);
+
     }
+
+}
+
+
+.senior-level.active-easy {
+
+    background:
+        rgba(16,185,129,.25);
+
+    border-color:
+        #10b981;
+
+    color:
+        #a7f3d0;
+
+}
+
+
+.senior-level.active-normal {
+
+    background:
+        rgba(245,158,11,.25);
+
+    border-color:
+        #f59e0b;
+
+    color:
+        #fde68a;
+
+}
+
+
+.senior-level.active-hard {
+
+    background:
+        rgba(239,68,68,.25);
+
+    border-color:
+        #ef4444;
+
+    color:
+        #fecaca;
+
 }
 
 </style>
@@ -86,36 +195,45 @@ body.mode-senior .glow-button {
 
 
 <body
+id="appBody"
 class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between"
-id="appBody">
+>
 
 
 <header class="w-full max-w-4xl text-center my-4">
+
 
     <!-- 模式切換 -->
 
     <div class="flex justify-center items-center gap-4 mb-4">
 
-        <div class="inline-flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 shadow-xl">
+        <div
+        class="inline-flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 shadow-xl"
+        >
 
             <button
-                id="modeChildBtn"
-                onclick="switchMode('child')"
-                class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md">
+            id="modeChildBtn"
+            onclick="switchMode('child')"
+            class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md"
+            >
 
                 <i class="fa-solid fa-child"></i>
+
                 兒童冒險模式
 
             </button>
 
 
             <button
-                id="modeSeniorBtn"
-                onclick="switchMode('senior')"
-                class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white">
+            id="modeSeniorBtn"
+            onclick="switchMode('senior')"
+            class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white"
+            >
 
                 <i class="fa-solid fa-person-cane"></i>
-                長輩模式 (請坐在有椅背的椅子上)
+
+                長輩模式
+                (請坐在有椅背的椅子上)
 
             </button>
 
@@ -124,15 +242,20 @@ id="appBody">
     </div>
 
 
-    <div
-        class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg"
-        id="topBadge">
 
-        <i class="fa-solid fa-headphones-simple text-amber-400 font-bold"></i>
+    <div
+    id="topBadge"
+    class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg"
+    >
+
+        <i
+        class="fa-solid fa-headphones-simple text-amber-400 font-bold"
+        ></i>
 
         <span
-            class="text-amber-300 font-semibold text-sm"
-            id="badgeText">
+        id="badgeText"
+        class="text-amber-300 font-semibold text-sm"
+        >
 
             沈浸式互動繪本・聽完動作指示後完成動作繼續
 
@@ -141,9 +264,11 @@ id="appBody">
     </div>
 
 
+
     <h1
-        class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300"
-        id="mainTitle">
+    id="mainTitle"
+    class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300"
+    >
 
         聲動奇境 ✨ 智慧互動繪本
 
@@ -154,102 +279,116 @@ id="appBody">
 
 
 <main
-class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto"
+>
 
 
-<!-- 左側：藍牙 -->
+<!-- 左側 -->
 
 <section
 id="leftCard"
-class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
+class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6"
+>
 
 
-<div>
+    <div>
 
-    <h2 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
+        <h2
+        class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2"
+        >
 
-        <i class="fa-brands fa-bluetooth-b text-cyan-400"></i>
+            <i class="fa-brands fa-bluetooth-b text-cyan-400"></i>
 
-        藍牙連線
+            藍牙連線
 
-    </h2>
+        </h2>
 
 
-    <div
-        class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
 
-        <div class="flex items-center gap-3">
+        <div
+        class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between"
+        >
 
-            <span
+            <div class="flex items-center gap-3">
+
+                <span
                 id="statusIndicator"
-                class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow">
-            </span>
+                class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow"
+                ></span>
 
-            <div>
+                <div>
 
-                <div class="text-xs text-slate-400">
-                    狀態
-                </div>
+                    <div class="text-xs text-slate-400">
+                        狀態
+                    </div>
 
-                <div
+                    <div
                     id="statusText"
-                    class="font-bold text-slate-200 text-sm">
-
-                    尚未連線
+                    class="font-bold text-slate-200 text-sm"
+                    >
+                        尚未連線
+                    </div>
 
                 </div>
 
             </div>
 
+
+            <i
+            id="statusIcon"
+            class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"
+            ></i>
+
         </div>
 
 
-        <i
-            id="statusIcon"
-            class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl">
-        </i>
+
+        <button
+        id="btnConnect"
+        class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm"
+        >
+
+            連接故事裝置
+
+        </button>
 
     </div>
 
 
-    <button
-        id="btnConnect"
-        class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">
 
-        連接故事裝置
+    <div
+    class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40"
+    >
 
-    </button>
+        <h3
+        class="text-sm font-bold text-purple-300 mb-2"
+        >
+            手動測試互動
+        </h3>
 
-</div>
 
-
-
-<div
-class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
-
-    <h3 class="text-sm font-bold text-purple-300 mb-2">
-        手動測試互動
-    </h3>
-
-    <button
+        <button
         id="btnManualAction"
-        class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
+        class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition"
+        >
 
-        ✨ 模擬做完動作
+            ✨ 模擬做完動作
 
-    </button>
+        </button>
 
 
-    <p
+        <p
         id="deviceHint"
-        class="text-xs text-slate-400 mt-3 leading-relaxed">
+        class="text-xs text-slate-400 mt-3 leading-relaxed"
+        >
 
-        裝置實體按鈕可切換模式。<br>
-        動作請依照目前模式指示操作。
+            裝置實體按鈕可切換模式。<br>
 
-    </p>
+            動作請依照目前模式指示操作。
 
-</div>
+        </p>
+
+    </div>
 
 </section>
 
@@ -259,174 +398,241 @@ class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
 
 <section
 id="rightCard"
-class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6">
-
-
-<div
-class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
-
-
-<div
-id="storyScroll"
-class="overflow-y-auto max-h-[360px] pr-2 space-y-4">
-
-
-<div
-id="welcomeMessage"
-class="text-center py-10">
-
-    <div
-        id="welcomeIcon"
-        class="text-5xl mb-3">
-
-        📖✨
-
-    </div>
-
-
-    <h3
-        id="welcomeTitle"
-        class="text-lg font-bold text-purple-300">
-
-        準備好開始冒險了嗎？
-
-    </h3>
-
-
-    <p
-        id="welcomeDesc"
-        class="text-sm text-slate-400 mt-1">
-
-        選擇或自訂主題，AI 會即時生成故事並在互動處停下。
-
-    </p>
-
-</div>
-
-
-<div
-id="storyDisplay"
-class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
-</div>
-
-</div>
-
-
-
-<!-- 動作提示 -->
-
-<div
-id="actionPrompt"
-class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl border border-pink-500/30 action-big">
-
-    <div
-        class="flex items-center gap-2 text-pink-300 font-bold"
-        id="actionHeaderBox">
-
-        <i class="fa-solid fa-hand-sparkles text-xl"></i>
-
-        <span id="promptText">
-            請依照提示做出動作。
-        </span>
-
-    </div>
+class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6"
+>
 
 
     <div
-        id="actionSubText"
-        class="text-sm text-slate-300 mt-2">
+    class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]"
+    >
+
+
+        <div
+        id="storyScroll"
+        class="overflow-y-auto max-h-[360px] pr-2 space-y-4"
+        >
+
+
+            <div
+            id="welcomeMessage"
+            class="text-center py-10"
+            >
+
+                <div
+                id="welcomeIcon"
+                class="text-5xl mb-3"
+                >
+                    📖✨
+                </div>
+
+
+                <h3
+                id="welcomeTitle"
+                class="text-lg font-bold text-purple-300"
+                >
+                    準備好開始冒險了嗎？
+                </h3>
+
+
+                <p
+                id="welcomeDesc"
+                class="text-sm text-slate-400 mt-1"
+                >
+                    選擇或自訂主題，AI 會即時生成故事並在互動處停下。
+                </p>
+
+            </div>
+
+
+            <div
+            id="storyDisplay"
+            class="text-lg leading-relaxed text-slate-300 hidden space-y-4"
+            ></div>
+
+        </div>
+
+
+
+        <!-- 動作提示 -->
+
+        <div
+        id="actionPrompt"
+        class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl border border-pink-500/30 action-big"
+        >
+
+            <div
+            id="actionHeaderBox"
+            class="flex items-center gap-2 text-pink-300 font-bold"
+            >
+
+                <i
+                class="fa-solid fa-hand-sparkles text-xl"
+                ></i>
+
+                <span id="promptText">
+                    請依照提示做出動作。
+                </span>
+
+            </div>
+
+
+            <div
+            id="actionSubText"
+            class="text-sm text-slate-300 mt-2"
+            ></div>
+
+        </div>
+
     </div>
 
-</div>
-
-</div>
 
 
+    <!-- 主題與按鈕 -->
 
-<!-- 下方控制區 -->
-
-<div class="space-y-4">
-
-
-<div class="space-y-2">
-
-    <div
-        class="grid grid-cols-3 gap-2"
-        id="themeButtonsContainer">
-
-        <button
-            data-theme="勇敢的小騎士與巨龍"
-            class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">
-
-            ⚔️ 騎士巨龍
-
-        </button>
+    <div class="space-y-4">
 
 
-        <button
-            data-theme="神奇魔法森林的密道"
-            class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-
-            🌲 魔法森林
-
-        </button>
+        <div class="space-y-2">
 
 
-        <button
-            data-theme="海底王國的寶藏探險"
-            class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
+            <div
+            id="themeButtonsContainer"
+            class="grid grid-cols-3 gap-2"
+            >
 
-            🐬 海底寶藏
+                <button
+                data-theme="勇敢的小騎士與巨龍"
+                class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold"
+                >
 
-        </button>
+                    ⚔️ 騎士巨龍
+
+                </button>
+
+
+                <button
+                data-theme="神奇魔法森林的密道"
+                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+                >
+
+                    🌲 魔法森林
+
+                </button>
+
+
+                <button
+                data-theme="海底王國的寶藏探險"
+                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+                >
+
+                    🐬 海底寶藏
+
+                </button>
+
+            </div>
+
+
+
+            <!-- 長輩難度 -->
+
+            <div
+            id="seniorDifficulty"
+            class="hidden"
+            >
+
+                <div
+                class="text-xs text-slate-400 mb-2"
+                >
+                    活動難度
+                </div>
+
+
+                <div class="grid grid-cols-3 gap-2">
+
+
+                    <button
+                    data-difficulty="easy"
+                    class="senior-level active-easy bg-emerald-900/30 border border-emerald-500/60 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold"
+                    >
+
+                        🟢 簡單
+
+                    </button>
+
+
+                    <button
+                    data-difficulty="normal"
+                    class="senior-level bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+                    >
+
+                        🟡 普通
+
+                    </button>
+
+
+                    <button
+                    data-difficulty="hard"
+                    class="senior-level bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+                    >
+
+                        🔴 挑戰
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+
+            <div class="flex gap-2">
+
+                <input
+                id="customTopicInput"
+                type="text"
+                placeholder="或者輸入想聽的故事、坐姿健康操"
+                class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500"
+                >
+
+            </div>
+
+        </div>
+
+
+
+        <div class="flex gap-3">
+
+
+            <button
+            id="btnGenerate"
+            class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3"
+            >
+
+                <i
+                id="btnIcon"
+                class="fa-solid fa-wand-magic-sparkles"
+                ></i>
+
+                <span id="btnText">
+                    開始精彩故事冒險
+                </span>
+
+            </button>
+
+
+            <button
+            id="btnSpeak"
+            disabled
+            class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition"
+            >
+
+                <i class="fa-solid fa-play"></i>
+
+            </button>
+
+        </div>
 
     </div>
-
-
-    <div class="flex gap-2">
-
-        <input
-            type="text"
-            id="customTopicInput"
-            placeholder="或者輸入想聽的故事、坐姿健康操"
-            class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
-
-    </div>
-
-</div>
-
-
-
-<div class="flex gap-3">
-
-    <button
-        id="btnGenerate"
-        class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
-
-        <i
-            id="btnIcon"
-            class="fa-solid fa-wand-magic-sparkles">
-        </i>
-
-        <span id="btnText">
-            開始精彩故事冒險
-        </span>
-
-    </button>
-
-
-    <button
-        id="btnSpeak"
-        disabled
-        class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
-
-        <i class="fa-solid fa-play"></i>
-
-    </button>
-
-</div>
-
-</div>
 
 </section>
 
@@ -436,8 +642,8 @@ class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl 
 
 <div
 id="toast"
-class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 text-sm font-semibold">
-</div>
+class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 text-sm font-semibold"
+></div>
 
 
 
@@ -445,7 +651,7 @@ class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purpl
 
 
 /* =========================================================
-   BLE 設定
+   BLE
 ========================================================= */
 
 const BLE_CONFIG = {
@@ -465,7 +671,7 @@ const WORKER_URL =
 
 
 /* =========================================================
-   全域變數
+   全域狀態
 ========================================================= */
 
 let bleDevice = null;
@@ -476,6 +682,9 @@ let currentMode = "child";
 
 let selectedTheme =
     "勇敢的小騎士與巨龍";
+
+let selectedDifficulty =
+    "easy";
 
 let currentStory = "";
 
@@ -502,14 +711,19 @@ const $ = id =>
 
 function showToast(msg) {
 
-    const t = $('toast');
+    const t =
+        $('toast');
 
-    t.textContent = msg;
+
+    t.textContent =
+        msg;
+
 
     t.classList.remove(
         'opacity-0',
         'pointer-events-none'
     );
+
 
     t.classList.add(
         'opacity-100'
@@ -521,6 +735,7 @@ function showToast(msg) {
         t.classList.remove(
             'opacity-100'
         );
+
 
         t.classList.add(
             'opacity-0',
@@ -534,20 +749,355 @@ function showToast(msg) {
 
 
 /* =========================================================
+   語音
+========================================================= */
+
+function speak(text) {
+
+    if (
+        !('speechSynthesis' in window)
+    ) {
+
+        return;
+
+    }
+
+
+    if (!text) {
+
+        return;
+
+    }
+
+
+    const utterance =
+        new SpeechSynthesisUtterance(
+            text
+        );
+
+
+    utterance.lang =
+        'zh-TW';
+
+
+    utterance.rate =
+        0.95;
+
+
+    utterance.pitch =
+        1.0;
+
+
+    window.speechSynthesis.speak(
+        utterance
+    );
+
+}
+
+
+
+/* =========================================================
+   清除語音並播放
+========================================================= */
+
+function speakNow(text) {
+
+    if (
+        !('speechSynthesis' in window)
+    ) {
+
+        return;
+
+    }
+
+
+    window.speechSynthesis.cancel();
+
+
+    setTimeout(() => {
+
+        speak(text);
+
+    }, 80);
+
+}
+
+
+
+/* =========================================================
+   成功 / 失敗
+========================================================= */
+
+function speakSuccess() {
+
+    speakNow(
+        "成功！做得很好！"
+    );
+
+}
+
+
+function speakFailure() {
+
+    speakNow(
+        "失敗，再試一次。"
+    );
+
+}
+
+
+
+/* =========================================================
+   動作顯示文字
+========================================================= */
+
+function actionLabel(action) {
+
+    const map = {
+
+        SWIPE_LEFT:
+
+            currentMode === 'senior'
+
+                ? "↩️ 請慢慢向左移動手臂"
+
+                : "⬅️ 請向左揮動手環",
+
+
+        SWIPE_RIGHT:
+
+            currentMode === 'senior'
+
+                ? "↪️ 請慢慢向右移動手臂"
+
+                : "➡️ 請向右揮動手環",
+
+
+        JUMP:
+            "⬆️ 請向上跳一下",
+
+
+        SHAKE:
+
+            currentMode === 'senior'
+
+                ? "📳 請輕輕搖動手臂"
+
+                : "📳 請搖晃手環",
+
+
+        RUN:
+
+            currentMode === 'senior'
+
+                ? "🏃 請在坐姿下輕鬆擺動雙臂"
+
+                : "🏃 請原地跑步，手臂前後擺動",
+
+
+        ARM_UP:
+            "🙋 請慢慢將手臂抬起來",
+
+
+        ARM_DOWN:
+            "🙆 請慢慢將手臂放下",
+
+
+        TILT_LEFT:
+            "↩️ 請慢慢向左傾斜",
+
+
+        TILT_RIGHT:
+            "↪️ 請慢慢向右傾斜",
+
+
+        HOLD_UP:
+            "✋ 請抬高手臂並保持一下"
+
+    };
+
+
+    return map[action] ||
+        "📳 請依照提示操作裝置";
+
+}
+
+
+
+/* =========================================================
+   動作語音文字
+   不包含 Emoji
+========================================================= */
+
+function actionSpeechLabel(action) {
+
+    const map = {
+
+        SWIPE_LEFT:
+
+            currentMode === 'senior'
+
+                ? "請慢慢向左移動手臂"
+
+                : "請向左揮動手環",
+
+
+        SWIPE_RIGHT:
+
+            currentMode === 'senior'
+
+                ? "請慢慢向右移動手臂"
+
+                : "請向右揮動手環",
+
+
+        JUMP:
+            "請向上跳一下",
+
+
+        SHAKE:
+
+            currentMode === 'senior'
+
+                ? "請輕輕搖動手臂"
+
+                : "請搖晃手環",
+
+
+        RUN:
+
+            currentMode === 'senior'
+
+                ? "請在坐姿下輕鬆擺動雙臂"
+
+                : "請原地跑步，手臂前後擺動",
+
+
+        ARM_UP:
+            "請慢慢將手臂抬起來",
+
+
+        ARM_DOWN:
+            "請慢慢將手臂放下",
+
+
+        TILT_LEFT:
+            "請慢慢向左傾斜",
+
+
+        TILT_RIGHT:
+            "請慢慢向右傾斜",
+
+
+        HOLD_UP:
+            "請抬高手臂並保持一下"
+
+    };
+
+
+    return map[action] ||
+        "請依照提示操作裝置";
+
+}
+
+
+
+/* =========================================================
+   播放動作
+========================================================= */
+
+function speakAction(action) {
+
+    speakNow(
+        actionSpeechLabel(action)
+    );
+
+}
+
+
+
+/* =========================================================
+   故事 → 動作
+========================================================= */
+
+function speakStoryThenAction(
+    story,
+    action
+) {
+
+    if (
+        !('speechSynthesis' in window)
+    ) {
+
+        return;
+
+    }
+
+
+    window.speechSynthesis.cancel();
+
+
+    const storyUtterance =
+        new SpeechSynthesisUtterance(
+            story
+        );
+
+
+    storyUtterance.lang =
+        'zh-TW';
+
+
+    storyUtterance.rate =
+        0.95;
+
+
+    storyUtterance.pitch =
+        1.0;
+
+
+    storyUtterance.onend =
+        () => {
+
+            if (action) {
+
+                speakAction(
+                    action
+                );
+
+            }
+
+        };
+
+
+    window.speechSynthesis.speak(
+        storyUtterance
+    );
+
+}
+
+
+
+/* =========================================================
    模式切換
 ========================================================= */
 
-async function switchMode(mode, notifyDevice = true) {
+async function switchMode(
+    mode,
+    notifyDevice = true
+) {
 
-    currentMode = mode;
+    currentMode =
+        mode;
+
 
     const isSenior =
         mode === 'senior';
 
 
-    /* -------------------------
-       長輩模式
-    ------------------------- */
+
+    /* =====================================================
+       切到長輩
+    ===================================================== */
 
     if (isSenior) {
 
@@ -591,32 +1141,34 @@ async function switchMode(mode, notifyDevice = true) {
         $('themeButtonsContainer').innerHTML = `
 
             <button
-                data-theme="輕鬆坐姿手部健康伸展"
-                class="theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">
-
+            data-theme="輕鬆坐姿手部健康伸展"
+            class="theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold"
+            >
                 🙌 手部健康伸展
-
             </button>
 
 
             <button
-                data-theme="坐姿肩頸放鬆活動"
-                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-
+            data-theme="坐姿肩頸放鬆活動"
+            class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+            >
                 🧘 肩頸放鬆操
-
             </button>
 
 
             <button
-                data-theme="坐姿活力健康活動"
-                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-
+            data-theme="坐姿活力健康活動"
+            class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+            >
                 🌟 活力健康動
-
             </button>
 
         `;
+
+
+        $('seniorDifficulty')
+            .classList
+            .remove('hidden');
 
 
         $('btnText').textContent =
@@ -643,12 +1195,20 @@ async function switchMode(mode, notifyDevice = true) {
             '已切換至【長輩模式】'
         );
 
+
+        /* 模式提示聲 */
+
+        speakNow(
+            "已切換至長輩健康活動模式。"
+        );
+
     }
 
 
-    /* -------------------------
-       兒童模式
-    ------------------------- */
+
+    /* =====================================================
+       切到兒童
+    ===================================================== */
 
     else {
 
@@ -689,32 +1249,34 @@ async function switchMode(mode, notifyDevice = true) {
             "勇敢的小騎士與巨龍";
 
 
+        $('seniorDifficulty')
+            .classList
+            .add('hidden');
+
+
         $('themeButtonsContainer').innerHTML = `
 
             <button
-                data-theme="勇敢的小騎士與巨龍"
-                class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold">
-
+            data-theme="勇敢的小騎士與巨龍"
+            class="theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold"
+            >
                 ⚔️ 騎士巨龍
-
             </button>
 
 
             <button
-                data-theme="神奇魔法森林的密道"
-                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-
+            data-theme="神奇魔法森林的密道"
+            class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+            >
                 🌲 魔法森林
-
             </button>
 
 
             <button
-                data-theme="海底王國的寶藏探險"
-                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-
+            data-theme="海底王國的寶藏探險"
+            class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold"
+            >
                 🐬 海底寶藏
-
             </button>
 
         `;
@@ -744,20 +1306,40 @@ async function switchMode(mode, notifyDevice = true) {
             '已切換至【兒童冒險模式】'
         );
 
+
+        /* 模式提示聲 */
+
+        speakNow(
+            "已切換至兒童冒險模式。"
+        );
+
     }
 
 
-    /* 清掉目前內容 */
 
-    waitingForAction = false;
+    /* =====================================================
+       清除目前遊戲狀態
+    ===================================================== */
 
-    expectedAction = "";
+    waitingForAction =
+        false;
 
-    busy = false;
 
-    currentStory = "";
+    expectedAction =
+        "";
 
-    history = [];
+
+    busy =
+        false;
+
+
+    currentStory =
+        "";
+
+
+    history =
+        [];
+
 
     $('actionPrompt')
         .classList
@@ -769,20 +1351,17 @@ async function switchMode(mode, notifyDevice = true) {
         .remove('hidden');
 
 
-    $('storyDisplay').innerHTML = "";
+    $('storyDisplay').innerHTML =
+        "";
+
 
     $('storyDisplay')
         .classList
         .add('hidden');
 
 
-    window.speechSynthesis.cancel();
-
-
     bindThemeButtons();
 
-
-    /* 同步 ESP32 */
 
     if (
         notifyDevice &&
@@ -826,18 +1405,24 @@ function bindThemeButtons() {
 
 
                     e.currentTarget.className =
+
                         currentMode === 'senior'
 
-                        ? 'theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold'
+                        ?
 
-                        : 'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold';
+                        'theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold'
+
+                        :
+
+                        'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold';
 
 
                     selectedTheme =
                         e.currentTarget.dataset.theme;
 
 
-                    $('customTopicInput').value = "";
+                    $('customTopicInput').value =
+                        "";
 
                 }
             );
@@ -849,349 +1434,95 @@ function bindThemeButtons() {
 
 
 /* =========================================================
-   動作顯示文字
+   長輩難度
 ========================================================= */
 
-function actionLabel(action) {
+function bindDifficultyButtons() {
 
-    const map = {
+    document
+        .querySelectorAll('.senior-level')
+        .forEach(btn => {
 
-        SWIPE_LEFT:
-            currentMode === 'senior'
-                ? "↩️ 請慢慢向左移動手臂"
-                : "⬅️ 請向左揮動手環",
+            btn.addEventListener(
+                'click',
+                () => {
 
-        SWIPE_RIGHT:
-            currentMode === 'senior'
-                ? "↪️ 請慢慢向右移動手臂"
-                : "➡️ 請向右揮動手環",
+                    document
+                        .querySelectorAll('.senior-level')
+                        .forEach(b => {
 
-        JUMP:
-            "⬆️ 請向上跳一下",
+                            b.classList.remove(
+                                'active-easy',
+                                'active-normal',
+                                'active-hard'
+                            );
 
-        SHAKE:
-            currentMode === 'senior'
-                ? "📳 請輕輕搖動手臂"
-                : "📳 請搖晃手環",
+                            b.className =
+                                'senior-level bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
 
-        RUN:
-            currentMode === 'senior'
-                ? "🏃 請在坐姿下輕鬆擺動雙臂"
-                : "🏃 請原地跑步，手臂前後擺動",
+                        });
 
-        ARM_UP:
-            "🙋 請慢慢將手臂抬起來",
 
-        ARM_DOWN:
-            "🙆 請慢慢將手臂放下",
+                    selectedDifficulty =
+                        btn.dataset.difficulty;
 
-        TILT_LEFT:
-            "↩️ 請慢慢向左傾斜",
 
-        TILT_RIGHT:
-            "↪️ 請慢慢向右傾斜",
+                    if (
+                        selectedDifficulty === 'easy'
+                    ) {
 
-        HOLD_UP:
-            "✋ 請抬高手臂並保持一下"
+                        btn.className =
+                            'senior-level active-easy bg-emerald-900/30 border border-emerald-500/60 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold';
 
-    };
+                    }
 
 
-    return map[action]
-        || "📳 請依照提示操作裝置";
+                    else if (
+                        selectedDifficulty === 'normal'
+                    ) {
 
-}
+                        btn.className =
+                            'senior-level active-normal bg-amber-900/30 border border-amber-500/60 text-amber-200 py-2 px-2 rounded-xl text-xs font-semibold';
 
+                    }
 
 
-/* =========================================================
-   給語音使用的文字
-   注意：這裡沒有 Emoji
-========================================================= */
+                    else {
 
-function actionSpeechLabel(action) {
+                        btn.className =
+                            'senior-level active-hard bg-red-900/30 border border-red-500/60 text-red-200 py-2 px-2 rounded-xl text-xs font-semibold';
 
-    const map = {
+                    }
 
-        SWIPE_LEFT:
-            currentMode === 'senior'
-                ? "請慢慢向左移動手臂"
-                : "請向左揮動手環",
 
-        SWIPE_RIGHT:
-            currentMode === 'senior'
-                ? "請慢慢向右移動手臂"
-                : "請向右揮動手環",
+                    const difficultyText = {
 
-        JUMP:
-            "請向上跳一下",
+                        easy: "簡單",
 
-        SHAKE:
-            currentMode === 'senior'
-                ? "請輕輕搖動手臂"
-                : "請搖晃手環",
+                        normal: "普通",
 
-        RUN:
-            currentMode === 'senior'
-                ? "請在坐姿下輕鬆擺動雙臂"
-                : "請原地跑步，手臂前後擺動",
+                        hard: "挑戰"
 
-        ARM_UP:
-            "請慢慢將手臂抬起來",
+                    };
 
-        ARM_DOWN:
-            "請慢慢將手臂放下",
 
-        TILT_LEFT:
-            "請慢慢向左傾斜",
+                    showToast(
+                        '已選擇【' +
+                        difficultyText[selectedDifficulty] +
+                        '】難度'
+                    );
 
-        TILT_RIGHT:
-            "請慢慢向右傾斜",
 
-        HOLD_UP:
-            "請抬高手臂並保持一下"
+                    speakNow(
+                        "已選擇" +
+                        difficultyText[selectedDifficulty] +
+                        "難度。"
+                    );
 
-    };
+                }
+            );
 
-
-    return map[action]
-        || "請依照提示操作裝置";
-
-}
-
-
-
-/* =========================================================
-   語音
-========================================================= */
-
-function speak(text) {
-
-    if (
-        !('speechSynthesis' in window) ||
-        !text
-    ) return;
-
-
-    const utterance =
-        new SpeechSynthesisUtterance(text);
-
-
-    utterance.lang = 'zh-TW';
-
-    utterance.rate = 0.95;
-
-    utterance.pitch = 1.0;
-
-
-    window.speechSynthesis.speak(
-        utterance
-    );
-
-}
-
-
-
-function speakSuccess() {
-
-    speak(
-        "成功！做得很好！"
-    );
-
-}
-
-
-
-function speakFailure() {
-
-    speak(
-        "失敗，再試一次。"
-    );
-
-}
-
-
-
-function speakAction(action) {
-
-    speak(
-        actionSpeechLabel(action)
-    );
-
-}
-
-
-
-/* =========================================================
-   故事語音
-========================================================= */
-
-function speakStoryThenAction(
-    story,
-    action
-) {
-
-    if (
-        !('speechSynthesis' in window)
-    ) return;
-
-
-    window.speechSynthesis.cancel();
-
-
-    if (!story) {
-
-        if (action) {
-            speakAction(action);
-        }
-
-        return;
-
-    }
-
-
-    const utterance =
-        new SpeechSynthesisUtterance(
-            story
-        );
-
-
-    utterance.lang = 'zh-TW';
-
-    utterance.rate = 0.95;
-
-    utterance.pitch = 1.0;
-
-
-    utterance.onend = () => {
-
-        if (action) {
-            speakAction(action);
-        }
-
-    };
-
-
-    window.speechSynthesis.speak(
-        utterance
-    );
-
-}
-
-
-
-/* =========================================================
-   顯示故事 / 活動
-========================================================= */
-
-function appendStory(
-    title,
-    text,
-    action,
-    resultText = ""
-) {
-
-    const display =
-        $('storyDisplay');
-
-
-    const box =
-        document.createElement('div');
-
-
-    box.className =
-        'p-4 rounded-xl bg-slate-900/70 border border-slate-800';
-
-
-    const safeTitle =
-        document.createElement('div');
-
-
-    safeTitle.className =
-        currentMode === 'senior'
-            ? 'text-xs font-bold text-emerald-300 mb-2'
-            : 'text-xs font-bold text-purple-300 mb-2';
-
-
-    safeTitle.textContent =
-        title;
-
-
-    box.appendChild(
-        safeTitle
-    );
-
-
-    if (text) {
-
-        const p =
-            document.createElement('p');
-
-
-        p.className =
-            'text-slate-200';
-
-
-        p.textContent =
-            text;
-
-
-        box.appendChild(
-            p
-        );
-
-    }
-
-
-    if (action) {
-
-        const a =
-            document.createElement('div');
-
-
-        a.className =
-            'mt-3 text-sm font-bold text-pink-400';
-
-
-        a.textContent =
-            '🎯 ' + actionLabel(action);
-
-
-        box.appendChild(
-            a
-        );
-
-    }
-
-
-    if (resultText) {
-
-        const r =
-            document.createElement('div');
-
-
-        r.className =
-            'mt-2 text-sm text-emerald-300';
-
-
-        r.textContent =
-            resultText;
-
-
-        box.appendChild(
-            r
-        );
-
-    }
-
-
-    display.appendChild(
-        box
-    );
-
-
-    $('storyScroll').scrollTop =
-        $('storyScroll').scrollHeight;
+        });
 
 }
 
@@ -1249,7 +1580,8 @@ async function connectBLE() {
                     'fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
 
 
-                bleCharacteristic = null;
+                bleCharacteristic =
+                    null;
 
 
                 showToast(
@@ -1332,7 +1664,7 @@ async function connectBLE() {
 
 
 /* =========================================================
-   接收 ESP32 訊號
+   ESP32 → 網頁
 ========================================================= */
 
 function onBleEvent(event) {
@@ -1348,6 +1680,7 @@ function onBleEvent(event) {
         "收到硬體訊號:",
         value
     );
+
 
 
     /* 模式切換 */
@@ -1382,6 +1715,7 @@ function onBleEvent(event) {
     }
 
 
+
     /* 沒有等待動作 */
 
     if (
@@ -1413,8 +1747,9 @@ function onBleEvent(event) {
         .toUpperCase();
 
 
+
     /* =====================================================
-       動作正確
+       正確
     ===================================================== */
 
     if (
@@ -1426,25 +1761,25 @@ function onBleEvent(event) {
 
 
         showToast(
-            '✨ 動作正確！正在繼續...'
+            '✨ 動作正確！'
         );
 
 
-        /* 成功語音 */
+        /*
+         * 先播放成功聲。
+         * handleAction 會等成功聲結束後才繼續。
+         */
 
-        speakSuccess();
-
-
-        handleAction(
+        playSuccessThenContinue(
             expectedAction
         );
-
 
     }
 
 
+
     /* =====================================================
-       動作錯誤
+       錯誤
     ===================================================== */
 
     else {
@@ -1462,11 +1797,61 @@ function onBleEvent(event) {
             actionLabel(expectedAction);
 
 
-        /* 失敗語音 */
-
         speakFailure();
 
     }
+
+}
+
+
+
+/* =========================================================
+   成功 → 下一段
+========================================================= */
+
+function playSuccessThenContinue(action) {
+
+    if (
+        !('speechSynthesis' in window)
+    ) {
+
+        handleAction(action);
+
+        return;
+
+    }
+
+
+    window.speechSynthesis.cancel();
+
+
+    const utterance =
+        new SpeechSynthesisUtterance(
+            "成功！做得很好！"
+        );
+
+
+    utterance.lang =
+        'zh-TW';
+
+
+    utterance.rate =
+        0.95;
+
+
+    utterance.onend =
+        () => {
+
+            handleAction(
+                action
+            );
+
+        };
+
+
+    window.speechSynthesis.speak(
+        utterance
+    );
 
 }
 
@@ -1479,7 +1864,9 @@ function onBleEvent(event) {
 async function sendBLE(command) {
 
     if (!bleCharacteristic) {
+
         return;
+
     }
 
 
@@ -1495,6 +1882,7 @@ async function sendBLE(command) {
 
     }
 
+
     catch (e) {
 
         console.error(
@@ -1509,7 +1897,7 @@ async function sendBLE(command) {
 
 
 /* =========================================================
-   AI 回應解析
+   AI JSON
 ========================================================= */
 
 async function parseAIResponse(res) {
@@ -1565,12 +1953,20 @@ async function parseAIResponse(res) {
 
         }
 
+
         catch (err) {
 
             return {
-                story: content,
-                action: null,
-                done: true
+
+                story:
+                    content,
+
+                action:
+                    null,
+
+                done:
+                    true
+
             };
 
         }
@@ -1585,7 +1981,127 @@ async function parseAIResponse(res) {
 
 
 /* =========================================================
-   完成動作 → 下一段
+   顯示故事
+========================================================= */
+
+function appendStory(
+    title,
+    text,
+    action,
+    resultText = ""
+) {
+
+    const display =
+        $('storyDisplay');
+
+
+    const box =
+        document.createElement('div');
+
+
+    box.className =
+        'p-4 rounded-xl bg-slate-900/70 border border-slate-800';
+
+
+    const safeTitle =
+        document.createElement('div');
+
+
+    safeTitle.className =
+        currentMode === 'senior'
+
+            ? 'text-xs font-bold text-emerald-300 mb-2'
+
+            : 'text-xs font-bold text-purple-300 mb-2';
+
+
+    safeTitle.textContent =
+        title;
+
+
+    box.appendChild(
+        safeTitle
+    );
+
+
+    if (text) {
+
+        const p =
+            document.createElement('p');
+
+
+        p.className =
+            'text-slate-200';
+
+
+        p.textContent =
+            text;
+
+
+        box.appendChild(
+            p
+        );
+
+    }
+
+
+    if (action) {
+
+        const a =
+            document.createElement('div');
+
+
+        a.className =
+            'mt-3 text-sm font-bold text-pink-400';
+
+
+        a.textContent =
+            '🎯 ' +
+            actionLabel(action);
+
+
+        box.appendChild(
+            a
+        );
+
+    }
+
+
+    if (resultText) {
+
+        const r =
+            document.createElement('div');
+
+
+        r.className =
+            'mt-2 text-sm text-emerald-300';
+
+
+        r.textContent =
+            resultText;
+
+
+        box.appendChild(
+            r
+        );
+
+    }
+
+
+    display.appendChild(
+        box
+    );
+
+
+    $('storyScroll').scrollTop =
+        $('storyScroll').scrollHeight;
+
+}
+
+
+
+/* =========================================================
+   動作完成後
 ========================================================= */
 
 async function handleAction(action) {
@@ -1609,7 +2125,8 @@ async function handleAction(action) {
         .add('hidden');
 
 
-    busy = true;
+    busy =
+        true;
 
 
     await sendBLE(
@@ -1619,10 +2136,25 @@ async function handleAction(action) {
 
     try {
 
+
+        /* ===================================================
+           ⚠️ 這裡是這次修正兒童「故事斷掉」的重點
+           
+           不再用 /api/story
+           
+           而是：
+           
+           /api/action
+           
+           表示「目前故事完成了一個動作，
+           請接著目前故事往下寫」。
+        =================================================== */
+
+
         const res =
             await fetch(
                 WORKER_URL +
-                '/api/story',
+                '/api/action',
                 {
 
                     method: 'POST',
@@ -1640,11 +2172,17 @@ async function handleAction(action) {
                         topic:
                             selectedTheme,
 
+                        difficulty:
+                            selectedDifficulty,
+
                         action:
                             action,
 
                         currentStory:
-                            currentStory
+                            currentStory,
+
+                        history:
+                            history
 
                     })
 
@@ -1656,21 +2194,24 @@ async function handleAction(action) {
             await parseAIResponse(res);
 
 
-        /* =================================================
+
+        /* ===================================================
            👴 長輩模式
-           完全不顯示故事
-        ================================================= */
+           
+           不要故事。
+        =================================================== */
 
         if (
             currentMode === 'senior'
         ) {
 
-            currentStory = "";
+            currentStory =
+                "";
 
 
-            /* 如果活動完成 */
-
-            if (data.done) {
+            if (
+                data.done
+            ) {
 
                 $('actionPrompt')
                     .classList
@@ -1689,15 +2230,12 @@ async function handleAction(action) {
                     false;
 
 
-                speak(
+                speakNow(
                     "今日活動完成，做得很好，請慢慢休息。"
                 );
 
-
             }
 
-
-            /* 下一個健康動作 */
 
             else {
 
@@ -1724,8 +2262,6 @@ async function handleAction(action) {
                     '請坐穩，慢慢完成動作。';
 
 
-                /* 只念動作，不念故事 */
-
                 speakAction(
                     data.action
                 );
@@ -1739,12 +2275,13 @@ async function handleAction(action) {
 
 
 
-        /* =================================================
+        /* ===================================================
            👦 兒童模式
-        ================================================= */
+        =================================================== */
 
         currentStory =
-            data.story || "";
+            data.story ||
+            currentStory;
 
 
         history.push({
@@ -1756,21 +2293,31 @@ async function handleAction(action) {
                 currentStory,
 
             action:
-                data.action || null
+                data.action ||
+                null
 
         });
 
 
         appendStory(
+
             '🤖 AI 繼續冒險',
+
             currentStory,
+
             data.done
                 ? null
                 : data.action
+
         );
 
 
-        if (data.done) {
+
+        /* 故事結束 */
+
+        if (
+            data.done
+        ) {
 
             $('actionPrompt')
                 .classList
@@ -1795,6 +2342,10 @@ async function handleAction(action) {
 
         }
 
+
+
+        /* 還有下一個動作 */
+
         else {
 
             expectedAction =
@@ -1818,14 +2369,25 @@ async function handleAction(action) {
 
 
             $('actionSubText').textContent =
-                '完成動作後，系統將自動解鎖下一步。';
+                '完成動作後，故事會繼續。';
 
 
-            /* 故事講完後才講動作 */
+            /*
+             * 這裡非常重要：
+             *
+             * 故事先念完
+             * ↓
+             * 再念動作
+             *
+             * 不會互相打斷。
+             */
 
             speakStoryThenAction(
+
                 currentStory,
+
                 data.action
+
             );
 
         }
@@ -1857,7 +2419,8 @@ async function handleAction(action) {
 
     finally {
 
-        busy = false;
+        busy =
+            false;
 
     }
 
@@ -1866,15 +2429,15 @@ async function handleAction(action) {
 
 
 /* =========================================================
-   開始
+   開始故事 / 活動
 ========================================================= */
 
 async function generateStory() {
 
     const custom =
         $('customTopicInput')
-        .value
-        .trim();
+            .value
+            .trim();
 
 
     const topic =
@@ -1897,8 +2460,13 @@ async function generateStory() {
         $('btnGenerate');
 
 
+    btn.disabled =
+        true;
+
+
+
     /* =====================================================
-       長輩模式按鈕文字
+       長輩
     ===================================================== */
 
     if (
@@ -1914,6 +2482,12 @@ async function generateStory() {
 
     }
 
+
+
+    /* =====================================================
+       兒童
+    ===================================================== */
+
     else {
 
         $('btnText').textContent =
@@ -1925,8 +2499,6 @@ async function generateStory() {
 
     }
 
-
-    btn.disabled = true;
 
 
     try {
@@ -1953,7 +2525,7 @@ async function generateStory() {
                             topic,
 
                         difficulty:
-                            "easy"
+                            selectedDifficulty
 
                     })
 
@@ -1970,7 +2542,8 @@ async function generateStory() {
             .add('hidden');
 
 
-        $('storyDisplay').innerHTML = "";
+        $('storyDisplay').innerHTML =
+            "";
 
 
         $('storyDisplay')
@@ -1979,38 +2552,53 @@ async function generateStory() {
 
 
 
-        /* =================================================
-           👴 長輩模式
-           不顯示故事
-        ================================================= */
+        /* ===================================================
+           👴 長輩
+           
+           完全不朗讀故事。
+        =================================================== */
 
         if (
             currentMode === 'senior'
         ) {
 
-            currentStory = "";
+            currentStory =
+                "";
 
 
             history = [
+
                 {
-                    role: 'user',
-                    topic: topic
+                    role:
+                        'user',
+
+                    topic:
+                        topic,
+
+                    difficulty:
+                        selectedDifficulty
+
                 }
+
             ];
 
 
-            /* 顯示活動開始 */
-
             appendStory(
+
                 '🌿 今日健康活動',
+
                 '請坐在有椅背的椅子上，準備開始。',
-                null
+
+                data.done
+                    ? null
+                    : data.action
+
             );
 
 
-            /* 活動已經完成 */
-
-            if (data.done) {
+            if (
+                data.done
+            ) {
 
                 $('actionPrompt')
                     .classList
@@ -2018,7 +2606,7 @@ async function generateStory() {
 
 
                 $('promptText').textContent =
-                    '🎉 活動已準備完成';
+                    '🎉 活動已完成';
 
 
                 $('actionSubText').textContent =
@@ -2029,14 +2617,12 @@ async function generateStory() {
                     false;
 
 
-                speak(
-                    "今日健康活動已準備完成。"
+                speakNow(
+                    "今日健康活動已完成。"
                 );
 
             }
 
-
-            /* 開始第一個動作 */
 
             else {
 
@@ -2054,6 +2640,7 @@ async function generateStory() {
 
 
                 $('promptText').textContent =
+                    data.actionLabel ||
                     actionLabel(
                         data.action
                     );
@@ -2063,16 +2650,14 @@ async function generateStory() {
                     '請坐穩，慢慢完成動作。';
 
 
-                /* 只念動作 */
-
                 speakAction(
                     data.action
                 );
 
 
-                /* 告訴 ESP32 開始 */
-
-                if (bleCharacteristic) {
+                if (
+                    bleCharacteristic
+                ) {
 
                     await sendBLE(
                         'START_STORY'
@@ -2094,36 +2679,51 @@ async function generateStory() {
 
 
 
-        /* =================================================
-           👦 兒童模式
-        ================================================= */
+        /* ===================================================
+           👦 兒童
+        =================================================== */
 
         currentStory =
-            data.story || "";
+            data.story ||
+            "";
 
 
         history = [
 
             {
-                role: 'user',
-                topic: topic
+                role:
+                    'user',
+
+                topic:
+                    topic
+
             },
 
             {
-                role: 'assistant',
-                story: currentStory,
-                action: data.action
+                role:
+                    'assistant',
+
+                story:
+                    currentStory,
+
+                action:
+                    data.action
+
             }
 
         ];
 
 
         appendStory(
+
             '📖 AI 第一章',
+
             currentStory,
+
             data.done
                 ? null
                 : data.action
+
         );
 
 
@@ -2131,9 +2731,12 @@ async function generateStory() {
             false;
 
 
-        /* 故事完成 */
 
-        if (data.done) {
+        /* 故事直接結束 */
+
+        if (
+            data.done
+        ) {
 
             $('actionPrompt')
                 .classList
@@ -2159,7 +2762,8 @@ async function generateStory() {
         }
 
 
-        /* 等待動作 */
+
+        /* 故事需要動作 */
 
         else {
 
@@ -2184,18 +2788,21 @@ async function generateStory() {
 
 
             $('actionSubText').textContent =
-                '請完成這個動作，ESP32 藍牙將自動通知。';
+                '請完成這個動作，故事會繼續。';
 
-
-            /* 故事講完 → 動作 */
 
             speakStoryThenAction(
+
                 currentStory,
+
                 data.action
+
             );
 
 
-            if (bleCharacteristic) {
+            if (
+                bleCharacteristic
+            ) {
 
                 await sendBLE(
                     'START_STORY'
@@ -2228,7 +2835,9 @@ async function generateStory() {
 
     finally {
 
-        if (currentMode === 'senior') {
+        if (
+            currentMode === 'senior'
+        ) {
 
             $('btnText').textContent =
                 '開始健康活動';
@@ -2251,7 +2860,8 @@ async function generateStory() {
         }
 
 
-        btn.disabled = false;
+        btn.disabled =
+            false;
 
     }
 
@@ -2260,7 +2870,7 @@ async function generateStory() {
 
 
 /* =========================================================
-   頁面初始化
+   初始化
 ========================================================= */
 
 document.addEventListener(
@@ -2285,17 +2895,22 @@ document.addEventListener(
         bindThemeButtons();
 
 
+        bindDifficultyButtons();
 
-        /* =================================================
-           手動測試
-        ================================================= */
+
+
+        /* ===================================================
+           手動完成動作
+        =================================================== */
 
         $('btnManualAction')
             .addEventListener(
                 'click',
                 () => {
 
-                    if (!waitingForAction) {
+                    if (
+                        !waitingForAction
+                    ) {
 
                         showToast(
                             '目前沒有等待中的互動。'
@@ -2306,7 +2921,11 @@ document.addEventListener(
                     }
 
 
-                    handleAction(
+                    /*
+                     * 手動測試也走同樣的成功流程
+                     */
+
+                    playSuccessThenContinue(
                         expectedAction
                     );
 
@@ -2315,9 +2934,9 @@ document.addEventListener(
 
 
 
-        /* =================================================
+        /* ===================================================
            自訂主題
-        ================================================= */
+        =================================================== */
 
         $('customTopicInput')
             .addEventListener(
@@ -2340,9 +2959,9 @@ document.addEventListener(
 
 
 
-        /* =================================================
+        /* ===================================================
            手動播放
-        ================================================= */
+        =================================================== */
 
         $('btnSpeak')
             .addEventListener(
@@ -2360,7 +2979,7 @@ document.addEventListener(
                     }
 
 
-                    /* 長輩模式只播放目前動作 */
+                    /* 長輩 */
 
                     if (
                         currentMode === 'senior'
@@ -2381,15 +3000,22 @@ document.addEventListener(
                     }
 
 
-                    /* 兒童模式播放故事 */
+                    /* 兒童 */
 
-                    if (currentStory) {
+                    if (
+                        currentStory
+                    ) {
 
-                        if (expectedAction) {
+                        if (
+                            expectedAction
+                        ) {
 
                             speakStoryThenAction(
+
                                 currentStory,
+
                                 expectedAction
+
                             );
 
                         }
@@ -2414,4 +3040,5 @@ document.addEventListener(
 </script>
 
 </body>
+
 </html>
