@@ -590,23 +590,6 @@ function showToast(msg) {
    語音控制
 ========================================================= */
 
-/*
-    這次最重要的修改之一。
-
-    舊版：
-
-    speak(story);
-    waitingForAction = true;
-
-    會變成「故事還在講，已經可以做動作」。
-
-    新版：
-
-    await speak(story);
-
-    代表一定等故事講完才繼續。
-*/
-
 function stopSpeech() {
 
     if ('speechSynthesis' in window) {
@@ -732,15 +715,6 @@ function actionSpeechLabel(action) {
 }
 
 
-/*
-    UI 可以有 Emoji。
-
-    但是語音只使用上面的
-    actionSpeechLabel()。
-
-    所以不會念出「📳」。
-*/
-
 function actionLabel(action) {
 
     const prefix = {
@@ -779,12 +753,7 @@ function actionLabel(action) {
 
 function lockAction() {
 
-    /*
-        這就是「故事沒講完不能亂甩」的核心。
-    */
-
     waitingForAction = false;
-
 
     $('actionPrompt')
         .classList.add(
@@ -853,11 +822,6 @@ async function switchMode(
     notifyDevice = true
 ) {
 
-    /*
-        切換模式時先停止上一段語音，
-        避免兒童故事切到長輩模式後還繼續念。
-    */
-
     stopSpeech();
 
     waitingForAction = false;
@@ -920,40 +884,30 @@ async function switchMode(
 
 
         $('welcomeDesc').textContent =
-            "選擇安全坐姿伸展主題，跟著語音指示輕鬆活動筋骨。";
+            "選擇活動難度，AI 會為你安排適合的坐姿健康活動。";
 
+
+        /*
+            ★ 修改：
+            長輩模式不再顯示
+            手部健康伸展
+            肩頸放鬆操
+            活力健康動
+
+            改成統一由 AI 產生健康活動。
+        */
 
         selectedTheme =
-            "輕鬆坐姿手部健康伸展";
+            "坐姿健康活動";
 
 
-        $('themeButtonsContainer').innerHTML = `
+        $('themeButtonsContainer')
+            .innerHTML = '';
 
-            <button
-                data-theme="輕鬆坐姿手部健康伸展"
-                class="theme-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">
-
-                🙌 手部健康伸展
-
-            </button>
-
-            <button
-                data-theme="坐姿肩頸放鬆操"
-                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-
-                🧘 肩頸放鬆操
-
-            </button>
-
-            <button
-                data-theme="坐姿活力健康動"
-                class="theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-
-                🌟 活力健康動
-
-            </button>
-
-        `;
+        $('themeButtonsContainer')
+            .classList.add(
+                'hidden'
+            );
 
 
         $('seniorDifficultyPanel')
@@ -1017,7 +971,18 @@ async function switchMode(
             "勇敢的小騎士與巨龍";
 
 
-        $('themeButtonsContainer').innerHTML = `
+        /*
+            ★ 兒童模式恢復原本三個故事主題
+        */
+
+        $('themeButtonsContainer')
+            .classList.remove(
+                'hidden'
+            );
+
+
+        $('themeButtonsContainer')
+            .innerHTML = `
 
             <button
                 data-theme="勇敢的小騎士與巨龍"
@@ -1781,15 +1746,11 @@ async function handleAction(action) {
 
 
         /*
-            =================================================
             兒童：
             /api/action
 
             長輩：
             /api/action
-
-            都不是 /api/story。
-            =================================================
         */
 
         res =
@@ -1913,8 +1874,6 @@ async function handleAction(action) {
             -------------------------------
             兒童模式
             -------------------------------
-
-            這裡才接續故事。
         */
 
         const nextStory =
@@ -1940,11 +1899,6 @@ async function handleAction(action) {
         });
 
 
-        /*
-            先顯示下一段，
-            但先鎖定。
-        */
-
         appendStory(
 
             '🤖 AI 繼續冒險',
@@ -1965,19 +1919,10 @@ async function handleAction(action) {
         lockAction();
 
 
-        /*
-            先完整念下一段故事。
-        */
-
         await speak(
             nextStory
         );
 
-
-        /*
-            故事念完之後，
-            才念動作提示。
-        */
 
         if (
             !data.done &&
@@ -1990,11 +1935,6 @@ async function handleAction(action) {
                 )
             );
 
-
-            /*
-                動作提示也講完，
-                現在才解鎖。
-            */
 
             unlockAction(
                 data.action
@@ -2031,11 +1971,6 @@ async function handleAction(action) {
             e.message
         );
 
-
-        /*
-            如果取得下一段失敗，
-            不讓它卡在「正在處理」。
-        */
 
         waitingForAction =
             true;
@@ -2244,10 +2179,6 @@ async function generateStory() {
             );
 
 
-            /*
-                先鎖。
-            */
-
             $('actionPrompt')
                 .classList.remove(
                     'hidden'
@@ -2257,18 +2188,10 @@ async function generateStory() {
             lockAction();
 
 
-            /*
-                故事完整播放。
-            */
-
             await speak(
                 currentStory
             );
 
-
-            /*
-                故事講完後才播放動作。
-            */
 
             if (
                 !data.done &&
@@ -2281,11 +2204,6 @@ async function generateStory() {
                     )
                 );
 
-
-                /*
-                    動作語音也講完，
-                    才正式解鎖。
-                */
 
                 unlockAction(
                     data.action
@@ -2315,10 +2233,6 @@ async function generateStory() {
             $('btnSpeak').disabled =
                 false;
 
-
-            /*
-                告訴 ESP32 可以開始。
-            */
 
             if (bleCharacteristic) {
 
@@ -2372,10 +2286,6 @@ async function generateStory() {
 
             lockAction();
 
-
-            /*
-                先講活動開始。
-            */
 
             await speak(
                 "健康活動準備開始。"
@@ -2544,8 +2454,7 @@ document.addEventListener(
 
                         });
 
-                }
-            );
+                });
 
 
         /*
@@ -2574,11 +2483,6 @@ document.addEventListener(
                         return;
                     }
 
-
-                    /*
-                        重新播放故事時，
-                        暫時鎖住 ESP32。
-                    */
 
                     const oldAction =
                         expectedAction;
