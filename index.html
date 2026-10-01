@@ -1509,6 +1509,9 @@ function removeEmoji(text) {
 const VOICE_STORAGE_KEY =
     'soundAdventureVoiceSettings';
 
+const VOICE_SETTINGS_VERSION =
+    2;
+
 
 let availableVoices = [];
 
@@ -1532,7 +1535,10 @@ let voiceSettings = {
         'natural',
 
     voiceURI:
-        ''
+        '',
+
+    version:
+        VOICE_SETTINGS_VERSION
 
 };
 
@@ -1624,6 +1630,21 @@ function loadVoiceSettings() {
 
             };
 
+
+            // 舊版本曾經會自動挑第一個 zh-TW 聲音。
+            // 第一次使用新版時清除舊的固定聲音，避免舊設定把它再次帶回來。
+            if (
+                parsed.version !== VOICE_SETTINGS_VERSION
+            ) {
+
+                voiceSettings.voiceURI =
+                    '';
+
+                voiceSettings.version =
+                    VOICE_SETTINGS_VERSION;
+
+            }
+
         }
 
     }
@@ -1647,6 +1668,9 @@ function loadVoiceSettings() {
 function saveVoiceSettings() {
 
     try {
+
+        voiceSettings.version =
+            VOICE_SETTINGS_VERSION;
 
         localStorage.setItem(
             VOICE_STORAGE_KEY,
@@ -1720,6 +1744,28 @@ function populateVoiceSelect() {
 
     select.innerHTML =
         '';
+
+
+    // -----------------------------------------
+    // 自動模式：不指定 voice，交給 iPhone / Bluefy
+    // 自己決定實際使用的裝置語音。
+    // 這是本專案的預設模式。
+    // -----------------------------------------
+
+    const autoOption =
+        document.createElement(
+            'option'
+        );
+
+    autoOption.value =
+        '__AUTO__';
+
+    autoOption.textContent =
+        '✨ 自動（使用 iPhone / 裝置自然語音）';
+
+    select.appendChild(
+        autoOption
+    );
 
 
     if (
@@ -1843,9 +1889,21 @@ function populateVoiceSelect() {
 
     restoreSelectedVoice();
 
-    updateVoiceStatus(
-        `已找到 ${availableVoices.length} 個裝置可用語音。`
-    );
+    if (voiceSettings.voiceURI && selectedVoice) {
+
+        updateVoiceStatus(
+            `已找到 ${availableVoices.length} 個裝置語音，目前使用：${selectedVoice.name}`
+        );
+
+    }
+
+    else {
+
+        updateVoiceStatus(
+            `已找到 ${availableVoices.length} 個裝置語音，目前為「自動」模式。`
+        );
+
+    }
 
 }
 
@@ -1856,121 +1914,42 @@ function populateVoiceSelect() {
 
 function restoreSelectedVoice() {
 
-    if (
-        !availableVoices.length
-    ) {
-
-        return;
-
-    }
-
-
-    let voice =
+    // 沒有使用者明確選擇聲音時，保持「自動」模式。
+    // 不再自行抓第一個 zh-TW，避免 iOS / Bluefy 被強制指定到某個聲音。
+    selectedVoice =
         null;
 
-
-    // -----------------------------------------
-    // 1. 優先使用使用者之前選擇
-    // -----------------------------------------
 
     if (
         voiceSettings.voiceURI
     ) {
 
-        voice =
+        const savedVoice =
             availableVoices.find(
-                v =>
-                    v.voiceURI ===
+                voice =>
+                    voice.voiceURI ===
                     voiceSettings.voiceURI
             );
 
-    }
 
+        if (savedVoice) {
 
-    // -----------------------------------------
-    // 2. 優先 zh-TW
-    // -----------------------------------------
+            selectedVoice =
+                savedVoice;
 
-    if (!voice) {
+        }
 
-        voice =
-            availableVoices.find(
-                v =>
-                    /^zh-TW$/i.test(
-                        v.lang
-                    )
-            );
+        else {
 
-    }
+            // 舊設定找不到時，自動回到裝置預設。
+            voiceSettings.voiceURI =
+                '';
 
+            saveVoiceSettings();
 
-    // -----------------------------------------
-    // 3. zh-Hant
-    // -----------------------------------------
-
-    if (!voice) {
-
-        voice =
-            availableVoices.find(
-                v =>
-                    /^zh-Hant/i.test(
-                        v.lang
-                    )
-            );
+        }
 
     }
-
-
-    // -----------------------------------------
-    // 4. 任一中文
-    // -----------------------------------------
-
-    if (!voice) {
-
-        voice =
-            availableVoices.find(
-                v =>
-                    /^zh/i.test(
-                        v.lang
-                    )
-            );
-
-    }
-
-
-    // -----------------------------------------
-    // 5. 系統預設
-    // -----------------------------------------
-
-    if (!voice) {
-
-        voice =
-            availableVoices.find(
-                v =>
-                    v.default
-            );
-
-    }
-
-
-    // -----------------------------------------
-    // 6. 第一個
-    // -----------------------------------------
-
-    if (!voice) {
-
-        voice =
-            availableVoices[0];
-
-    }
-
-
-    selectedVoice =
-        voice;
-
-
-    voiceSettings.voiceURI =
-        voice.voiceURI;
 
 
     const select =
@@ -1980,12 +1959,11 @@ function restoreSelectedVoice() {
     if (select) {
 
         select.value =
-            voice.voiceURI;
+            selectedVoice
+                ? selectedVoice.voiceURI
+                : '__AUTO__';
 
     }
-
-
-    saveVoiceSettings();
 
 }
 
@@ -1996,6 +1974,9 @@ function restoreSelectedVoice() {
 
 function getSelectedVoice() {
 
+    // 「自動」模式刻意回傳 null。
+    // speakSentence() 不會指定 utterance.voice，
+    // 讓 iPhone / Bluefy 使用它自己的自然語音。
     if (
         selectedVoice
     ) {
@@ -2500,8 +2481,11 @@ function speakSentence(
 
 
             // -------------------------------------
-            // 指定裝置語音
+            // 語音模式
             // -------------------------------------
+            // 有手動選擇 → 指定該聲音。
+            // 自動模式 → 完全不指定 voice，讓 iPhone / Bluefy
+            // 自己決定實際播放的系統語音。
 
             if (voice) {
 
@@ -2808,7 +2792,10 @@ async function speak(
 
 
     // -----------------------------------------
-    // 停掉上一段
+    // 每次只建立一個原生 Utterance。
+    // 這樣最接近 iPhone / Safari 的原生測試方式，
+    // 也避免某些 iOS 語音在多個 Utterance 連續播放時重複或循環。
+    // 中文標點本身會負責自然停頓與語氣。
     // -----------------------------------------
 
     stopSpeech();
@@ -2818,72 +2805,16 @@ async function speak(
         speechToken;
 
 
-    const sentences =
-        splitSpeechText(
-            cleanText
-        );
-
-
-    if (
-        !sentences.length
-    ) {
-
-        return;
-
-    }
-
-
     speechPlaying =
         true;
 
 
     try {
 
-        for (
-            let i = 0;
-            i < sentences.length;
-            i++
-        ) {
-
-            if (
-                myToken !==
-                speechToken
-            ) {
-
-                return;
-
-            }
-
-
-            await speakSentence(
-                sentences[i],
-                myToken
-            );
-
-
-            if (
-                myToken !==
-                speechToken
-            ) {
-
-                return;
-
-            }
-
-
-            if (
-                i <
-                sentences.length - 1
-            ) {
-
-                await speechPause(
-                    sentences[i],
-                    myToken
-                );
-
-            }
-
-        }
+        await speakSentence(
+            cleanText,
+            myToken
+        );
 
     }
 
@@ -4936,6 +4867,26 @@ document.addEventListener(
                             .value;
 
 
+                    // 自動模式：清除固定 voice。
+                    if (uri === '__AUTO__') {
+
+                        selectedVoice =
+                            null;
+
+                        voiceSettings.voiceURI =
+                            '';
+
+                        saveVoiceSettings();
+
+                        updateVoiceStatus(
+                            '✨ 自動模式：不指定聲音，讓 iPhone / Bluefy 使用裝置自然語音。'
+                        );
+
+                        return;
+
+                    }
+
+
                     selectedVoice =
                         availableVoices.find(
                             voice =>
@@ -4946,7 +4897,9 @@ document.addEventListener(
 
 
                     voiceSettings.voiceURI =
-                        uri;
+                        selectedVoice
+                            ? uri
+                            : '';
 
 
                     saveVoiceSettings();
@@ -5103,9 +5056,6 @@ document.addEventListener(
                 'click',
                 async () => {
 
-                    stopSpeech();
-
-
                     const testText =
                         currentMode === 'senior'
 
@@ -5149,7 +5099,10 @@ document.addEventListener(
                             'natural',
 
                         voiceURI:
-                            ''
+                            '',
+
+                        version:
+                            VOICE_SETTINGS_VERSION
 
                     };
 
@@ -5242,3 +5195,4 @@ document.addEventListener(
 
 </body>
 </html>
+
