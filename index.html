@@ -14,7 +14,6 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
 rel="stylesheet">
 
-
 <script>
 
 tailwind.config = {
@@ -60,7 +59,6 @@ tailwind.config = {
 
 </script>
 
-
 <style>
 
 body {
@@ -84,7 +82,6 @@ body {
 
 }
 
-
 body.mode-senior {
 
     background:
@@ -96,7 +93,6 @@ body.mode-senior {
 
 }
 
-
 .glow-button {
 
     box-shadow:
@@ -107,7 +103,6 @@ body.mode-senior {
         all .3s ease;
 
 }
-
 
 body.mode-senior .glow-button {
 
@@ -125,14 +120,12 @@ body.mode-senior .glow-button {
 
 }
 
-
 .action-big {
 
     animation:
         pulseGlow 1.6s infinite;
 
 }
-
 
 @keyframes pulseGlow {
 
@@ -154,13 +147,11 @@ body.mode-senior .glow-button {
 
 }
 
-
 .action-locked {
 
     opacity: .65;
 
 }
-
 
 .action-ready {
 
@@ -168,14 +159,12 @@ body.mode-senior .glow-button {
 
 }
 
-
 .difficulty-btn {
 
     transition:
         all .2s ease;
 
 }
-
 
 .difficulty-btn.active {
 
@@ -190,7 +179,6 @@ body.mode-senior .glow-button {
 
 }
 
-
 .theme-btn {
 
     transition:
@@ -198,14 +186,12 @@ body.mode-senior .glow-button {
 
 }
 
-
 .theme-btn:hover {
 
     transform:
         translateY(-1px);
 
 }
-
 
 .theme-btn.active {
 
@@ -215,10 +201,261 @@ body.mode-senior .glow-button {
 }
 
 
+/* =====================================================
+   語音設定
+===================================================== */
+
+.voice-modal {
+
+    position: fixed;
+
+    inset: 0;
+
+    background:
+        rgba(2,6,23,.78);
+
+    backdrop-filter:
+        blur(8px);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+
+    z-index: 100;
+
+}
+
+.voice-modal.hidden {
+
+    display: none;
+
+}
+
+.voice-panel {
+
+    width: 100%;
+
+    max-width: 520px;
+
+    max-height: 90vh;
+
+    overflow-y: auto;
+
+    background:
+        linear-gradient(
+            145deg,
+            #1e1b4b,
+            #0f172a
+        );
+
+    border:
+        1px solid
+        rgba(139,92,246,.45);
+
+    border-radius:
+        28px;
+
+    box-shadow:
+        0 25px 80px
+        rgba(0,0,0,.55);
+
+    padding: 24px;
+
+}
+
+.voice-row {
+
+    margin-top: 18px;
+
+}
+
+.voice-label {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 8px;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    color: #c4b5fd;
+
+}
+
+.voice-select {
+
+    width: 100%;
+
+    background:
+        #020617;
+
+    border:
+        1px solid
+        #475569;
+
+    color:
+        #e2e8f0;
+
+    border-radius:
+        14px;
+
+    padding:
+        12px;
+
+    outline:
+        none;
+
+}
+
+.voice-select:focus {
+
+    border-color:
+        #8b5cf6;
+
+}
+
+.voice-range {
+
+    width: 100%;
+
+    accent-color:
+        #8b5cf6;
+
+    cursor: pointer;
+
+}
+
+.voice-emotions {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(2,1fr);
+
+    gap:
+        8px;
+
+}
+
+.voice-emotion {
+
+    padding:
+        10px;
+
+    border:
+        1px solid
+        #334155;
+
+    background:
+        #0f172a;
+
+    color:
+        #cbd5e1;
+
+    border-radius:
+        14px;
+
+    font-weight:
+        700;
+
+    font-size:
+        13px;
+
+    transition:
+        all .2s ease;
+
+}
+
+.voice-emotion:hover {
+
+    border-color:
+        #8b5cf6;
+
+}
+
+.voice-emotion.active {
+
+    background:
+        rgba(124,58,237,.35);
+
+    border-color:
+        #a78bfa;
+
+    color:
+        #ede9fe;
+
+}
+
+.voice-status {
+
+    margin-top:
+        10px;
+
+    padding:
+        10px 12px;
+
+    border-radius:
+        12px;
+
+    background:
+        rgba(15,23,42,.8);
+
+    color:
+        #94a3b8;
+
+    font-size:
+        12px;
+
+    line-height:
+        1.5;
+
+}
+
+.voice-badge {
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    gap:
+        6px;
+
+    padding:
+        4px 8px;
+
+    border-radius:
+        999px;
+
+    background:
+        rgba(16,185,129,.12);
+
+    border:
+        1px solid
+        rgba(16,185,129,.25);
+
+    color:
+        #6ee7b7;
+
+    font-size:
+        11px;
+
+}
+
 </style>
 
 </head>
-
 
 <body
 class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between"
@@ -232,14 +469,11 @@ id="appBody">
 <header
 class="w-full max-w-4xl text-center my-4">
 
-
 <div
 class="flex justify-center items-center gap-4 mb-4">
 
-
 <div
 class="inline-flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 shadow-xl">
-
 
 <button
 id="modeChildBtn"
@@ -251,7 +485,6 @@ class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2
 兒童冒險模式
 
 </button>
-
 
 <button
 id="modeSeniorBtn"
@@ -265,21 +498,17 @@ class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2
 
 </button>
 
-
 </div>
 
 </div>
-
 
 <div
 class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg"
 id="topBadge">
 
-
 <i
 class="fa-solid fa-headphones-simple text-amber-400">
 </i>
-
 
 <span
 class="text-amber-300 font-semibold text-sm"
@@ -289,9 +518,7 @@ id="badgeText">
 
 </span>
 
-
 </div>
-
 
 <h1
 class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300"
@@ -301,9 +528,7 @@ id="mainTitle">
 
 </h1>
 
-
 </header>
-
 
 
 <!-- =====================================================
@@ -322,9 +547,7 @@ class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
 class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6"
 id="leftCard">
 
-
 <div>
-
 
 <h2
 class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
@@ -335,20 +558,16 @@ class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
 
 </h2>
 
-
 <div
 class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
 
-
 <div
 class="flex items-center gap-3">
-
 
 <span
 id="statusIndicator"
 class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow">
 </span>
-
 
 <div>
 
@@ -358,7 +577,6 @@ class="text-xs text-slate-400">
 狀態
 
 </div>
-
 
 <div
 id="statusText"
@@ -372,15 +590,12 @@ class="font-bold text-slate-200 text-sm">
 
 </div>
 
-
 <i
 id="statusIcon"
 class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl">
 </i>
 
-
 </div>
-
 
 <button
 id="btnConnect"
@@ -390,14 +605,10 @@ class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 round
 
 </button>
 
-
 </div>
-
-
 
 <div
 class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
-
 
 <h3
 class="text-sm font-bold text-purple-300 mb-2">
@@ -406,7 +617,6 @@ class="text-sm font-bold text-purple-300 mb-2">
 
 </h3>
 
-
 <button
 id="btnManualAction"
 class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
@@ -414,7 +624,6 @@ class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3
 ✨ 模擬做完動作
 
 </button>
-
 
 <p
 id="deviceHint"
@@ -425,12 +634,9 @@ class="text-xs text-slate-400 mt-3 leading-relaxed">
 
 </p>
 
-
 </div>
 
-
 </section>
-
 
 
 <!-- =====================================================
@@ -447,16 +653,13 @@ id="rightCard">
 <div
 class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
 
-
 <div
 class="overflow-y-auto max-h-[420px] pr-2 space-y-4"
 id="storyScroll">
 
-
 <div
 id="welcomeMessage"
 class="text-center py-10">
-
 
 <div
 class="text-5xl mb-3"
@@ -466,7 +669,6 @@ id="welcomeIcon">
 
 </div>
 
-
 <h3
 class="text-lg font-bold text-purple-300"
 id="welcomeTitle">
@@ -474,7 +676,6 @@ id="welcomeTitle">
 準備好開始冒險了嗎？
 
 </h3>
-
 
 <p
 class="text-sm text-slate-400 mt-1"
@@ -485,18 +686,14 @@ AI 會即時生成故事並在互動處停下。
 
 </p>
 
-
 </div>
-
 
 <div
 id="storyDisplay"
 class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
 </div>
 
-
 </div>
-
 
 
 <!-- ACTION PROMPT -->
@@ -505,16 +702,13 @@ class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
 id="actionPrompt"
 class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl border border-pink-500/30 action-big">
 
-
 <div
 class="flex items-center gap-2 text-pink-300 font-bold"
 id="actionHeaderBox">
 
-
 <i
 class="fa-solid fa-hand-sparkles text-xl">
 </i>
-
 
 <span
 id="promptText">
@@ -523,21 +717,16 @@ id="promptText">
 
 </span>
 
-
 </div>
-
 
 <div
 id="actionSubText"
 class="text-sm text-slate-300 mt-2">
 </div>
 
-
 </div>
 
-
 </div>
-
 
 
 <!-- =====================================================
@@ -553,10 +742,8 @@ class="space-y-4">
 <div
 class="space-y-2">
 
-
 <div
 class="flex items-center justify-between">
-
 
 <div
 class="text-xs text-purple-300 font-bold">
@@ -565,7 +752,6 @@ class="text-xs text-purple-300 font-bold">
 
 </div>
 
-
 <div
 class="text-xs text-slate-500">
 
@@ -573,19 +759,12 @@ class="text-xs text-slate-500">
 
 </div>
 
-
 </div>
-
 
 <div
 class="grid grid-cols-2 md:grid-cols-3 gap-2"
 id="themeButtonsContainer">
-
-
-<!-- JS 產生主題 -->
-
 </div>
-
 
 
 <!-- SENIOR DIFFICULTY -->
@@ -594,7 +773,6 @@ id="themeButtonsContainer">
 id="seniorDifficultyPanel"
 class="hidden mt-3">
 
-
 <div
 class="text-xs text-emerald-300 font-bold mb-2">
 
@@ -602,10 +780,8 @@ class="text-xs text-emerald-300 font-bold mb-2">
 
 </div>
 
-
 <div
 class="grid grid-cols-3 gap-2">
-
 
 <button
 data-difficulty="easy"
@@ -615,7 +791,6 @@ class="difficulty-btn active bg-emerald-900/50 border border-emerald-500 text-em
 
 </button>
 
-
 <button
 data-difficulty="normal"
 class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
@@ -623,7 +798,6 @@ class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 p
 🟡 普通
 
 </button>
-
 
 <button
 data-difficulty="challenge"
@@ -633,12 +807,9 @@ class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 p
 
 </button>
 
-
 </div>
 
-
 </div>
-
 
 
 <!-- CUSTOM TOPIC -->
@@ -646,19 +817,15 @@ class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 p
 <div
 class="flex gap-2 mt-3">
 
-
 <input
 type="text"
 id="customTopicInput"
 placeholder="或者輸入你想聽的故事，例如：會飛的橘色章魚"
 class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
 
-
 </div>
 
-
 </div>
-
 
 
 <!-- BUTTONS -->
@@ -666,17 +833,14 @@ class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm 
 <div
 class="flex gap-3">
 
-
 <button
 id="btnGenerate"
 class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
-
 
 <i
 id="btnIcon"
 class="fa-solid fa-wand-magic-sparkles">
 </i>
-
 
 <span
 id="btnText">
@@ -685,35 +849,38 @@ id="btnText">
 
 </span>
 
-
 </button>
-
 
 <button
 id="btnSpeak"
 disabled
 class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
 
-
 <i
 class="fa-solid fa-play">
 </i>
 
-
 </button>
 
 
+<!-- 語音設定 -->
+
+<button
+id="btnVoiceSettings"
+class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition"
+title="聲音設定">
+
+<i class="fa-solid fa-sliders"></i>
+
+</button>
+
 </div>
 
-
 </div>
-
 
 </section>
 
-
 </main>
-
 
 
 <!-- =====================================================
@@ -725,6 +892,282 @@ id="toast"
 class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 text-sm font-semibold">
 </div>
 
+
+<!-- =====================================================
+     VOICE SETTINGS MODAL
+===================================================== -->
+
+<div
+id="voiceModal"
+class="voice-modal hidden">
+
+<div
+class="voice-panel"
+id="voicePanel">
+
+<div
+class="flex items-center justify-between gap-3">
+
+<div>
+
+<h2
+class="text-xl font-black text-purple-200">
+
+🎙️ 聲音設定
+
+</h2>
+
+<p
+class="text-xs text-slate-400 mt-1">
+
+調整故事朗讀的聲音與語氣
+
+</p>
+
+</div>
+
+<button
+id="btnCloseVoiceSettings"
+class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
+
+<i class="fa-solid fa-xmark"></i>
+
+</button>
+
+</div>
+
+
+<div
+id="voiceStatus"
+class="voice-status">
+
+正在讀取裝置可用語音……
+
+</div>
+
+
+<!-- VOICE -->
+
+<div
+class="voice-row">
+
+<div
+class="voice-label">
+
+<span>🗣️ 朗讀聲音</span>
+
+<span
+class="voice-badge">
+
+<i class="fa-solid fa-mobile-screen"></i>
+
+裝置語音
+
+</span>
+
+</div>
+
+<select
+id="voiceSelect"
+class="voice-select">
+
+<option value="">
+
+載入中……
+
+</option>
+
+</select>
+
+</div>
+
+
+<!-- RATE -->
+
+<div
+class="voice-row">
+
+<div
+class="voice-label">
+
+<span>⚡ 語速</span>
+
+<span id="rateValue">
+
+1.00
+
+</span>
+
+</div>
+
+<input
+id="rateRange"
+class="voice-range"
+type="range"
+min="0.75"
+max="1.20"
+step="0.01"
+value="1.00">
+
+</div>
+
+
+<!-- PITCH -->
+
+<div
+class="voice-row">
+
+<div
+class="voice-label">
+
+<span>🎵 音調</span>
+
+<span id="pitchValue">
+
+1.00
+
+</span>
+
+</div>
+
+<input
+id="pitchRange"
+class="voice-range"
+type="range"
+min="0.75"
+max="1.25"
+step="0.01"
+value="1.00">
+
+</div>
+
+
+<!-- VOLUME -->
+
+<div
+class="voice-row">
+
+<div
+class="voice-label">
+
+<span>🔊 音量</span>
+
+<span id="volumeValue">
+
+1.00
+
+</span>
+
+</div>
+
+<input
+id="volumeRange"
+class="voice-range"
+type="range"
+min="0.2"
+max="1"
+step="0.05"
+value="1">
+
+</div>
+
+
+<!-- EMOTION -->
+
+<div
+class="voice-row">
+
+<div
+class="voice-label">
+
+<span>🎭 故事語氣</span>
+
+<span
+class="text-slate-500">
+
+自動搭配標點
+
+</span>
+
+</div>
+
+<div
+class="voice-emotions">
+
+<button
+class="voice-emotion active"
+data-emotion="natural">
+
+🙂 自然
+
+</button>
+
+<button
+class="voice-emotion"
+data-emotion="lively">
+
+😆 活潑
+
+</button>
+
+<button
+class="voice-emotion"
+data-emotion="tense">
+
+😱 緊張
+
+</button>
+
+<button
+class="voice-emotion"
+data-emotion="gentle">
+
+🌿 溫柔
+
+</button>
+
+</div>
+
+</div>
+
+
+<!-- BUTTONS -->
+
+<div
+class="grid grid-cols-2 gap-3 mt-6">
+
+<button
+id="btnVoiceTest"
+class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl">
+
+<i class="fa-solid fa-volume-high mr-2"></i>
+
+測試聲音
+
+</button>
+
+<button
+id="btnVoiceReset"
+class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold py-3 rounded-xl">
+
+恢復預設
+
+</button>
+
+</div>
+
+
+<p
+class="text-[11px] text-slate-500 mt-4 leading-relaxed">
+
+💡 語音來源是目前瀏覽器與裝置提供的語音。
+如果 Bluefy 沒有列出某個 iPhone 語音，網頁本身無法把該語音強制加入。
+
+</p>
+
+</div>
+
+</div>
 
 
 <script>
@@ -1018,20 +1461,25 @@ function showToast(msg) {
 function removeEmoji(text) {
 
     if (!text) {
+
         return "";
+
     }
 
     try {
 
         return text
+
             .replace(
                 /[\p{Extended_Pictographic}\uFE0F]/gu,
                 ''
             )
+
             .replace(
                 /\s{2,}/g,
                 ' '
             )
+
             .trim();
 
     }
@@ -1039,13 +1487,1230 @@ function removeEmoji(text) {
     catch {
 
         return text
+
             .replace(
                 /[^\u0000-\u00FF\u3100-\u9FFF\u4E00-\u9FFF，。！？、：「」『』（）《》〈〉；：…—～]/g,
                 ''
             )
+
             .trim();
 
     }
+
+}
+
+
+// =====================================================
+// =====================================================
+// 新版完整語音系統
+// =====================================================
+// =====================================================
+
+const VOICE_STORAGE_KEY =
+    'soundAdventureVoiceSettings';
+
+
+let availableVoices = [];
+
+let selectedVoice = null;
+
+let speechToken = 0;
+
+
+let voiceSettings = {
+
+    rate:
+        1.00,
+
+    pitch:
+        1.00,
+
+    volume:
+        1.00,
+
+    emotion:
+        'natural',
+
+    voiceURI:
+        ''
+
+};
+
+
+// =====================================================
+// 情緒設定
+// =====================================================
+
+const EMOTION_PROFILES = {
+
+    natural: {
+
+        rate:
+            1.00,
+
+        pitch:
+            1.00,
+
+        pause:
+            1.00
+
+    },
+
+    lively: {
+
+        rate:
+            1.05,
+
+        pitch:
+            1.08,
+
+        pause:
+            0.85
+
+    },
+
+    tense: {
+
+        rate:
+            1.02,
+
+        pitch:
+            1.12,
+
+        pause:
+            1.15
+
+    },
+
+    gentle: {
+
+        rate:
+            0.88,
+
+        pitch:
+            0.94,
+
+        pause:
+            1.25
+
+    }
+
+};
+
+
+// =====================================================
+// 讀取設定
+// =====================================================
+
+function loadVoiceSettings() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                VOICE_STORAGE_KEY
+            );
+
+        if (saved) {
+
+            const parsed =
+                JSON.parse(saved);
+
+            voiceSettings = {
+
+                ...voiceSettings,
+
+                ...parsed
+
+            };
+
+        }
+
+    }
+
+    catch(e) {
+
+        console.warn(
+            '讀取語音設定失敗',
+            e
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// 儲存設定
+// =====================================================
+
+function saveVoiceSettings() {
+
+    try {
+
+        localStorage.setItem(
+            VOICE_STORAGE_KEY,
+            JSON.stringify(
+                voiceSettings
+            )
+        );
+
+    }
+
+    catch(e) {
+
+        console.warn(
+            '儲存語音設定失敗',
+            e
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// 載入裝置語音
+// =====================================================
+
+function loadVoices() {
+
+    if (
+        !('speechSynthesis' in window)
+    ) {
+
+        availableVoices =
+            [];
+
+        updateVoiceStatus(
+            '此瀏覽器不支援語音朗讀。'
+        );
+
+        return;
+
+    }
+
+
+    availableVoices =
+        window.speechSynthesis
+            .getVoices();
+
+
+    populateVoiceSelect();
+
+}
+
+
+// =====================================================
+// 更新語音選單
+// =====================================================
+
+function populateVoiceSelect() {
+
+    const select =
+        $('voiceSelect');
+
+
+    if (!select) {
+
+        return;
+
+    }
+
+
+    select.innerHTML =
+        '';
+
+
+    if (
+        availableVoices.length === 0
+    ) {
+
+        const option =
+            document.createElement(
+                'option'
+            );
+
+        option.value =
+            '';
+
+        option.textContent =
+            '目前沒有取得裝置語音';
+
+        select.appendChild(
+            option
+        );
+
+        updateVoiceStatus(
+            '尚未取得語音清單。請稍等一下，或重新開啟聲音設定。'
+        );
+
+        return;
+
+    }
+
+
+    // -----------------------------------------
+    // 優先中文
+    // -----------------------------------------
+
+    const chinese =
+        availableVoices.filter(
+            voice =>
+                /^zh/i.test(
+                    voice.lang
+                ) ||
+                /中文|Chinese|Taiwan|台灣|台灣/i.test(
+                    voice.name
+                )
+        );
+
+
+    const others =
+        availableVoices.filter(
+            voice =>
+                !chinese.includes(
+                    voice
+                )
+        );
+
+
+    const sorted =
+        [
+            ...chinese,
+            ...others
+        ];
+
+
+    sorted.forEach(
+        voice => {
+
+            const option =
+                document.createElement(
+                    'option'
+                );
+
+
+            option.value =
+                voice.voiceURI;
+
+
+            let label =
+                voice.name;
+
+
+            if (
+                voice.lang
+            ) {
+
+                label +=
+                    ` (${voice.lang})`;
+
+            }
+
+
+            if (
+                voice.default
+            ) {
+
+                label +=
+                    ' ・系統預設';
+
+            }
+
+
+            if (
+                voice.localService
+            ) {
+
+                label +=
+                    ' ・裝置';
+
+            }
+
+
+            option.textContent =
+                label;
+
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
+
+
+    restoreSelectedVoice();
+
+    updateVoiceStatus(
+        `已找到 ${availableVoices.length} 個裝置可用語音。`
+    );
+
+}
+
+
+// =====================================================
+// 還原語音
+// =====================================================
+
+function restoreSelectedVoice() {
+
+    if (
+        !availableVoices.length
+    ) {
+
+        return;
+
+    }
+
+
+    let voice =
+        null;
+
+
+    // -----------------------------------------
+    // 1. 優先使用使用者之前選擇
+    // -----------------------------------------
+
+    if (
+        voiceSettings.voiceURI
+    ) {
+
+        voice =
+            availableVoices.find(
+                v =>
+                    v.voiceURI ===
+                    voiceSettings.voiceURI
+            );
+
+    }
+
+
+    // -----------------------------------------
+    // 2. 優先 zh-TW
+    // -----------------------------------------
+
+    if (!voice) {
+
+        voice =
+            availableVoices.find(
+                v =>
+                    /^zh-TW$/i.test(
+                        v.lang
+                    )
+            );
+
+    }
+
+
+    // -----------------------------------------
+    // 3. zh-Hant
+    // -----------------------------------------
+
+    if (!voice) {
+
+        voice =
+            availableVoices.find(
+                v =>
+                    /^zh-Hant/i.test(
+                        v.lang
+                    )
+            );
+
+    }
+
+
+    // -----------------------------------------
+    // 4. 任一中文
+    // -----------------------------------------
+
+    if (!voice) {
+
+        voice =
+            availableVoices.find(
+                v =>
+                    /^zh/i.test(
+                        v.lang
+                    )
+            );
+
+    }
+
+
+    // -----------------------------------------
+    // 5. 系統預設
+    // -----------------------------------------
+
+    if (!voice) {
+
+        voice =
+            availableVoices.find(
+                v =>
+                    v.default
+            );
+
+    }
+
+
+    // -----------------------------------------
+    // 6. 第一個
+    // -----------------------------------------
+
+    if (!voice) {
+
+        voice =
+            availableVoices[0];
+
+    }
+
+
+    selectedVoice =
+        voice;
+
+
+    voiceSettings.voiceURI =
+        voice.voiceURI;
+
+
+    const select =
+        $('voiceSelect');
+
+
+    if (select) {
+
+        select.value =
+            voice.voiceURI;
+
+    }
+
+
+    saveVoiceSettings();
+
+}
+
+
+// =====================================================
+// 取得目前語音
+// =====================================================
+
+function getSelectedVoice() {
+
+    if (
+        selectedVoice
+    ) {
+
+        return selectedVoice;
+
+    }
+
+
+    if (
+        voiceSettings.voiceURI
+    ) {
+
+        const found =
+            availableVoices.find(
+                voice =>
+                    voice.voiceURI ===
+                    voiceSettings.voiceURI
+            );
+
+        if (found) {
+
+            selectedVoice =
+                found;
+
+            return found;
+
+        }
+
+    }
+
+
+    return null;
+
+}
+
+
+// =====================================================
+// 語音狀態
+// =====================================================
+
+function updateVoiceStatus(
+    message
+) {
+
+    const status =
+        $('voiceStatus');
+
+
+    if (status) {
+
+        status.textContent =
+            message;
+
+    }
+
+}
+
+
+// =====================================================
+// 更新設定 UI
+// =====================================================
+
+function updateVoiceSettingUI() {
+
+    const rate =
+        $('rateRange');
+
+    const pitch =
+        $('pitchRange');
+
+    const volume =
+        $('volumeRange');
+
+
+    if (rate) {
+
+        rate.value =
+            voiceSettings.rate;
+
+        $('rateValue')
+            .textContent =
+            Number(
+                voiceSettings.rate
+            ).toFixed(2);
+
+    }
+
+
+    if (pitch) {
+
+        pitch.value =
+            voiceSettings.pitch;
+
+        $('pitchValue')
+            .textContent =
+            Number(
+                voiceSettings.pitch
+            ).toFixed(2);
+
+    }
+
+
+    if (volume) {
+
+        volume.value =
+            voiceSettings.volume;
+
+        $('volumeValue')
+            .textContent =
+            Number(
+                voiceSettings.volume
+            ).toFixed(2);
+
+    }
+
+
+    document
+        .querySelectorAll(
+            '.voice-emotion'
+        )
+        .forEach(
+            button => {
+
+                button.classList.toggle(
+                    'active',
+                    button.dataset.emotion ===
+                    voiceSettings.emotion
+                );
+
+            }
+        );
+
+
+    if (
+        availableVoices.length
+    ) {
+
+        restoreSelectedVoice();
+
+    }
+
+}
+
+
+// =====================================================
+// 依照標點切句
+// =====================================================
+
+function splitSpeechText(
+    text
+) {
+
+    if (!text) {
+
+        return [];
+
+    }
+
+
+    const clean =
+        removeEmoji(text);
+
+
+    if (!clean) {
+
+        return [];
+
+    }
+
+
+    // -----------------------------------------
+    // 中文故事切句
+    // -----------------------------------------
+
+    const matches =
+        clean.match(
+            /[^。！？!?；;：:，,、…—]+(?:[。！？!?；;：:，,、…—]+|$)/g
+        );
+
+
+    if (
+        !matches
+    ) {
+
+        return [
+            clean
+        ];
+
+    }
+
+
+    const sentences =
+        [];
+
+
+    let buffer =
+        "";
+
+
+    matches.forEach(
+        part => {
+
+            const value =
+                part.trim();
+
+
+            if (!value) {
+
+                return;
+
+            }
+
+
+            buffer +=
+                value;
+
+
+            // ---------------------------------
+            // 短逗號不要每個都獨立成句
+            // ---------------------------------
+
+            const strongEnd =
+                /[。！？!?；;]$/.test(
+                    value
+                ) ||
+                /…+$/.test(
+                    value
+                );
+
+
+            if (
+                strongEnd ||
+                buffer.length >= 45
+            ) {
+
+                sentences.push(
+                    buffer
+                );
+
+                buffer =
+                    "";
+
+            }
+
+        }
+    );
+
+
+    if (
+        buffer.trim()
+    ) {
+
+        sentences.push(
+            buffer.trim()
+        );
+
+    }
+
+
+    return sentences;
+
+}
+
+
+// =====================================================
+// 取得句子語氣
+// =====================================================
+
+function getSentenceEmotion(
+    text
+) {
+
+    const profile =
+        EMOTION_PROFILES[
+            voiceSettings.emotion
+        ] ||
+        EMOTION_PROFILES.natural;
+
+
+    let rate =
+        Number(
+            voiceSettings.rate
+        ) *
+        profile.rate;
+
+
+    let pitch =
+        Number(
+            voiceSettings.pitch
+        ) *
+        profile.pitch;
+
+
+    let pause =
+        profile.pause;
+
+
+    // -----------------------------------------
+    // 驚嘆
+    // -----------------------------------------
+
+    if (
+        /！!/.test(
+            text
+        )
+    ) {
+
+        rate *=
+            1.04;
+
+        pitch *=
+            1.07;
+
+    }
+
+
+    // -----------------------------------------
+    // 問句
+    // -----------------------------------------
+
+    if (
+        /？?/.test(
+            text
+        )
+    ) {
+
+        pitch *=
+            1.05;
+
+    }
+
+
+    // -----------------------------------------
+    // 省略號
+    // -----------------------------------------
+
+    if (
+        /……|…/.test(
+            text
+        )
+    ) {
+
+        pause *=
+            1.45;
+
+    }
+
+
+    // -----------------------------------------
+    // 破折號
+    // -----------------------------------------
+
+    if (
+        /—/.test(
+            text
+        )
+    ) {
+
+        pause *=
+            1.25;
+
+    }
+
+
+    // -----------------------------------------
+    // 緊張關鍵字
+    // -----------------------------------------
+
+    if (
+        /危險|快跑|救命|小心|怪獸|糟糕|逃|快點|不好了/.test(
+            text
+        )
+    ) {
+
+        rate *=
+            1.06;
+
+        pitch *=
+            1.06;
+
+    }
+
+
+    // -----------------------------------------
+    // 溫柔關鍵字
+    // -----------------------------------------
+
+    if (
+        /慢慢|輕輕|溫柔|放心|沒事|安心|休息|深呼吸/.test(
+            text
+        )
+    ) {
+
+        rate *=
+            0.94;
+
+        pitch *=
+            0.96;
+
+        pause *=
+            1.15;
+
+    }
+
+
+    rate =
+        Math.max(
+            0.65,
+            Math.min(
+                1.35,
+                rate
+            )
+        );
+
+
+    pitch =
+        Math.max(
+            0.5,
+            Math.min(
+                2,
+                pitch
+            )
+        );
+
+
+    return {
+
+        rate,
+
+        pitch,
+
+        pause
+
+    };
+
+}
+
+
+// =====================================================
+// 單句播放
+// =====================================================
+
+function speakSentence(
+    text,
+    token
+) {
+
+    return new Promise(
+        resolve => {
+
+            if (
+                token !==
+                speechToken
+            ) {
+
+                resolve();
+
+                return;
+
+            }
+
+
+            if (
+                !('speechSynthesis' in window)
+            ) {
+
+                resolve();
+
+                return;
+
+            }
+
+
+            const cleanText =
+                removeEmoji(text);
+
+
+            if (!cleanText) {
+
+                resolve();
+
+                return;
+
+            }
+
+
+            const utterance =
+                new SpeechSynthesisUtterance(
+                    cleanText
+                );
+
+
+            const emotion =
+                getSentenceEmotion(
+                    cleanText
+                );
+
+
+            const voice =
+                getSelectedVoice();
+
+
+            // -------------------------------------
+            // 指定裝置語音
+            // -------------------------------------
+
+            if (voice) {
+
+                utterance.voice =
+                    voice;
+
+                utterance.lang =
+                    voice.lang ||
+                    'zh-TW';
+
+            }
+
+            else {
+
+                utterance.lang =
+                    'zh-TW';
+
+            }
+
+
+            utterance.rate =
+                emotion.rate;
+
+
+            utterance.pitch =
+                emotion.pitch;
+
+
+            utterance.volume =
+                Number(
+                    voiceSettings.volume
+                );
+
+
+            let finished =
+                false;
+
+
+            const finish =
+                () => {
+
+                    if (
+                        finished
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    finished =
+                        true;
+
+
+                    clearTimeout(
+                        safetyTimer
+                    );
+
+
+                    resolve();
+
+                };
+
+
+            utterance.onend =
+                finish;
+
+
+            utterance.onerror =
+                finish;
+
+
+            // -------------------------------------
+            // 防止某些瀏覽器 onend 不回來
+            // -------------------------------------
+
+            const safetyTimer =
+                setTimeout(
+                    finish,
+                    Math.max(
+                        6000,
+                        cleanText.length *
+                        520 /
+                        Math.max(
+                            emotion.rate,
+                            0.5
+                        )
+                    )
+                );
+
+
+            try {
+
+                window.speechSynthesis.speak(
+                    utterance
+                );
+
+            }
+
+            catch(e) {
+
+                clearTimeout(
+                    safetyTimer
+                );
+
+                finish();
+
+            }
+
+        }
+    );
+
+}
+
+
+// =====================================================
+// 句子之間的自然停頓
+// =====================================================
+
+function speechPause(
+    text,
+    token
+) {
+
+    return new Promise(
+        resolve => {
+
+            if (
+                token !==
+                speechToken
+            ) {
+
+                resolve();
+
+                return;
+
+            }
+
+
+            let duration =
+                120;
+
+
+            if (
+                /[，,、]$/.test(
+                    text
+                )
+            ) {
+
+                duration =
+                    180;
+
+            }
+
+
+            if (
+                /[。；;]$/.test(
+                    text
+                )
+            ) {
+
+                duration =
+                    420;
+
+            }
+
+
+            if (
+                /[！？!?]$/.test(
+                    text
+                )
+            ) {
+
+                duration =
+                    520;
+
+            }
+
+
+            if (
+                /……|…/.test(
+                    text
+                )
+            ) {
+
+                duration =
+                    850;
+
+            }
+
+
+            const profile =
+                EMOTION_PROFILES[
+                    voiceSettings.emotion
+                ] ||
+                EMOTION_PROFILES.natural;
+
+
+            duration *=
+                profile.pause;
+
+
+            setTimeout(
+                resolve,
+                duration
+            );
+
+        }
+    );
 
 }
 
@@ -1056,14 +2721,24 @@ function removeEmoji(text) {
 
 function stopSpeech() {
 
+    speechToken++;
+
+
     if (
         'speechSynthesis'
         in window
     ) {
 
-        window.speechSynthesis.cancel();
+        try {
+
+            window.speechSynthesis.cancel();
+
+        }
+
+        catch(e) {}
 
     }
+
 
     speechPlaying =
         false;
@@ -1085,27 +2760,17 @@ function primeSpeech() {
 
     }
 
+
     try {
 
-        const utterance =
-            new SpeechSynthesisUtterance("");
-
-        utterance.lang =
-            "zh-TW";
-
-        utterance.volume =
-            0;
-
-        window.speechSynthesis.speak(
-            utterance
-        );
+        loadVoices();
 
     }
 
     catch(e) {
 
         console.warn(
-            "語音初始化失敗",
+            '語音初始化失敗',
             e
         );
 
@@ -1115,118 +2780,126 @@ function primeSpeech() {
 
 
 // =====================================================
-// 語音
+// 完整朗讀
 // =====================================================
 
-function speak(text) {
+async function speak(
+    text
+) {
 
-    return new Promise(
-        resolve => {
+    if (
+        !('speechSynthesis' in window)
+    ) {
+
+        return;
+
+    }
+
+
+    const cleanText =
+        removeEmoji(text);
+
+
+    if (!cleanText) {
+
+        return;
+
+    }
+
+
+    // -----------------------------------------
+    // 停掉上一段
+    // -----------------------------------------
+
+    stopSpeech();
+
+
+    const myToken =
+        speechToken;
+
+
+    const sentences =
+        splitSpeechText(
+            cleanText
+        );
+
+
+    if (
+        !sentences.length
+    ) {
+
+        return;
+
+    }
+
+
+    speechPlaying =
+        true;
+
+
+    try {
+
+        for (
+            let i = 0;
+            i < sentences.length;
+            i++
+        ) {
 
             if (
-                !('speechSynthesis' in window)
+                myToken !==
+                speechToken
             ) {
 
-                resolve();
+                return;
+
+            }
+
+
+            await speakSentence(
+                sentences[i],
+                myToken
+            );
+
+
+            if (
+                myToken !==
+                speechToken
+            ) {
 
                 return;
 
             }
 
-            const cleanText =
-                removeEmoji(text);
 
-            if (!cleanText) {
+            if (
+                i <
+                sentences.length - 1
+            ) {
 
-                resolve();
-
-                return;
-
-            }
-
-            try {
-
-                window.speechSynthesis.cancel();
-
-                const utterance =
-                    new SpeechSynthesisUtterance(
-                        cleanText
-                    );
-
-                utterance.lang =
-                    "zh-TW";
-
-                utterance.rate =
-                    0.95;
-
-                utterance.pitch =
-                    1;
-
-                utterance.volume =
-                    1;
-
-                speechPlaying =
-                    true;
-
-                let finished =
-                    false;
-
-                const finish =
-                    () => {
-
-                        if (finished) {
-                            return;
-                        }
-
-                        finished =
-                            true;
-
-                        speechPlaying =
-                            false;
-
-                        resolve();
-
-                    };
-
-
-                utterance.onend =
-                    finish;
-
-                utterance.onerror =
-                    finish;
-
-
-                window.speechSynthesis.speak(
-                    utterance
+                await speechPause(
+                    sentences[i],
+                    myToken
                 );
-
-
-                setTimeout(
-                    finish,
-                    Math.max(
-                        12000,
-                        cleanText.length * 550
-                    )
-                );
-
-            }
-
-            catch(e) {
-
-                console.error(
-                    "語音播放失敗",
-                    e
-                );
-
-                speechPlaying =
-                    false;
-
-                resolve();
 
             }
 
         }
-    );
+
+    }
+
+    finally {
+
+        if (
+            myToken ===
+            speechToken
+        ) {
+
+            speechPlaying =
+                false;
+
+        }
+
+    }
 
 }
 
@@ -1549,10 +3222,6 @@ async function switchMode(
 
     if (isSenior) {
 
-        // =========================================
-        // 長輩模式
-        // =========================================
-
         $('appBody')
             .classList
             .add(
@@ -1594,10 +3263,6 @@ async function switchMode(
             .textContent =
             "請坐在有椅背的椅子上，選擇難度並跟著語音提示輕鬆活動。";
 
-
-        // -----------------------------------------
-        // 長輩模式不再顯示故事主題
-        // -----------------------------------------
 
         $('themeButtonsContainer')
             .innerHTML =
@@ -1645,10 +3310,6 @@ async function switchMode(
     }
 
     else {
-
-        // =========================================
-        // 兒童模式
-        // =========================================
 
         $('appBody')
             .classList
@@ -1916,10 +3577,6 @@ async function onBleEvent(
     );
 
 
-    // =========================================
-    // 模式切換
-    // =========================================
-
     if (
         value === "SWITCH_MODE_SENIOR" ||
         value === "MODE_SENIOR"
@@ -1950,10 +3607,6 @@ async function onBleEvent(
     }
 
 
-    // =========================================
-    // 沒有等待動作
-    // =========================================
-
     if (
         !waitingForAction ||
         busy
@@ -1968,10 +3621,6 @@ async function onBleEvent(
 
     }
 
-
-    // =========================================
-    // 防止連續觸發
-    // =========================================
 
     const now =
         Date.now();
@@ -1996,10 +3645,6 @@ async function onBleEvent(
             .toUpperCase();
 
 
-    // =========================================
-    // 正確動作
-    // =========================================
-
     if (
         value ===
         cleanExpected
@@ -2015,10 +3660,6 @@ async function onBleEvent(
     }
 
     else {
-
-        // =====================================
-        // 錯誤動作
-        // =====================================
 
         waitingForAction =
             false;
@@ -2422,10 +4063,6 @@ async function handleAction(
             );
 
 
-        // =========================================
-        // 長輩模式
-        // =========================================
-
         if (
             currentMode ===
             'senior'
@@ -2499,10 +4136,6 @@ async function handleAction(
         }
 
 
-        // =========================================
-        // 兒童故事
-        // =========================================
-
         const nextStory =
             data.story ||
             "";
@@ -2542,10 +4175,6 @@ async function handleAction(
             );
 
 
-        // =========================================
-        // 故事播放期間鎖定
-        // =========================================
-
         lockAction();
 
 
@@ -2553,10 +4182,6 @@ async function handleAction(
             nextStory
         );
 
-
-        // =========================================
-        // 最終結局
-        // =========================================
 
         if (
             data.done ||
@@ -2585,10 +4210,6 @@ async function handleAction(
 
         }
 
-
-        // =========================================
-        // 下一個動作
-        // =========================================
 
         await speak(
             actionSpeechLabel(
@@ -2686,18 +4307,10 @@ async function generateStory() {
     }
 
 
-    // =========================================
-    // 語音初始化
-    // =========================================
-
     stopSpeech();
 
     primeSpeech();
 
-
-    // =========================================
-    // 重置
-    // =========================================
 
     waitingForAction =
         false;
@@ -2825,10 +4438,6 @@ async function generateStory() {
         ];
 
 
-        // =========================================
-        // 兒童
-        // =========================================
-
         if (
             currentMode ===
             'child'
@@ -2847,10 +4456,6 @@ async function generateStory() {
                     'hidden'
                 );
 
-
-            // =====================================
-            // 故事播放期間絕對鎖定
-            // =====================================
 
             lockAction();
 
@@ -2918,10 +4523,6 @@ async function generateStory() {
 
         }
 
-
-        // =========================================
-        // 長輩
-        // =========================================
 
         else {
 
@@ -3059,10 +4660,38 @@ document.addEventListener(
     () => {
 
         // -----------------------------------------
-        // 初始兒童主題
+        // 主題
         // -----------------------------------------
 
         renderChildThemes();
+
+
+        // -----------------------------------------
+        // 語音設定
+        // -----------------------------------------
+
+        loadVoiceSettings();
+
+        updateVoiceSettingUI();
+
+        primeSpeech();
+
+
+        if (
+            'speechSynthesis' in window
+        ) {
+
+            window.speechSynthesis
+                .addEventListener(
+                    'voiceschanged',
+                    () => {
+
+                        loadVoices();
+
+                    }
+                );
+
+        }
 
 
         // -----------------------------------------
@@ -3133,7 +4762,9 @@ document.addEventListener(
 
 
                     if (!value) {
+
                         return;
+
                     }
 
 
@@ -3223,6 +4854,326 @@ document.addEventListener(
             );
 
 
+        // =================================================
+        // 語音設定視窗
+        // =================================================
+
+        $('btnVoiceSettings')
+            .addEventListener(
+                'click',
+                () => {
+
+                    loadVoices();
+
+                    updateVoiceSettingUI();
+
+                    $('voiceModal')
+                        .classList
+                        .remove(
+                            'hidden'
+                        );
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 關閉
+        // -----------------------------------------
+
+        $('btnCloseVoiceSettings')
+            .addEventListener(
+                'click',
+                () => {
+
+                    $('voiceModal')
+                        .classList
+                        .add(
+                            'hidden'
+                        );
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 點背景關閉
+        // -----------------------------------------
+
+        $('voiceModal')
+            .addEventListener(
+                'click',
+                event => {
+
+                    if (
+                        event.target ===
+                        $('voiceModal')
+                    ) {
+
+                        $('voiceModal')
+                            .classList
+                            .add(
+                                'hidden'
+                            );
+
+                    }
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 選擇語音
+        // -----------------------------------------
+
+        $('voiceSelect')
+            .addEventListener(
+                'change',
+                () => {
+
+                    const uri =
+                        $('voiceSelect')
+                            .value;
+
+
+                    selectedVoice =
+                        availableVoices.find(
+                            voice =>
+                                voice.voiceURI ===
+                                uri
+                        ) ||
+                        null;
+
+
+                    voiceSettings.voiceURI =
+                        uri;
+
+
+                    saveVoiceSettings();
+
+
+                    if (
+                        selectedVoice
+                    ) {
+
+                        updateVoiceStatus(
+                            `目前使用：${selectedVoice.name}（${selectedVoice.lang}）`
+                        );
+
+                    }
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 語速
+        // -----------------------------------------
+
+        $('rateRange')
+            .addEventListener(
+                'input',
+                () => {
+
+                    voiceSettings.rate =
+                        Number(
+                            $('rateRange')
+                                .value
+                        );
+
+
+                    $('rateValue')
+                        .textContent =
+                        voiceSettings.rate
+                            .toFixed(2);
+
+
+                    saveVoiceSettings();
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 音調
+        // -----------------------------------------
+
+        $('pitchRange')
+            .addEventListener(
+                'input',
+                () => {
+
+                    voiceSettings.pitch =
+                        Number(
+                            $('pitchRange')
+                                .value
+                        );
+
+
+                    $('pitchValue')
+                        .textContent =
+                        voiceSettings.pitch
+                            .toFixed(2);
+
+
+                    saveVoiceSettings();
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 音量
+        // -----------------------------------------
+
+        $('volumeRange')
+            .addEventListener(
+                'input',
+                () => {
+
+                    voiceSettings.volume =
+                        Number(
+                            $('volumeRange')
+                                .value
+                        );
+
+
+                    $('volumeValue')
+                        .textContent =
+                        voiceSettings.volume
+                            .toFixed(2);
+
+
+                    saveVoiceSettings();
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 情緒
+        // -----------------------------------------
+
+        document
+            .querySelectorAll(
+                '.voice-emotion'
+            )
+            .forEach(
+                button => {
+
+                    button.addEventListener(
+                        'click',
+                        () => {
+
+                            voiceSettings.emotion =
+                                button.dataset.emotion;
+
+
+                            document
+                                .querySelectorAll(
+                                    '.voice-emotion'
+                                )
+                                .forEach(
+                                    b => {
+
+                                        b.classList.toggle(
+                                            'active',
+                                            b === button
+                                        );
+
+                                    }
+                                );
+
+
+                            saveVoiceSettings();
+
+                        }
+                    );
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 測試聲音
+        // -----------------------------------------
+
+        $('btnVoiceTest')
+            .addEventListener(
+                'click',
+                async () => {
+
+                    stopSpeech();
+
+
+                    const testText =
+                        currentMode === 'senior'
+
+                            ? "您好，歡迎來到聲動奇境。請慢慢活動身體，保持輕鬆。"
+
+                            : "等等！前面好像出現了什麼……你要不要靠近看看？";
+
+
+                    await speak(
+                        testText
+                    );
+
+                }
+            );
+
+
+        // -----------------------------------------
+        // 恢復預設
+        // -----------------------------------------
+
+        $('btnVoiceReset')
+            .addEventListener(
+                'click',
+                () => {
+
+                    stopSpeech();
+
+
+                    voiceSettings = {
+
+                        rate:
+                            1.00,
+
+                        pitch:
+                            1.00,
+
+                        volume:
+                            1.00,
+
+                        emotion:
+                            'natural',
+
+                        voiceURI:
+                            ''
+
+                    };
+
+
+                    selectedVoice =
+                        null;
+
+
+                    saveVoiceSettings();
+
+
+                    loadVoices();
+
+                    updateVoiceSettingUI();
+
+
+                    showToast(
+                        '🎙️ 已恢復預設聲音設定'
+                    );
+
+                }
+            );
+
+
         // -----------------------------------------
         // 再播放
         // -----------------------------------------
@@ -3256,7 +5207,6 @@ document.addEventListener(
                         expectedAction;
 
 
-                    // 播放期間鎖住
                     lockAction();
 
 
