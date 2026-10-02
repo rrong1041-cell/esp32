@@ -8,7 +8,7 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
-<title>聲動奇境 - 智慧互動繪本</title>
+<title>聲動奇境 8.0 - 智慧互動繪本</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 
@@ -59,9 +59,10 @@ tailwind.config = {
 
     }
 
-}
+};
 
 </script>
+
 
 <style>
 
@@ -86,6 +87,7 @@ body {
 
 }
 
+
 body.mode-senior {
 
     background:
@@ -97,6 +99,7 @@ body.mode-senior {
 
 }
 
+
 .glow-button {
 
     box-shadow:
@@ -107,6 +110,7 @@ body.mode-senior {
         all .3s ease;
 
 }
+
 
 body.mode-senior .glow-button {
 
@@ -124,12 +128,14 @@ body.mode-senior .glow-button {
 
 }
 
+
 .action-big {
 
     animation:
         pulseGlow 1.6s infinite;
 
 }
+
 
 @keyframes pulseGlow {
 
@@ -151,11 +157,13 @@ body.mode-senior .glow-button {
 
 }
 
+
 .action-locked {
 
     opacity: .65;
 
 }
+
 
 .action-ready {
 
@@ -163,12 +171,14 @@ body.mode-senior .glow-button {
 
 }
 
+
 .difficulty-btn {
 
     transition:
         all .2s ease;
 
 }
+
 
 .difficulty-btn.active {
 
@@ -183,12 +193,14 @@ body.mode-senior .glow-button {
 
 }
 
+
 .theme-btn {
 
     transition:
         all .2s ease;
 
 }
+
 
 .theme-btn:hover {
 
@@ -197,12 +209,14 @@ body.mode-senior .glow-button {
 
 }
 
+
 .theme-btn.active {
 
     transform:
         translateY(-1px);
 
 }
+
 
 .story-action {
 
@@ -221,6 +235,7 @@ body.mode-senior .glow-button {
 
 }
 
+
 body.mode-senior .story-action {
 
     background:
@@ -230,6 +245,7 @@ body.mode-senior .story-action {
         rgba(16,185,129,.25);
 
 }
+
 
 .action-purpose {
 
@@ -244,12 +260,14 @@ body.mode-senior .story-action {
 
 }
 
+
 body.mode-senior .action-purpose {
 
     color:
         #6ee7b7;
 
 }
+
 
 .memory-badge {
 
@@ -318,12 +336,14 @@ body.mode-senior .action-purpose {
 
 }
 
+
 .voice-modal.hidden {
 
     display:
         none;
 
 }
+
 
 .voice-panel {
 
@@ -362,12 +382,14 @@ body.mode-senior .action-purpose {
 
 }
 
+
 .voice-row {
 
     margin-top:
         18px;
 
 }
+
 
 .voice-label {
 
@@ -393,6 +415,7 @@ body.mode-senior .action-purpose {
         #c4b5fd;
 
 }
+
 
 .voice-select {
 
@@ -420,12 +443,14 @@ body.mode-senior .action-purpose {
 
 }
 
+
 .voice-select:focus {
 
     border-color:
         #8b5cf6;
 
 }
+
 
 .voice-range {
 
@@ -440,6 +465,7 @@ body.mode-senior .action-purpose {
 
 }
 
+
 .voice-emotions {
 
     display:
@@ -452,6 +478,7 @@ body.mode-senior .action-purpose {
         8px;
 
 }
+
 
 .voice-emotion {
 
@@ -482,12 +509,14 @@ body.mode-senior .action-purpose {
 
 }
 
+
 .voice-emotion:hover {
 
     border-color:
         #8b5cf6;
 
 }
+
 
 .voice-emotion.active {
 
@@ -501,6 +530,7 @@ body.mode-senior .action-purpose {
         #ede9fe;
 
 }
+
 
 .voice-status {
 
@@ -526,6 +556,7 @@ body.mode-senior .action-purpose {
         1.5;
 
 }
+
 
 .voice-badge {
 
@@ -592,6 +623,7 @@ class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2
 兒童冒險模式
 
 </button>
+
 
 <button
 id="modeSeniorBtn"
@@ -764,10 +796,9 @@ class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25
 id="rightCard">
 
 
-<!-- STORY -->
-
 <div
 class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
+
 
 <div
 class="overflow-y-auto max-h-[420px] pr-2 space-y-4"
@@ -819,11 +850,14 @@ class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
 </div>
 
 
-<!-- ACTION -->
+<!-- =====================================================
+     ACTION PROMPT
+===================================================== -->
 
 <div
 id="actionPrompt"
 class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl border border-pink-500/30 action-big">
+
 
 <div
 class="flex items-center gap-2 text-pink-300 font-bold"
@@ -832,6 +866,7 @@ id="actionHeaderBox">
 <i
 class="fa-solid fa-wand-magic-sparkles text-xl">
 </i>
+
 
 <span
 id="promptText">
@@ -853,7 +888,9 @@ class="text-sm text-slate-300 mt-2">
 </div>
 
 
-<!-- CONTROLS -->
+<!-- =====================================================
+     CONTROLS
+===================================================== -->
 
 <div
 class="space-y-4">
@@ -861,6 +898,7 @@ class="space-y-4">
 
 <div
 class="space-y-2">
+
 
 <div
 class="flex items-center justify-between">
@@ -871,6 +909,7 @@ class="text-xs text-purple-300 font-bold">
 📚 選擇故事主題
 
 </div>
+
 
 <div
 class="text-xs text-slate-500">
@@ -892,6 +931,7 @@ id="themeButtonsContainer">
 id="seniorDifficultyPanel"
 class="hidden mt-3">
 
+
 <div
 class="text-xs text-emerald-300 font-bold mb-2">
 
@@ -902,6 +942,7 @@ class="text-xs text-emerald-300 font-bold mb-2">
 
 <div
 class="grid grid-cols-3 gap-2">
+
 
 <button
 data-difficulty="easy"
@@ -951,14 +992,17 @@ class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm 
 <div
 class="flex gap-3">
 
+
 <button
 id="btnGenerate"
 class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
+
 
 <i
 id="btnIcon"
 class="fa-solid fa-wand-magic-sparkles">
 </i>
+
 
 <span
 id="btnText">
@@ -1000,7 +1044,9 @@ title="聲音設定">
 </main>
 
 
-<!-- TOAST -->
+<!-- =====================================================
+     TOAST
+===================================================== -->
 
 <div
 id="toast"
@@ -1016,11 +1062,14 @@ class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purpl
 id="voiceModal"
 class="voice-modal hidden">
 
+
 <div
 class="voice-panel">
 
+
 <div
 class="flex items-center justify-between gap-3">
+
 
 <div>
 
@@ -1030,6 +1079,7 @@ class="text-xl font-black text-purple-200">
 🎙️ 聲音設定
 
 </h2>
+
 
 <p
 class="text-xs text-slate-400 mt-1">
@@ -1064,10 +1114,12 @@ class="voice-status">
 <div
 class="voice-row">
 
+
 <div
 class="voice-label">
 
 <span>🗣️ 朗讀聲音</span>
+
 
 <span
 class="voice-badge">
@@ -1099,10 +1151,12 @@ class="voice-select">
 <div
 class="voice-row">
 
+
 <div
 class="voice-label">
 
 <span>⚡ 語速</span>
+
 
 <span id="rateValue">
 
@@ -1128,10 +1182,12 @@ value="1.00">
 <div
 class="voice-row">
 
+
 <div
 class="voice-label">
 
 <span>🎵 音調</span>
+
 
 <span id="pitchValue">
 
@@ -1157,10 +1213,12 @@ value="1.00">
 <div
 class="voice-row">
 
+
 <div
 class="voice-label">
 
 <span>🔊 音量</span>
+
 
 <span id="volumeValue">
 
@@ -1186,10 +1244,12 @@ value="1">
 <div
 class="voice-row">
 
+
 <div
 class="voice-label">
 
 <span>🎭 故事語氣</span>
+
 
 <span class="text-slate-500">
 
@@ -1202,6 +1262,7 @@ class="voice-label">
 
 <div
 class="voice-emotions">
+
 
 <button
 class="voice-emotion active"
@@ -1246,6 +1307,7 @@ data-emotion="gentle">
 <div
 class="grid grid-cols-2 gap-3 mt-6">
 
+
 <button
 id="btnVoiceTest"
 class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl">
@@ -1283,10 +1345,14 @@ class="text-[11px] text-slate-500 mt-4 leading-relaxed">
 
 <script>
 
+/* =====================================================
+   聲動奇境 8.0
+   ===================================================== */
 
-// =====================================================
-// BLE
-// =====================================================
+
+/* =====================================================
+   BLE
+===================================================== */
 
 const BLE_CONFIG = {
 
@@ -1299,17 +1365,17 @@ const BLE_CONFIG = {
 };
 
 
-// =====================================================
-// WORKER
-// =====================================================
+/* =====================================================
+   WORKER
+===================================================== */
 
 const WORKER_URL =
     'https://empty-credit-1539.rrong1041.workers.dev';
 
 
-// =====================================================
-// 基本狀態
-// =====================================================
+/* =====================================================
+   基本狀態
+===================================================== */
 
 let bleDevice =
     null;
@@ -1342,9 +1408,9 @@ let currentActionReason =
     '';
 
 
-// =====================================================
-// ⭐ 最重要：故事記憶
-// =====================================================
+/* =====================================================
+   ⭐ 故事記憶
+===================================================== */
 
 let storyMemory =
     null;
@@ -1363,7 +1429,6 @@ let sceneId =
 
 let sceneSeed =
     '';
-
 
 let history =
     [];
@@ -1384,18 +1449,18 @@ let speechPlaying =
     false;
 
 
-// =====================================================
-// DOM
-// =====================================================
+/* =====================================================
+   DOM
+===================================================== */
 
 const $ =
     id =>
         document.getElementById(id);
 
 
-// =====================================================
-// 主題
-// =====================================================
+/* =====================================================
+   主題
+===================================================== */
 
 const CHILD_THEMES = [
 
@@ -1568,13 +1633,11 @@ const SENIOR_THEME =
     '午後健康活動';
 
 
-// =====================================================
-// Toast
-// =====================================================
+/* =====================================================
+   Toast
+===================================================== */
 
-function showToast(
-    msg
-) {
+function showToast(msg) {
 
     const t =
         $('toast');
@@ -1610,13 +1673,11 @@ function showToast(
 }
 
 
-// =====================================================
-// 清除 Emoji
-// =====================================================
+/* =====================================================
+   清除 Emoji
+===================================================== */
 
-function removeEmoji(
-    text
-) {
+function removeEmoji(text) {
 
     if (!text) {
 
@@ -1651,15 +1712,136 @@ function removeEmoji(
 }
 
 
-// =====================================================
-// ⭐ 語音系統
-// =====================================================
+/* =====================================================
+   ⭐ 8.0 核心：動作名稱 → 玩家真正要做的事
+===================================================== */
+
+const ACTION_INSTRUCTIONS = {
+
+    SWIPE_LEFT:
+        '現在向左閃避！',
+
+    SWIPE_RIGHT:
+        '現在向右閃避！',
+
+    JUMP:
+        '現在跳起來！',
+
+    SHAKE:
+        '現在搖一搖，把它甩開！',
+
+    RUN:
+        '現在快跑，追上去！',
+
+    ARM_UP:
+        '現在把手抬高！',
+
+    ARM_DOWN:
+        '現在把手放下！',
+
+    TILT_LEFT:
+        '現在向左傾斜！',
+
+    TILT_RIGHT:
+        '現在向右傾斜！',
+
+    HOLD_UP:
+        '現在把手抬起並保持住！'
+
+};
+
+
+/* =====================================================
+   ⭐ 取得乾淨、明確的動作提示
+===================================================== */
+
+function getActionNarration(data) {
+
+    const action =
+        (
+            data?.action ||
+            ''
+        )
+        .trim()
+        .toUpperCase();
+
+
+    if (
+        ACTION_INSTRUCTIONS[action]
+    ) {
+
+        return ACTION_INSTRUCTIONS[action];
+
+    }
+
+
+    return (
+        data?.actionPurpose ||
+        data?.actionNarration ||
+        '現在做出你的動作！'
+    );
+
+}
+
+
+/* =====================================================
+   ⭐ 動作圖示
+===================================================== */
+
+function getActionIcon(action) {
+
+    const icons = {
+
+        SWIPE_LEFT:
+            '⬅️',
+
+        SWIPE_RIGHT:
+            '➡️',
+
+        JUMP:
+            '⬆️',
+
+        SHAKE:
+            '📳',
+
+        RUN:
+            '🏃',
+
+        ARM_UP:
+            '🙋',
+
+        ARM_DOWN:
+            '🙆',
+
+        TILT_LEFT:
+            '↩️',
+
+        TILT_RIGHT:
+            '↪️',
+
+        HOLD_UP:
+            '✋'
+
+    };
+
+
+    return (
+        icons[action] ||
+        '✨'
+    );
+
+}
+
+
+/* =====================================================
+   語音設定
+===================================================== */
 
 const VOICE_STORAGE_KEY =
     'soundAdventureVoiceSettings';
 
 const VOICE_SETTINGS_VERSION =
-    3;
+    4;
 
 
 let availableVoices =
@@ -1752,9 +1934,9 @@ const EMOTION_PROFILES = {
 };
 
 
-// =====================================================
-// 載入語音設定
-// =====================================================
+/* =====================================================
+   載入語音設定
+===================================================== */
 
 function loadVoiceSettings() {
 
@@ -1812,9 +1994,9 @@ function loadVoiceSettings() {
 }
 
 
-// =====================================================
-// 儲存語音
-// =====================================================
+/* =====================================================
+   儲存語音設定
+===================================================== */
 
 function saveVoiceSettings() {
 
@@ -1837,9 +2019,9 @@ function saveVoiceSettings() {
 }
 
 
-// =====================================================
-// 載入語音
-// =====================================================
+/* =====================================================
+   載入裝置語音
+===================================================== */
 
 function loadVoices() {
 
@@ -1864,9 +2046,9 @@ function loadVoices() {
 }
 
 
-// =====================================================
-// 語音選單
-// =====================================================
+/* =====================================================
+   語音選單
+===================================================== */
 
 function populateVoiceSelect() {
 
@@ -1952,9 +2134,9 @@ function populateVoiceSelect() {
 }
 
 
-// =====================================================
-// 還原語音
-// =====================================================
+/* =====================================================
+   還原語音
+===================================================== */
 
 function restoreSelectedVoice() {
 
@@ -1992,13 +2174,11 @@ function restoreSelectedVoice() {
 }
 
 
-// =====================================================
-// 語音狀態
-// =====================================================
+/* =====================================================
+   語音狀態
+===================================================== */
 
-function updateVoiceStatus(
-    message
-) {
+function updateVoiceStatus(message) {
 
     const status =
         $('voiceStatus');
@@ -2013,9 +2193,9 @@ function updateVoiceStatus(
 }
 
 
-// =====================================================
-// 語音 UI
-// =====================================================
+/* =====================================================
+   語音 UI
+===================================================== */
 
 function updateVoiceSettingUI() {
 
@@ -2066,13 +2246,11 @@ function updateVoiceSettingUI() {
 }
 
 
-// =====================================================
-// 語音句子
-// =====================================================
+/* =====================================================
+   語音情緒
+===================================================== */
 
-function getSentenceEmotion(
-    text
-) {
+function getSentenceEmotion(text) {
 
     const profile =
         EMOTION_PROFILES[
@@ -2119,7 +2297,7 @@ function getSentenceEmotion(
 
 
     if (
-        /危險|快跑|救命|小心|怪獸|糟糕|逃/.test(text)
+        /危險|快跑|救命|小心|怪獸|糟糕|逃|攻擊|火焰/.test(text)
     ) {
 
         rate *=
@@ -2169,9 +2347,9 @@ function getSentenceEmotion(
 }
 
 
-// =====================================================
-// 停止語音
-// =====================================================
+/* =====================================================
+   停止語音
+===================================================== */
 
 function stopSpeech() {
 
@@ -2191,13 +2369,11 @@ function stopSpeech() {
 }
 
 
-// =====================================================
-// 播放語音
-// =====================================================
+/* =====================================================
+   ⭐ 語音朗讀
+===================================================== */
 
-async function speak(
-    text
-) {
+async function speak(text) {
 
     if (
         !text ||
@@ -2211,6 +2387,7 @@ async function speak(
 
     const clean =
         removeEmoji(text);
+
 
     if (!clean) {
 
@@ -2279,6 +2456,9 @@ async function speak(
             let finished =
                 false;
 
+            let timer =
+                null;
+
 
             const finish =
                 () => {
@@ -2310,7 +2490,7 @@ async function speak(
                 finish;
 
 
-            const timer =
+            timer =
                 setTimeout(
                     finish,
                     Math.max(
@@ -2368,85 +2548,19 @@ async function speak(
 }
 
 
-// =====================================================
-// ⭐⭐ 核心：AI 動作敘事
-// =====================================================
+/* =====================================================
+   ⭐ 顯示動作
+===================================================== */
 
-function getActionNarration(
-    data
-) {
-
-    return (
-        data.actionNarration ||
-        data.actionPurpose ||
-        ''
-    );
-
-}
-
-
-// =====================================================
-// 顯示動作
-// =====================================================
-
-function getActionIcon(
-    action
-) {
-
-    const icons = {
-
-        SWIPE_LEFT:
-            '⬅️',
-
-        SWIPE_RIGHT:
-            '➡️',
-
-        JUMP:
-            '⬆️',
-
-        SHAKE:
-            '📳',
-
-        RUN:
-            '🏃',
-
-        ARM_UP:
-            '🙋',
-
-        ARM_DOWN:
-            '🙆',
-
-        TILT_LEFT:
-            '↩️',
-
-        TILT_RIGHT:
-            '↪️',
-
-        HOLD_UP:
-            '✋'
-
-    };
-
-
-    return (
-        icons[action] ||
-        '✨'
-    );
-
-}
-
-
-// =====================================================
-// ⭐ 不再寫死「請搖晃手環」
-// =====================================================
-
-function showAction(
-    data
-) {
+function showAction(data) {
 
     const action =
-        data.action ||
-        '';
+        (
+            data?.action ||
+            ''
+        )
+        .trim()
+        .toUpperCase();
 
 
     currentAction =
@@ -2454,18 +2568,19 @@ function showAction(
 
 
     currentActionNarration =
-        data.actionNarration ||
-        '';
+        getActionNarration(
+            data
+        );
 
 
     currentActionPurpose =
-        data.actionPurpose ||
-        '';
+        data?.actionPurpose ||
+        '完成這個動作，故事就會繼續。';
 
 
     currentActionReason =
-        data.actionReason ||
-        data.reason ||
+        data?.actionReason ||
+        data?.reason ||
         '';
 
 
@@ -2473,6 +2588,9 @@ function showAction(
 
         waitingForAction =
             false;
+
+        expectedAction =
+            '';
 
         $('actionPrompt')
             .classList
@@ -2486,9 +2604,7 @@ function showAction(
 
 
     expectedAction =
-        action
-            .trim()
-            .toUpperCase();
+        action;
 
 
     waitingForAction =
@@ -2510,55 +2626,30 @@ function showAction(
         );
 
 
-    // -----------------------------------------
-    // ⭐ 這裡是最重要的改變
-    // 不再顯示固定動作名稱
-    // 而是使用 Worker 的劇情描述
-    // -----------------------------------------
-
-    const narration =
-        data.actionNarration ||
-        data.actionPurpose ||
-        '故事中的下一個關鍵時刻到了。';
-
-
     $('promptText')
         .textContent =
         getActionIcon(action) +
         ' ' +
-        narration;
-
-
-    let sub =
-        '完成這個動作，故事就會繼續。';
-
-
-    if (
-        data.actionPurpose
-    ) {
-
-        sub =
-            '💡 ' +
-            data.actionPurpose;
-
-    }
+        currentActionNarration;
 
 
     $('actionSubText')
         .textContent =
-        sub;
+        '💡 ' +
+        currentActionPurpose;
 
 }
 
 
-// =====================================================
-// 鎖定
-// =====================================================
+/* =====================================================
+   鎖定動作
+===================================================== */
 
 function lockAction() {
 
     waitingForAction =
         false;
+
 
     $('actionPrompt')
         .classList
@@ -2574,14 +2665,15 @@ function lockAction() {
 }
 
 
-// =====================================================
-// 建立主題
-// =====================================================
+/* =====================================================
+   建立主題
+===================================================== */
 
 function renderChildThemes() {
 
     const container =
         $('themeButtonsContainer');
+
 
     container.innerHTML =
         '';
@@ -2656,13 +2748,14 @@ function renderChildThemes() {
 }
 
 
-// =====================================================
-// ⭐ 重置「一場新的冒險」
-// =====================================================
+/* =====================================================
+   ⭐ 重置一場新的冒險
+===================================================== */
 
 function resetAdventure() {
 
     stopSpeech();
+
 
     waitingForAction =
         false;
@@ -2685,8 +2778,10 @@ function resetAdventure() {
     currentActionReason =
         '';
 
+
     history =
         [];
+
 
     storyMemory =
         null;
@@ -2709,9 +2804,9 @@ function resetAdventure() {
 }
 
 
-// =====================================================
-// 切換模式
-// =====================================================
+/* =====================================================
+   切換模式
+===================================================== */
 
 async function switchMode(
     mode,
@@ -2719,6 +2814,7 @@ async function switchMode(
 ) {
 
     resetAdventure();
+
 
     currentMode =
         mode;
@@ -2738,6 +2834,13 @@ async function switchMode(
     $('storyDisplay')
         .innerHTML =
         '';
+
+
+    $('storyDisplay')
+        .classList
+        .add(
+            'hidden'
+        );
 
 
     $('welcomeMessage')
@@ -2829,8 +2932,10 @@ async function switchMode(
             '長輩模式會依照難度安排坐姿活動';
 
 
-        if (notifyDevice &&
-            bleCharacteristic) {
+        if (
+            notifyDevice &&
+            bleCharacteristic
+        ) {
 
             await sendBLE(
                 'MODE_SENIOR'
@@ -2908,8 +3013,10 @@ async function switchMode(
             '或者輸入你想聽的故事，例如：會飛的橘色章魚';
 
 
-        if (notifyDevice &&
-            bleCharacteristic) {
+        if (
+            notifyDevice &&
+            bleCharacteristic
+        ) {
 
             await sendBLE(
                 'MODE_CHILD'
@@ -2922,9 +3029,9 @@ async function switchMode(
 }
 
 
-// =====================================================
-// BLE 連線
-// =====================================================
+/* =====================================================
+   BLE 連線
+===================================================== */
 
 async function connectBLE() {
 
@@ -3058,13 +3165,11 @@ async function connectBLE() {
 }
 
 
-// =====================================================
-// BLE 收訊號
-// =====================================================
+/* =====================================================
+   BLE 收訊號
+===================================================== */
 
-async function onBleEvent(
-    event
-) {
+async function onBleEvent(event) {
 
     const value =
         new TextDecoder()
@@ -3157,18 +3262,16 @@ async function onBleEvent(
         lastActionTime =
             now;
 
+
         await handleAction(
             expected
         );
+
 
         return;
 
     }
 
-
-    // -------------------------------------------------
-    // 錯誤動作
-    // -------------------------------------------------
 
     waitingForAction =
         false;
@@ -3194,9 +3297,6 @@ async function onBleEvent(
         action:
             expectedAction,
 
-        actionNarration:
-            currentActionNarration,
-
         actionPurpose:
             currentActionPurpose
 
@@ -3205,13 +3305,11 @@ async function onBleEvent(
 }
 
 
-// =====================================================
-// BLE 傳送
-// =====================================================
+/* =====================================================
+   BLE 傳送
+===================================================== */
 
-async function sendBLE(
-    command
-) {
+async function sendBLE(command) {
 
     if (
         !bleCharacteristic
@@ -3245,13 +3343,11 @@ async function sendBLE(
 }
 
 
-// =====================================================
-// ⭐ Worker 回應解析
-// =====================================================
+/* =====================================================
+   Worker 回應解析
+===================================================== */
 
-async function parseAIResponse(
-    res
-) {
+async function parseAIResponse(res) {
 
     const raw =
         await res.json();
@@ -3274,13 +3370,11 @@ async function parseAIResponse(
 }
 
 
-// =====================================================
-// ⭐ 故事記憶更新
-// =====================================================
+/* =====================================================
+   ⭐ 更新故事狀態
+===================================================== */
 
-function updateAdventureState(
-    data
-) {
+function updateAdventureState(data) {
 
     if (
         data.storyMemory
@@ -3349,9 +3443,10 @@ function updateAdventureState(
 }
 
 
-// =====================================================
-// 顯示故事
-// =====================================================
+/* =====================================================
+   ⭐ 顯示故事
+   ⭐ 8.0：這裡只顯示故事，不顯示 actionNarration
+===================================================== */
 
 function appendStory(
     title,
@@ -3420,82 +3515,6 @@ function appendStory(
     );
 
 
-    // -------------------------------------------------
-    // ⭐ AI 決定的自然動作敘事
-    // -------------------------------------------------
-
-    if (
-        data &&
-        data.action &&
-        data.actionNarration
-    ) {
-
-        const actionBox =
-            document.createElement(
-                'div'
-            );
-
-
-        actionBox.className =
-            'story-action';
-
-
-        const actionTitle =
-            document.createElement(
-                'div'
-            );
-
-
-        actionTitle.className =
-            'font-bold text-pink-300';
-
-
-        actionTitle.textContent =
-            getActionIcon(
-                data.action
-            ) +
-            ' ' +
-            data.actionNarration;
-
-
-        actionBox.appendChild(
-            actionTitle
-        );
-
-
-        if (
-            data.actionPurpose
-        ) {
-
-            const purpose =
-                document.createElement(
-                    'div'
-                );
-
-
-            purpose.className =
-                'action-purpose';
-
-
-            purpose.textContent =
-                '💡 ' +
-                data.actionPurpose;
-
-
-            actionBox.appendChild(
-                purpose
-            );
-
-        }
-
-
-        box.appendChild(
-            actionBox
-        );
-
-    }
-
-
     if (
         resultText
     ) {
@@ -3534,13 +3553,11 @@ function appendStory(
 }
 
 
-// =====================================================
-// ⭐ 執行動作
-// =====================================================
+/* =====================================================
+   ⭐ 執行動作
+===================================================== */
 
-async function handleAction(
-    action
-) {
+async function handleAction(action) {
 
     if (
         !waitingForAction ||
@@ -3587,16 +3604,14 @@ async function handleAction(
                         'POST',
 
                     headers: {
+
                         'Content-Type':
                             'application/json'
+
                     },
 
                     body:
                         JSON.stringify({
-
-                            // -------------------------
-                            // 基本
-                            // -------------------------
 
                             mode:
                                 currentMode,
@@ -3613,11 +3628,6 @@ async function handleAction(
                             actionSuccess:
                                 true,
 
-
-                            // -------------------------
-                            // ⭐ 故事上下文
-                            // -------------------------
-
                             currentStory:
                                 currentStory,
 
@@ -3626,11 +3636,6 @@ async function handleAction(
 
                             previousAction:
                                 action,
-
-
-                            // -------------------------
-                            // ⭐⭐ 最重要
-                            // -------------------------
 
                             storyMemory:
                                 storyMemory,
@@ -3650,11 +3655,6 @@ async function handleAction(
                             sceneSeed:
                                 sceneSeed,
 
-
-                            // -------------------------
-                            // 舊版相容
-                            // -------------------------
-
                             history:
                                 history
 
@@ -3670,21 +3670,19 @@ async function handleAction(
             );
 
 
-        // ⭐ 更新記憶
         updateAdventureState(
             data
         );
 
 
-        // ⭐ 更新故事
         currentStory =
             data.story ||
             '';
 
 
-        // -------------------------------------------------
-        // 長輩
-        // -------------------------------------------------
+        /* =================================================
+           長輩模式
+        ================================================= */
 
         if (
             currentMode ===
@@ -3736,6 +3734,15 @@ async function handleAction(
                 waitingForAction =
                     false;
 
+
+                expectedAction =
+                    '';
+
+
+                showToast(
+                    '🎉 活動完成！'
+                );
+
             }
 
             else {
@@ -3743,15 +3750,15 @@ async function handleAction(
                 lockAction();
 
 
-                if (
-                    data.actionNarration
-                ) {
-
-                    await speak(
-                        data.actionNarration
+                const actionText =
+                    getActionNarration(
+                        data
                     );
 
-                }
+
+                await speak(
+                    actionText
+                );
 
 
                 showAction(
@@ -3761,14 +3768,37 @@ async function handleAction(
             }
 
 
+            history.push({
+
+                role:
+                    'assistant',
+
+                story:
+                    data.story,
+
+                action:
+                    data.action,
+
+                actionNarration:
+                    getActionNarration(data),
+
+                actionPurpose:
+                    data.actionPurpose,
+
+                round:
+                    data.round
+
+            });
+
+
             return;
 
         }
 
 
-        // -------------------------------------------------
-        // 兒童
-        // -------------------------------------------------
+        /* =================================================
+           兒童模式
+        ================================================= */
 
         if (
             data.story
@@ -3790,9 +3820,9 @@ async function handleAction(
         }
 
 
-        // -------------------------------------------------
-        // 完成
-        // -------------------------------------------------
+        /* =================================================
+           完成
+        ================================================= */
 
         if (
             data.done ||
@@ -3819,6 +3849,7 @@ async function handleAction(
             waitingForAction =
                 false;
 
+
             expectedAction =
                 '';
 
@@ -3828,44 +3859,53 @@ async function handleAction(
             );
 
 
+            history.push({
+
+                role:
+                    'assistant',
+
+                story:
+                    data.story,
+
+                action:
+                    '',
+
+                round:
+                    data.round,
+
+                done:
+                    true
+
+            });
+
+
             return;
 
         }
 
 
-        // -------------------------------------------------
-        // ⭐ AI 動作
-        // -------------------------------------------------
+        /* =================================================
+           ⭐ 下一個動作
+        ================================================= */
 
         lockAction();
 
 
-        if (
-            data.actionNarration
-        ) {
-
-            await speak(
-                data.actionNarration
+        const actionText =
+            getActionNarration(
+                data
             );
 
-        }
+
+        await speak(
+            actionText
+        );
 
 
         showAction(
             data
         );
 
-
-        $('actionSubText')
-            .textContent =
-            data.actionPurpose
-                ? '💡 ' + data.actionPurpose
-                : '完成這個動作，故事就會繼續。';
-
-
-        // -------------------------------------------------
-        // 更新 history
-        // -------------------------------------------------
 
         history.push({
 
@@ -3879,7 +3919,7 @@ async function handleAction(
                 data.action,
 
             actionNarration:
-                data.actionNarration,
+                actionText,
 
             actionPurpose:
                 data.actionPurpose,
@@ -3902,14 +3942,10 @@ async function handleAction(
         );
 
 
-        // 發生錯誤時重新顯示目前動作
         showAction({
 
             action:
                 action,
-
-            actionNarration:
-                currentActionNarration,
 
             actionPurpose:
                 currentActionPurpose
@@ -3928,9 +3964,9 @@ async function handleAction(
 }
 
 
-// =====================================================
-// ⭐ 開始全新故事
-// =====================================================
+/* =====================================================
+   ⭐ 開始全新故事
+===================================================== */
 
 async function generateStory() {
 
@@ -3964,10 +4000,6 @@ async function generateStory() {
 
     }
 
-
-    // -------------------------------------------------
-    // ⭐ 新故事一定清空舊故事記憶
-    // -------------------------------------------------
 
     resetAdventure();
 
@@ -4029,8 +4061,6 @@ async function generateStory() {
                             difficulty:
                                 selectedDifficulty,
 
-                            // 新故事明確告訴 Worker：
-                            // 不要沿用上一場冒險
                             newAdventure:
                                 true,
 
@@ -4055,7 +4085,6 @@ async function generateStory() {
             );
 
 
-        // ⭐ 保存新的故事記憶
         updateAdventureState(
             data
         );
@@ -4109,7 +4138,10 @@ async function generateStory() {
                     data.action,
 
                 actionNarration:
-                    data.actionNarration,
+                    getActionNarration(data),
+
+                actionPurpose:
+                    data.actionPurpose,
 
                 round:
                     data.round
@@ -4119,9 +4151,9 @@ async function generateStory() {
         ];
 
 
-        // -------------------------------------------------
-        // 長輩
-        // -------------------------------------------------
+        /* =================================================
+           顯示第一章
+        ================================================= */
 
         if (
             currentMode ===
@@ -4147,18 +4179,18 @@ async function generateStory() {
         }
 
 
-        // -------------------------------------------------
-        // 朗讀故事
-        // -------------------------------------------------
+        /* =================================================
+           朗讀故事
+        ================================================= */
 
         await speak(
             currentStory
         );
 
 
-        // -------------------------------------------------
-        // 完整結局？
-        // -------------------------------------------------
+        /* =================================================
+           故事直接結束
+        ================================================= */
 
         if (
             data.done ||
@@ -4187,23 +4219,31 @@ async function generateStory() {
             waitingForAction =
                 false;
 
+
+            expectedAction =
+                '';
+
+
         }
 
         else {
 
+            /* =============================================
+               ⭐ 朗讀明確動作
+            ============================================= */
+
+            const actionText =
+                getActionNarration(
+                    data
+                );
+
+
             lockAction();
 
 
-            // ⭐ AI 自己寫的動作劇情
-            if (
-                data.actionNarration
-            ) {
-
-                await speak(
-                    data.actionNarration
-                );
-
-            }
+            await speak(
+                actionText
+            );
 
 
             showAction(
@@ -4275,9 +4315,9 @@ async function generateStory() {
 }
 
 
-// =====================================================
-// 語音初始化
-// =====================================================
+/* =====================================================
+   語音初始化
+===================================================== */
 
 function primeSpeech() {
 
@@ -4298,25 +4338,25 @@ function primeSpeech() {
 }
 
 
-// =====================================================
-// 初始化
-// =====================================================
+/* =====================================================
+   初始化
+===================================================== */
 
 document.addEventListener(
     'DOMContentLoaded',
     () => {
 
 
-        // -------------------------------------------------
-        // 主題
-        // -------------------------------------------------
+        /* =================================================
+           主題
+        ================================================= */
 
         renderChildThemes();
 
 
-        // -------------------------------------------------
-        // 語音
-        // -------------------------------------------------
+        /* =================================================
+           語音
+        ================================================= */
 
         loadVoiceSettings();
 
@@ -4338,9 +4378,9 @@ document.addEventListener(
         }
 
 
-        // -------------------------------------------------
-        // BLE
-        // -------------------------------------------------
+        /* =================================================
+           BLE
+        ================================================= */
 
         $('btnConnect')
             .addEventListener(
@@ -4349,9 +4389,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 開始故事
-        // -------------------------------------------------
+        /* =================================================
+           開始故事
+        ================================================= */
 
         $('btnGenerate')
             .addEventListener(
@@ -4360,9 +4400,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 手動測試
-        // -------------------------------------------------
+        /* =================================================
+           手動測試
+        ================================================= */
 
         $('btnManualAction')
             .addEventListener(
@@ -4390,9 +4430,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 自訂主題
-        // -------------------------------------------------
+        /* =================================================
+           自訂主題
+        ================================================= */
 
         $('customTopicInput')
             .addEventListener(
@@ -4429,9 +4469,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 難度
-        // -------------------------------------------------
+        /* =================================================
+           難度
+        ================================================= */
 
         document
             .querySelectorAll(
@@ -4476,9 +4516,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 語音設定
-        // -------------------------------------------------
+        /* =================================================
+           語音設定
+        ================================================= */
 
         $('btnVoiceSettings')
             .addEventListener(
@@ -4536,9 +4576,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 選擇語音
-        // -------------------------------------------------
+        /* =================================================
+           選擇語音
+        ================================================= */
 
         $('voiceSelect')
             .addEventListener(
@@ -4605,9 +4645,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 語速
-        // -------------------------------------------------
+        /* =================================================
+           語速
+        ================================================= */
 
         $('rateRange')
             .addEventListener(
@@ -4633,9 +4673,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 音調
-        // -------------------------------------------------
+        /* =================================================
+           音調
+        ================================================= */
 
         $('pitchRange')
             .addEventListener(
@@ -4661,9 +4701,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 音量
-        // -------------------------------------------------
+        /* =================================================
+           音量
+        ================================================= */
 
         $('volumeRange')
             .addEventListener(
@@ -4689,9 +4729,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 情緒
-        // -------------------------------------------------
+        /* =================================================
+           情緒
+        ================================================= */
 
         document
             .querySelectorAll(
@@ -4733,9 +4773,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 測試聲音
-        // -------------------------------------------------
+        /* =================================================
+           測試聲音
+        ================================================= */
 
         $('btnVoiceTest')
             .addEventListener(
@@ -4762,9 +4802,9 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 恢復預設
-        // -------------------------------------------------
+        /* =================================================
+           恢復預設
+        ================================================= */
 
         $('btnVoiceReset')
             .addEventListener(
@@ -4816,9 +4856,10 @@ document.addEventListener(
             );
 
 
-        // -------------------------------------------------
-        // 再播放
-        // -------------------------------------------------
+        /* =================================================
+           ⭐ 再播放
+           ⭐ 8.0：不再播放 AI 舊的 narration
+        ================================================= */
 
         $('btnSpeak')
             .addEventListener(
@@ -4849,10 +4890,6 @@ document.addEventListener(
                         expectedAction;
 
 
-                    const oldNarration =
-                        currentActionNarration;
-
-
                     const oldPurpose =
                         currentActionPurpose;
 
@@ -4869,24 +4906,27 @@ document.addEventListener(
                         oldAction
                     ) {
 
-                        if (
-                            oldNarration
-                        ) {
+                        const actionText =
+                            getActionNarration({
 
-                            await speak(
-                                oldNarration
-                            );
+                                action:
+                                    oldAction,
 
-                        }
+                                actionPurpose:
+                                    oldPurpose
+
+                            });
+
+
+                        await speak(
+                            actionText
+                        );
 
 
                         showAction({
 
                             action:
                                 oldAction,
-
-                            actionNarration:
-                                oldNarration,
 
                             actionPurpose:
                                 oldPurpose
