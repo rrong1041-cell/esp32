@@ -1101,7 +1101,7 @@ function resetActionProgress(data = {}) {
     const count = Number(data.targetCount);
     const seconds = Number(data.holdSeconds);
     actionTargetCount = Number.isFinite(count) && count >= 1 ? Math.floor(count) : 1;
-    actionHoldSeconds = String(data.action || currentAction).trim().toUpperCase() !== 'JUMP' &&
+    actionHoldSeconds = !['JUMP', 'TILT_LEFT', 'TILT_RIGHT'].includes(String(data.action || currentAction).trim().toUpperCase()) &&
         Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
     renderActionProgress();
 }
