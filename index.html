@@ -547,7 +547,7 @@ class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3
 class="text-xs text-slate-400 mt-3 leading-relaxed">
 
 裝置實體動作會觸發故事。<br>
-AI 會依照劇情決定下一個自然的互動。
+完成目前動作後，故事會進入下一幕。
 
 </p>
 
@@ -800,6 +800,7 @@ class="voice-select">
 
 <option value="">
 載入中……
+
 </option>
 
 </select>
@@ -945,8 +946,30 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 <script>
 
 /* =====================================================
-   聲動奇境 9.0 FRONTEND
-   ===================================================== */
+   聲動奇境 ✨ 智慧互動繪本
+   FRONTEND 10.0
+
+   新架構：
+
+   HTML
+      ↓
+   POST /generate
+      ↓
+   Worker
+      ↓
+   Gemini
+      ↓
+   完整 11 幕故事
+      ↓
+   HTML 本地推進
+      ↓
+   ESP32 BLE
+===================================================== */
+
+
+/* =====================================================
+   BLE
+===================================================== */
 
 const BLE_CONFIG = {
 
@@ -961,8 +984,14 @@ const BLE_CONFIG = {
 const WORKER_URL =
     'https://empty-credit-1539.rrong1041.workers.dev';
 
+
 let bleDevice = null;
 let bleCharacteristic = null;
+
+
+/* =====================================================
+   基本狀態
+===================================================== */
 
 let currentMode = 'child';
 
@@ -974,26 +1003,58 @@ let selectedDifficulty = 'easy';
 let currentStory = '';
 
 let currentAction = '';
+
 let currentActionNarration = '';
+
 let currentActionPurpose = '';
 
-let storyMemory = null;
-let adventureSeed = '';
+
+/* =====================================================
+   ⭐ 新的完整冒險資料
+===================================================== */
+
+let adventure = null;
+
+let acts = [];
+
+let currentActIndex = 0;
 
 let currentRound = 0;
+
 let maxRound = 11;
 
+
+/* =====================================================
+   舊狀態保留
+===================================================== */
+
+let storyMemory = null;
+
+let adventureSeed = '';
+
 let sceneId = '';
+
 let sceneSeed = '';
 
 let history = [];
 
+
+/* =====================================================
+   動作狀態
+===================================================== */
+
 let waitingForAction = false;
+
 let expectedAction = '';
 
 let busy = false;
 
 let lastActionTime = 0;
+
+
+/* =====================================================
+   語音狀態
+===================================================== */
 
 let speechPlaying = false;
 
@@ -1127,63 +1188,174 @@ const SENIOR_THEME =
 
 const ACTION_INSTRUCTIONS = {
 
-    SWIPE_LEFT:'現在向左閃避！',
+    SWIPE_LEFT:
+        '現在向左閃避！',
 
-    SWIPE_RIGHT:'現在向右閃避！',
+    SWIPE_RIGHT:
+        '現在向右閃避！',
 
-    JUMP:'現在跳起來！',
+    JUMP:
+        '現在跳起來！',
 
-    SHAKE:'現在搖一搖，把它甩開！',
+    SHAKE:
+        '現在搖一搖，把它甩開！',
 
-    RUN:'現在快跑，追上去！',
+    RUN:
+        '現在快跑，追上去！',
 
-    ARM_UP:'現在把手抬高！',
+    ARM_UP:
+        '現在把手抬高！',
 
-    ARM_DOWN:'現在把手放下！',
+    ARM_DOWN:
+        '現在把手放下！',
 
-    TILT_LEFT:'現在向左傾斜！',
+    TILT_LEFT:
+        '現在向左傾斜！',
 
-    TILT_RIGHT:'現在向右傾斜！',
+    TILT_RIGHT:
+        '現在向右傾斜！',
 
-    HOLD_UP:'現在把手抬起並保持住！'
+    HOLD_UP:
+        '現在把手抬起並保持住！'
 
 };
+
+
+/* =====================================================
+   ⭐ 長輩模式安全動作
+===================================================== */
+
+const SENIOR_SAFE_ACTIONS = [
+
+    'ARM_UP',
+
+    'ARM_DOWN',
+
+    'TILT_LEFT',
+
+    'TILT_RIGHT',
+
+    'HOLD_UP',
+
+    'SWIPE_LEFT',
+
+    'SWIPE_RIGHT',
+
+    'SHAKE'
+
+];
+
+
+function normalizeAction(action) {
+
+    const a =
+        String(action || '')
+        .trim()
+        .toUpperCase();
+
+    if (!a) return '';
+
+    if (
+        currentMode === 'senior' &&
+        !SENIOR_SAFE_ACTIONS.includes(a)
+    ) {
+
+        console.warn(
+            '長輩模式收到不安全動作，改為 ARM_UP：',
+            a
+        );
+
+        return 'ARM_UP';
+
+    }
+
+    return a;
+
+}
+
+
+/* =====================================================
+   ⭐ 取得動作文字
+===================================================== */
 
 function getActionNarration(data) {
 
     const action =
-        String(data?.action || '')
-        .trim()
-        .toUpperCase();
+        normalizeAction(
+            data?.action
+        );
+
+    /*
+     * 新 Worker 使用 actionText
+     */
+
+    if (
+        data?.actionText &&
+        typeof data.actionText === 'string'
+    ) {
+
+        return data.actionText.trim();
+
+    }
+
+    /*
+     * 保留舊格式相容性
+     */
+
+    if (
+        data?.actionNarration &&
+        typeof data.actionNarration === 'string'
+    ) {
+
+        return data.actionNarration.trim();
+
+    }
+
+    if (
+        data?.actionPurpose &&
+        typeof data.actionPurpose === 'string'
+    ) {
+
+        return data.actionPurpose.trim();
+
+    }
 
     return ACTION_INSTRUCTIONS[action]
-        ||
-        data?.actionNarration
-        ||
-        data?.actionPurpose
         ||
         '現在做出你的動作！';
 
 }
+
 
 function getActionIcon(action) {
 
     const icons = {
 
         SWIPE_LEFT:'⬅️',
+
         SWIPE_RIGHT:'➡️',
+
         JUMP:'⬆️',
+
         SHAKE:'📳',
+
         RUN:'🏃',
+
         ARM_UP:'🙋',
+
         ARM_DOWN:'🙆',
+
         TILT_LEFT:'↩️',
+
         TILT_RIGHT:'↪️',
+
         HOLD_UP:'✋'
 
     };
 
-    return icons[action] || '✨';
+    return icons[
+        normalizeAction(action)
+    ] || '✨';
 
 }
 
@@ -1194,20 +1366,26 @@ function getActionIcon(action) {
 
 function showToast(msg) {
 
-    const t = $('toast');
+    const t =
+        $('toast');
 
-    t.textContent = msg;
+    t.textContent =
+        msg;
 
     t.classList.remove(
         'opacity-0',
         'pointer-events-none'
     );
 
-    t.classList.add('opacity-100');
+    t.classList.add(
+        'opacity-100'
+    );
 
     setTimeout(() => {
 
-        t.classList.remove('opacity-100');
+        t.classList.remove(
+            'opacity-100'
+        );
 
         t.classList.add(
             'opacity-0',
@@ -1234,7 +1412,10 @@ function removeEmoji(text) {
                 /[\p{Extended_Pictographic}\uFE0F]/gu,
                 ''
             )
-            .replace(/\s{2,}/g,' ')
+            .replace(
+                /\s{2,}/g,
+                ' '
+            )
             .trim();
 
     }
@@ -1256,6 +1437,7 @@ const VOICE_STORAGE_KEY =
     'soundAdventureVoiceSettings';
 
 let availableVoices = [];
+
 let selectedVoice = null;
 
 let speechToken = 0;
@@ -1263,13 +1445,19 @@ let speechToken = 0;
 let voiceSettings = {
 
     rate:1,
+
     pitch:1,
+
     volume:1,
+
     emotion:'natural',
+
     voiceURI:'',
+
     version:5
 
 };
+
 
 const EMOTION_PROFILES = {
 
@@ -1295,6 +1483,7 @@ const EMOTION_PROFILES = {
 
 };
 
+
 function loadVoiceSettings() {
 
     try {
@@ -1307,8 +1496,11 @@ function loadVoiceSettings() {
         if (!saved) return;
 
         voiceSettings = {
+
             ...voiceSettings,
+
             ...JSON.parse(saved)
+
         };
 
     }
@@ -1320,6 +1512,7 @@ function loadVoiceSettings() {
     }
 
 }
+
 
 function saveVoiceSettings() {
 
@@ -1338,15 +1531,21 @@ function saveVoiceSettings() {
 
 }
 
+
 function updateVoiceStatus(message) {
 
-    const el = $('voiceStatus');
+    const el =
+        $('voiceStatus');
 
     if (el) {
-        el.textContent = message;
+
+        el.textContent =
+            message;
+
     }
 
 }
+
 
 function populateVoiceSelect() {
 
@@ -1358,9 +1557,12 @@ function populateVoiceSelect() {
     select.innerHTML = '';
 
     const auto =
-        document.createElement('option');
+        document.createElement(
+            'option'
+        );
 
-    auto.value = '__AUTO__';
+    auto.value =
+        '__AUTO__';
 
     auto.textContent =
         '✨ 自動（使用裝置自然語音）';
@@ -1376,7 +1578,8 @@ function populateVoiceSelect() {
 
     const others =
         availableVoices.filter(
-            v => !chinese.includes(v)
+            v =>
+                !chinese.includes(v)
         );
 
     [
@@ -1385,7 +1588,9 @@ function populateVoiceSelect() {
     ].forEach(voice => {
 
         const option =
-            document.createElement('option');
+            document.createElement(
+                'option'
+            );
 
         option.value =
             voice.voiceURI;
@@ -1393,23 +1598,36 @@ function populateVoiceSelect() {
         option.textContent =
             `${voice.name} (${voice.lang})`;
 
-        select.appendChild(option);
+        select.appendChild(
+            option
+        );
 
     });
 
     restoreSelectedVoice();
 
     updateVoiceStatus(
+
         availableVoices.length
-            ? `已找到 ${availableVoices.length} 個裝置語音。`
-            : '尚未取得裝置語音。'
+
+            ?
+
+        `已找到 ${availableVoices.length} 個裝置語音。`
+
+            :
+
+        '尚未取得裝置語音。'
+
     );
 
 }
 
+
 function loadVoices() {
 
-    if (!('speechSynthesis' in window)) {
+    if (
+        !('speechSynthesis' in window)
+    ) {
 
         updateVoiceStatus(
             '此瀏覽器不支援語音朗讀。'
@@ -1426,11 +1644,14 @@ function loadVoices() {
 
 }
 
+
 function restoreSelectedVoice() {
 
     selectedVoice = null;
 
-    if (voiceSettings.voiceURI) {
+    if (
+        voiceSettings.voiceURI
+    ) {
 
         selectedVoice =
             availableVoices.find(
@@ -1450,12 +1671,19 @@ function restoreSelectedVoice() {
 
         select.value =
             selectedVoice
-                ? selectedVoice.voiceURI
-                : '__AUTO__';
+
+                ?
+
+            selectedVoice.voiceURI
+
+                :
+
+            '__AUTO__';
 
     }
 
 }
+
 
 function updateVoiceSettingUI() {
 
@@ -1484,13 +1712,18 @@ function updateVoiceSettingUI() {
         ).toFixed(2);
 
     document
-        .querySelectorAll('.voice-emotion')
+        .querySelectorAll(
+            '.voice-emotion'
+        )
         .forEach(button => {
 
             button.classList.toggle(
+
                 'active',
+
                 button.dataset.emotion ===
                 voiceSettings.emotion
+
             );
 
         });
@@ -1498,6 +1731,7 @@ function updateVoiceSettingUI() {
     restoreSelectedVoice();
 
 }
+
 
 function getSentenceEmotion(text) {
 
@@ -1509,16 +1743,21 @@ function getSentenceEmotion(text) {
         EMOTION_PROFILES.natural;
 
     let rate =
-        Number(voiceSettings.rate) *
+        Number(
+            voiceSettings.rate
+        ) *
         profile.rate;
 
     let pitch =
-        Number(voiceSettings.pitch) *
+        Number(
+            voiceSettings.pitch
+        ) *
         profile.pitch;
 
     if (/！!/.test(text)) {
 
         rate *= 1.04;
+
         pitch *= 1.07;
 
     }
@@ -1534,6 +1773,7 @@ function getSentenceEmotion(text) {
     ) {
 
         rate *= 1.06;
+
         pitch *= 1.06;
 
     }
@@ -1543,6 +1783,7 @@ function getSentenceEmotion(text) {
     ) {
 
         rate *= .94;
+
         pitch *= .96;
 
     }
@@ -1552,18 +1793,25 @@ function getSentenceEmotion(text) {
         rate:
             Math.max(
                 .65,
-                Math.min(1.35,rate)
+                Math.min(
+                    1.35,
+                    rate
+                )
             ),
 
         pitch:
             Math.max(
                 .5,
-                Math.min(2,pitch)
+                Math.min(
+                    2,
+                    pitch
+                )
             )
 
     };
 
 }
+
 
 function stopSpeech() {
 
@@ -1577,9 +1825,11 @@ function stopSpeech() {
 
     catch(e) {}
 
-    speechPlaying = false;
+    speechPlaying =
+        false;
 
 }
+
 
 async function speak(text) {
 
@@ -1602,7 +1852,8 @@ async function speak(text) {
     const token =
         speechToken;
 
-    speechPlaying = true;
+    speechPlaying =
+        true;
 
     const utterance =
         new SpeechSynthesisUtterance(
@@ -1610,7 +1861,9 @@ async function speak(text) {
         );
 
     const emotion =
-        getSentenceEmotion(clean);
+        getSentenceEmotion(
+            clean
+        );
 
     if (selectedVoice) {
 
@@ -1639,62 +1892,82 @@ async function speak(text) {
     utterance.volume =
         voiceSettings.volume;
 
-    await new Promise(resolve => {
+    await new Promise(
+        resolve => {
 
-        let finished = false;
+            let finished =
+                false;
 
-        let timer = null;
+            let timer =
+                null;
 
-        const finish = () => {
+            const finish =
+                () => {
 
-            if (finished) return;
+                    if (finished)
+                        return;
 
-            finished = true;
+                    finished =
+                        true;
 
-            clearTimeout(timer);
+                    clearTimeout(
+                        timer
+                    );
 
-            resolve();
+                    resolve();
 
-        };
+                };
 
-        utterance.onend = finish;
-        utterance.onerror = finish;
+            utterance.onend =
+                finish;
 
-        timer =
-            setTimeout(
-                finish,
-                Math.max(
-                    7000,
-                    clean.length *
-                    500 /
+            utterance.onerror =
+                finish;
+
+            timer =
+                setTimeout(
+
+                    finish,
+
                     Math.max(
-                        emotion.rate,
-                        .5
+
+                        7000,
+
+                        clean.length *
+                        500 /
+                        Math.max(
+                            emotion.rate,
+                            .5
+                        )
+
                     )
-                )
-            );
 
-        try {
+                );
 
-            speechSynthesis.speak(
-                utterance
-            );
+            try {
+
+                speechSynthesis.speak(
+                    utterance
+                );
+
+            }
+
+            catch(e) {
+
+                finish();
+
+            }
 
         }
-
-        catch(e) {
-
-            finish();
-
-        }
-
-    });
+    );
 
     if (
-        token === speechToken
+        token ===
+        speechToken
     ) {
 
-        speechPlaying = false;
+        speechPlaying =
+            false;
 
     }
 
@@ -1735,7 +2008,9 @@ async function connectBLE() {
             });
 
         bleDevice.addEventListener(
+
             'gattserverdisconnected',
+
             () => {
 
                 $('statusIndicator').className =
@@ -1747,13 +2022,15 @@ async function connectBLE() {
                 $('statusIcon').className =
                     'fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
 
-                bleCharacteristic = null;
+                bleCharacteristic =
+                    null;
 
                 showToast(
                     '故事裝置已斷線'
                 );
 
             }
+
         );
 
         const server =
@@ -1785,7 +2062,9 @@ async function connectBLE() {
         $('statusIcon').className =
             'fa-solid fa-plug-circle-check text-emerald-400 text-xl';
 
-        await sendBLE('READY');
+        await sendBLE(
+            'READY'
+        );
 
         showToast(
             '藍牙連線成功！'
@@ -1806,11 +2085,14 @@ async function connectBLE() {
 
 }
 
+
 async function onBleEvent(event) {
 
     const value =
         new TextDecoder()
-        .decode(event.target.value)
+        .decode(
+            event.target.value
+        )
         .trim()
         .toUpperCase();
 
@@ -1819,9 +2101,13 @@ async function onBleEvent(event) {
         value
     );
 
+
     if (
-        value === 'SWITCH_MODE_SENIOR' ||
-        value === 'MODE_SENIOR'
+        value ===
+        'SWITCH_MODE_SENIOR'
+        ||
+        value ===
+        'MODE_SENIOR'
     ) {
 
         await switchMode(
@@ -1833,9 +2119,13 @@ async function onBleEvent(event) {
 
     }
 
+
     if (
-        value === 'SWITCH_MODE_CHILD' ||
-        value === 'MODE_CHILD'
+        value ===
+        'SWITCH_MODE_CHILD'
+        ||
+        value ===
+        'MODE_CHILD'
     ) {
 
         await switchMode(
@@ -1847,6 +2137,7 @@ async function onBleEvent(event) {
 
     }
 
+
     if (
         !waitingForAction ||
         busy
@@ -1856,10 +2147,13 @@ async function onBleEvent(event) {
 
     }
 
-    const now = Date.now();
+
+    const now =
+        Date.now();
 
     if (
-        now - lastActionTime <
+        now -
+        lastActionTime <
         1500
     ) {
 
@@ -1867,18 +2161,20 @@ async function onBleEvent(event) {
 
     }
 
+
     const expected =
-        String(
-            expectedAction || ''
-        )
-        .trim()
-        .toUpperCase();
+        normalizeAction(
+            expectedAction
+        );
+
 
     if (
-        value === expected
+        value ===
+        expected
     ) {
 
-        lastActionTime = now;
+        lastActionTime =
+            now;
 
         await handleAction(
             expected
@@ -1888,9 +2184,11 @@ async function onBleEvent(event) {
 
 }
 
+
 async function sendBLE(command) {
 
-    if (!bleCharacteristic) return;
+    if (!bleCharacteristic)
+        return;
 
     try {
 
@@ -1985,40 +2283,70 @@ function renderChildThemes() {
 
 
 /* =====================================================
-   模式
+   重置冒險
 ===================================================== */
 
 function resetAdventure() {
 
     stopSpeech();
 
-    waitingForAction = false;
+    waitingForAction =
+        false;
 
-    expectedAction = '';
+    expectedAction =
+        '';
 
-    currentStory = '';
+    currentStory =
+        '';
 
-    currentAction = '';
+    currentAction =
+        '';
 
-    currentActionNarration = '';
+    currentActionNarration =
+        '';
 
-    currentActionPurpose = '';
+    currentActionPurpose =
+        '';
 
-    history = [];
+    adventure =
+        null;
 
-    storyMemory = null;
+    acts =
+        [];
 
-    adventureSeed = '';
+    currentActIndex =
+        0;
 
-    currentRound = 0;
+    currentRound =
+        0;
 
-    maxRound = 11;
+    maxRound =
+        11;
 
-    sceneId = '';
+    history =
+        [];
 
-    sceneSeed = '';
+    storyMemory =
+        null;
+
+    adventureSeed =
+        '';
+
+    sceneId =
+        '';
+
+    sceneSeed =
+        '';
+
+    $('btnSpeak').disabled =
+        true;
 
 }
+
+
+/* =====================================================
+   模式
+===================================================== */
 
 async function switchMode(
     mode,
@@ -2027,7 +2355,8 @@ async function switchMode(
 
     resetAdventure();
 
-    currentMode = mode;
+    currentMode =
+        mode;
 
     const senior =
         mode === 'senior';
@@ -2036,7 +2365,8 @@ async function switchMode(
         .classList
         .add('hidden');
 
-    $('storyDisplay').innerHTML = '';
+    $('storyDisplay').innerHTML =
+        '';
 
     $('storyDisplay')
         .classList
@@ -2045,6 +2375,7 @@ async function switchMode(
     $('welcomeMessage')
         .classList
         .remove('hidden');
+
 
     if (senior) {
 
@@ -2086,7 +2417,7 @@ async function switchMode(
                 </div>
 
                 <div class="text-xs text-slate-400 mt-1">
-                    AI 會依照難度安排不同活動
+                    AI 會依照難度安排坐姿活動
                 </div>
 
             </div>
@@ -2101,6 +2432,10 @@ async function switchMode(
 
         $('customTopicInput').placeholder =
             '長輩模式會依照難度安排坐姿活動';
+
+        selectedTheme =
+            SENIOR_THEME;
+
 
         if (
             notifyDevice &&
@@ -2157,6 +2492,7 @@ async function switchMode(
         $('customTopicInput').placeholder =
             '或者輸入你想聽的故事，例如：會飛的橘色章魚';
 
+
         if (
             notifyDevice &&
             bleCharacteristic
@@ -2174,7 +2510,7 @@ async function switchMode(
 
 
 /* =====================================================
-   Worker
+   Worker Response
 ===================================================== */
 
 async function parseAIResponse(res) {
@@ -2195,6 +2531,127 @@ async function parseAIResponse(res) {
 
 }
 
+
+/* =====================================================
+   ⭐ 從 Worker 找出完整冒險
+===================================================== */
+
+function extractAdventure(data) {
+
+    let story =
+        data?.story;
+
+
+    /*
+     * 正常情況：
+     *
+     * data.story
+     * {
+     *   title,
+     *   summary,
+     *   acts:[]
+     * }
+     */
+
+
+    if (
+        typeof story ===
+        'string'
+    ) {
+
+        try {
+
+            story =
+                JSON.parse(
+                    story
+                );
+
+        }
+
+        catch(e) {
+
+            console.warn(
+                'story 是字串，但無法 JSON.parse'
+            );
+
+        }
+
+    }
+
+
+    let foundActs = null;
+
+
+    if (
+        Array.isArray(
+            story?.acts
+        )
+    ) {
+
+        foundActs =
+            story.acts;
+
+    }
+
+    else if (
+        Array.isArray(
+            data?.acts
+        )
+    ) {
+
+        foundActs =
+            data.acts;
+
+    }
+
+    else if (
+        Array.isArray(
+            data?.adventure?.acts
+        )
+    ) {
+
+        foundActs =
+            data.adventure.acts;
+
+    }
+
+
+    if (
+        !foundActs ||
+        !foundActs.length
+    ) {
+
+        throw new Error(
+            'Worker 回傳格式不正確：找不到故事 acts。'
+        );
+
+    }
+
+
+    return {
+
+        title:
+            story?.title ||
+            data?.title ||
+            '聲動奇境',
+
+        summary:
+            story?.summary ||
+            data?.summary ||
+            '',
+
+        acts:
+            foundActs
+
+    };
+
+}
+
+
+/* =====================================================
+   舊狀態相容
+===================================================== */
+
 function updateAdventureState(data) {
 
     if (data.storyMemory) {
@@ -2211,17 +2668,25 @@ function updateAdventureState(data) {
 
     }
 
-    if (data.round !== undefined) {
+    if (
+        data.round !== undefined
+    ) {
 
         currentRound =
-            Number(data.round) || 0;
+            Number(
+                data.round
+            ) || 0;
 
     }
 
-    if (data.maxRound !== undefined) {
+    if (
+        data.maxRound !== undefined
+    ) {
 
         maxRound =
-            Number(data.maxRound) || 11;
+            Number(
+                data.maxRound
+            ) || 11;
 
     }
 
@@ -2255,13 +2720,17 @@ function appendStory(
         $('storyDisplay');
 
     const box =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
 
     box.className =
         'p-4 rounded-xl bg-slate-900/70 border border-slate-800';
 
     const titleEl =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
 
     titleEl.className =
         currentMode === 'senior'
@@ -2277,10 +2746,14 @@ function appendStory(
     titleEl.textContent =
         title;
 
-    box.appendChild(titleEl);
+    box.appendChild(
+        titleEl
+    );
 
     const p =
-        document.createElement('p');
+        document.createElement(
+            'p'
+        );
 
     p.className =
         'text-slate-200';
@@ -2288,9 +2761,13 @@ function appendStory(
     p.textContent =
         text;
 
-    box.appendChild(p);
+    box.appendChild(
+        p
+    );
 
-    display.appendChild(box);
+    display.appendChild(
+        box
+    );
 
     $('storyScroll').scrollTop =
         $('storyScroll').scrollHeight;
@@ -2299,23 +2776,255 @@ function appendStory(
 
 
 /* =====================================================
-   動作
+   ⭐ 顯示目前這一幕
+===================================================== */
+
+async function showCurrentAct(
+    speakIt = true
+) {
+
+    if (
+        !acts.length
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+     * 如果已經超過最後一幕
+     */
+
+    if (
+        currentActIndex >=
+        acts.length
+    ) {
+
+        showEnding();
+
+        return;
+
+    }
+
+
+    const act =
+        acts[
+            currentActIndex
+        ];
+
+
+    if (!act) {
+
+        currentActIndex++;
+
+        await showCurrentAct(
+            speakIt
+        );
+
+        return;
+
+    }
+
+
+    currentRound =
+        currentActIndex + 1;
+
+    maxRound =
+        acts.length;
+
+
+    currentStory =
+        String(
+            act.story || ''
+        ).trim();
+
+
+    currentAction =
+        normalizeAction(
+            act.action
+        );
+
+
+    currentActionNarration =
+        getActionNarration(
+            act
+        );
+
+
+    currentActionPurpose =
+        act.actionPurpose ||
+        '完成這個動作，故事就會繼續。';
+
+
+    /*
+     * ⭐ 顯示第幾幕
+     */
+
+    const actNumber =
+        currentActIndex + 1;
+
+
+    let actLabel =
+        currentMode === 'senior'
+
+            ?
+
+        `🌿 第 ${actNumber} 個活動・${act.title || '活動'}`
+
+            :
+
+        `📖 第 ${actNumber} 幕・${act.title || '冒險'}`;
+
+
+    /*
+     * 最後一幕特別標示
+     */
+
+    if (
+        currentActIndex ===
+        acts.length - 1
+    ) {
+
+        actLabel =
+            currentMode === 'senior'
+
+                ?
+
+            `🌿 最終活動・${act.title || '完成'}`
+
+                :
+
+            `🎬 最終章・${act.title || '結局'}`;
+
+    }
+
+
+    appendStory(
+        actLabel,
+        currentStory ||
+        '故事正在繼續……'
+    );
+
+
+    /*
+     * 故事語音
+     */
+
+    if (
+        speakIt &&
+        currentStory
+    ) {
+
+        await speak(
+            currentStory
+        );
+
+    }
+
+
+    /*
+     * 顯示動作
+     */
+
+    if (
+        currentAction
+    ) {
+
+        showAction(
+            act
+        );
+
+
+        /*
+         * 故事講完後才念動作
+         */
+
+        if (
+            speakIt
+        ) {
+
+            await speak(
+                currentActionNarration
+            );
+
+        }
+
+        return;
+
+    }
+
+
+    /*
+     * 如果 Gemini 某一幕真的沒有 action
+     *
+     * 不把它當結局。
+     *
+     * 自動進下一幕。
+     */
+
+    waitingForAction =
+        false;
+
+    expectedAction =
+        '';
+
+    $('actionPrompt')
+        .classList
+        .add('hidden');
+
+
+    if (
+        currentActIndex <
+        acts.length - 1
+    ) {
+
+        setTimeout(
+            async () => {
+
+                if (!busy)
+                    return;
+
+                currentActIndex++;
+
+                await showCurrentAct(
+                    true
+                );
+
+            },
+            900
+        );
+
+    }
+
+    else {
+
+        showEnding();
+
+    }
+
+}
+
+
+/* =====================================================
+   動作 UI
 ===================================================== */
 
 function showAction(data) {
 
-    const action =
-        String(
-            data?.action || ''
-        )
-        .trim()
-        .toUpperCase();
+    let action =
+        normalizeAction(
+            data?.action
+        );
+
 
     if (!action) {
 
-        waitingForAction = false;
+        waitingForAction =
+            false;
 
-        expectedAction = '';
+        expectedAction =
+            '';
 
         $('actionPrompt')
             .classList
@@ -2325,20 +3034,29 @@ function showAction(data) {
 
     }
 
+
     currentAction =
         action;
 
+
     currentActionNarration =
-        getActionNarration(data);
+        getActionNarration(
+            data
+        );
+
 
     currentActionPurpose =
         data?.actionPurpose ||
         '完成這個動作，故事就會繼續。';
 
+
     expectedAction =
         action;
 
-    waitingForAction = true;
+
+    waitingForAction =
+        true;
+
 
     $('actionPrompt')
         .classList
@@ -2347,79 +3065,143 @@ function showAction(data) {
             'action-locked'
         );
 
+
     $('actionPrompt')
         .classList
-        .add('action-ready');
+        .add(
+            'action-ready'
+        );
+
 
     $('promptText').textContent =
-        getActionIcon(action) +
-        ' ' +
+
+        getActionIcon(
+            action
+        )
+        +
+        ' '
+        +
         currentActionNarration;
 
+
     $('actionSubText').textContent =
-        '💡 ' +
+
+        '💡 '
+        +
         currentActionPurpose;
-
-}
-
-function lockAction() {
-
-    $('actionPrompt')
-        .classList
-        .remove('hidden');
-
-    $('actionPrompt')
-        .classList
-        .add('action-locked');
-
-    $('actionSubText').textContent =
-        '🔒 故事正在播放，請先聽完劇情。';
 
 }
 
 
 /* =====================================================
-   真正的結局判斷
+   鎖定動作
 ===================================================== */
 
-function showEnding(data) {
-
-    waitingForAction = false;
-
-    expectedAction = '';
+function lockAction() {
 
     $('actionPrompt')
         .classList
-        .remove('hidden');
+        .remove(
+            'hidden'
+        );
 
     $('actionPrompt')
         .classList
-        .remove('action-locked');
-
-    $('promptText').textContent =
-        currentMode === 'senior'
-            ? '🎉 活動圓滿完成！'
-            : '🎉 冒險圓滿結束！';
+        .add(
+            'action-locked'
+        );
 
     $('actionSubText').textContent =
+        '🔊 正在播放劇情，請先聽完……';
+
+}
+
+
+/* =====================================================
+   ⭐ 真正結局
+===================================================== */
+
+function showEnding() {
+
+    waitingForAction =
+        false;
+
+    expectedAction =
+        '';
+
+    busy =
+        false;
+
+
+    $('actionPrompt')
+        .classList
+        .remove(
+            'hidden',
+            'action-locked'
+        );
+
+
+    $('promptText').textContent =
+
         currentMode === 'senior'
-            ? '今天的健康活動已完成。'
-            : '你完成了這場完整的冒險。';
+
+            ?
+
+        '🎉 活動圓滿完成！'
+
+            :
+
+        '🎉 冒險圓滿結束！';
+
+
+    $('actionSubText').textContent =
+
+        currentMode === 'senior'
+
+            ?
+
+        '今天的完整健康活動已完成。'
+
+            :
+
+        '你完成了這場完整的 11 幕冒險。';
+
+
+    if (
+        bleCharacteristic
+    ) {
+
+        sendBLE(
+            'STORY_COMPLETE'
+        );
+
+    }
+
 
     showToast(
+
         currentMode === 'senior'
-            ? '🎉 活動完成！'
-            : '🎉 故事完成！'
+
+            ?
+
+        '🎉 今日活動完成！'
+
+            :
+
+        '🎉 完整冒險完成！'
+
     );
 
 }
 
 
 /* =====================================================
-   執行動作
+   ⭐ 完成動作
 ===================================================== */
 
-async function handleAction(action) {
+async function handleAction(
+    action
+) {
 
     if (
         !waitingForAction ||
@@ -2430,269 +3212,160 @@ async function handleAction(action) {
 
     }
 
-    waitingForAction = false;
 
-    busy = true;
-
-    expectedAction = '';
-
-    $('actionSubText').textContent =
-        '✨ 動作完成，故事正在回應你的行動……';
-
-    await sendBLE('ACTION_OK');
-
-    stopSpeech();
-
-    try {
-
-        const res =
-            await fetch(
-                WORKER_URL +
-                '/api/action',
-                {
-
-                    method:'POST',
-
-                    headers:{
-                        'Content-Type':
-                            'application/json'
-                    },
-
-                    body:JSON.stringify({
-
-                        mode:
-                            currentMode,
-
-                        topic:
-                            selectedTheme,
-
-                        difficulty:
-                            selectedDifficulty,
-
-                        action:
-                            action,
-
-                        actionSuccess:
-                            true,
-
-                        currentStory:
-                            currentStory,
-
-                        currentScene:
-                            currentStory,
-
-                        previousAction:
-                            action,
-
-                        storyMemory:
-                            storyMemory,
-
-                        adventureSeed:
-                            adventureSeed,
-
-                        round:
-                            currentRound,
-
-                        maxRound:
-                            maxRound,
-
-                        sceneId:
-                            sceneId,
-
-                        sceneSeed:
-                            sceneSeed,
-
-                        history:
-                            history
-
-                    })
-
-                }
-            );
-
-        const data =
-            await parseAIResponse(res);
-
-        updateAdventureState(data);
-
-        currentStory =
-            data.story || '';
-
-        if (data.story) {
-
-            appendStory(
-                data.completed
-                    ? '🎉 最終章'
-                    : '✨ 劇情繼續',
-                data.story
-            );
-
-            await speak(
-                data.story
-            );
-
-        }
-
-        /*
-         * ⭐ 最重要的修正
-         *
-         * 只有 completed === true
-         * 才能顯示結局。
-         *
-         * actionRequired === false
-         * 不再被當成結局。
-         */
-
-        if (data.completed === true) {
-
-            showEnding(data);
-
-        }
-
-        else if (
-            data.actionRequired === true &&
-            data.action
-        ) {
-
-            lockAction();
-
-            const actionText =
-                getActionNarration(data);
-
-            await speak(
-                actionText
-            );
-
-            showAction(data);
-
-        }
-
-        else {
-
-            /*
-             * 如果 AI 這一幕沒有動作，
-             * 不結束故事。
-             *
-             * Worker 正常情況下會提供 action，
-             * 這裡只是安全 fallback。
-             */
-
-            showToast(
-                '✨ 劇情繼續……'
-            );
-
-            await continueWithoutAction(
-                data
-            );
-
-        }
-
-        history.push({
-
-            role:'assistant',
-
-            story:
-                data.story,
-
-            action:
-                data.action || '',
-
-            actionNarration:
-                getActionNarration(data),
-
-            actionPurpose:
-                data.actionPurpose || '',
-
-            round:
-                data.round,
-
-            completed:
-                data.completed === true
-
-        });
-
-    }
-
-    catch(e) {
-
-        console.error(e);
-
-        showToast(
-            '故事連線失敗：' +
-            e.message
+    const received =
+        normalizeAction(
+            action
         );
 
-        showAction({
 
-            action:
-                action,
-
-            actionPurpose:
-                currentActionPurpose
-
-        });
-
-    }
-
-    finally {
-
-        busy = false;
-
-    }
-
-}
+    const expected =
+        normalizeAction(
+            expectedAction
+        );
 
 
-/* =====================================================
-   無動作場景
-===================================================== */
+    /*
+     * 防止錯誤動作直接推進故事
+     */
 
-async function continueWithoutAction(data) {
-
-    if (data.completed === true) {
-
-        showEnding(data);
+    if (
+        received !==
+        expected
+    ) {
 
         return;
 
     }
 
-    /*
-     * 這裡不把場景當結局。
-     *
-     * Worker 正常會在下一個需要互動的場景
-     * 回傳 action。
-     */
+
+    waitingForAction =
+        false;
+
+    expectedAction =
+        '';
+
+    busy =
+        true;
+
 
     $('actionPrompt')
         .classList
-        .remove('hidden');
+        .add(
+            'action-locked'
+        );
+
 
     $('promptText').textContent =
-        '📖 劇情正在推進……';
+        '✨ 做得好！';
+
 
     $('actionSubText').textContent =
-        '請稍等，下一個互動即將出現。';
+        '故事正在繼續……';
+
+
+    stopSpeech();
+
+
+    await sendBLE(
+        'ACTION_OK'
+    );
+
+
+    /*
+     * 記錄本幕
+     */
+
+    const completedAct =
+        acts[
+            currentActIndex
+        ];
+
+
+    history.push({
+
+        role:'user',
+
+        action:
+            received,
+
+        round:
+            currentRound,
+
+        title:
+            completedAct?.title ||
+            ''
+
+    });
+
+
+    /*
+     * 稍微停一下，
+     * 讓玩家感覺有「成功 → 下一幕」的節奏
+     */
+
+    await new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                500
+            )
+    );
+
+
+    /*
+     * ⭐ 核心：
+     * 完全不呼叫 Worker。
+     *
+     * 直接進下一幕。
+     */
+
+    currentActIndex++;
+
+
+    if (
+        currentActIndex >=
+        acts.length
+    ) {
+
+        showEnding();
+
+        return;
+
+    }
+
+
+    await showCurrentAct(
+        true
+    );
+
+
+    busy =
+        false;
 
 }
 
 
 /* =====================================================
-   開始新故事
+   ⭐ 開始完整故事
 ===================================================== */
 
 async function generateStory() {
 
-    if (busy) return;
+    if (busy)
+        return;
+
 
     const custom =
         $('customTopicInput')
         .value
         .trim();
 
+
     const topic =
         custom ||
         selectedTheme;
+
 
     if (!topic) {
 
@@ -2704,31 +3377,54 @@ async function generateStory() {
 
     }
 
+
     resetAdventure();
 
     primeSpeech();
 
-    busy = true;
+    busy =
+        true;
+
 
     const btn =
         $('btnGenerate');
 
-    btn.disabled = true;
+
+    btn.disabled =
+        true;
+
 
     $('btnText').textContent =
+
         currentMode === 'senior'
-            ? 'AI 正在安排活動……'
-            : 'AI 正在創造冒險……';
+
+            ?
+
+        'AI 正在安排完整活動……'
+
+            :
+
+        'AI 正在創造完整冒險……';
+
 
     $('btnIcon').className =
         'fa-solid fa-spinner animate-spin';
 
+
     try {
+
+        /*
+         * ⭐⭐⭐
+         * 新 Worker API
+         * ⭐⭐⭐
+         */
 
         const res =
             await fetch(
+
                 WORKER_URL +
-                '/api/story',
+                '/generate',
+
                 {
 
                     method:'POST',
@@ -2747,148 +3443,205 @@ async function generateStory() {
                             topic,
 
                         difficulty:
-                            selectedDifficulty,
-
-                        newAdventure:true,
-
-                        storyMemory:null,
-
-                        adventureSeed:'',
-
-                        round:0
+                            selectedDifficulty
 
                     })
 
                 }
+
             );
 
+
         const data =
-            await parseAIResponse(res);
+            await parseAIResponse(
+                res
+            );
 
-        updateAdventureState(data);
 
-        $('welcomeMessage')
-            .classList
-            .add('hidden');
+        /*
+         * 找出完整 11 幕
+         */
 
-        $('storyDisplay').innerHTML = '';
+        adventure =
+            extractAdventure(
+                data
+            );
 
-        $('storyDisplay')
-            .classList
-            .remove('hidden');
+
+        acts =
+            adventure.acts;
+
+
+        /*
+         * 保險：
+         * 如果 Gemini 多產生幾幕，
+         * 前端仍可以正常播放。
+         */
+
+        maxRound =
+            acts.length;
+
+
+        if (
+            maxRound < 1
+        ) {
+
+            throw new Error(
+                '故事沒有任何幕。'
+            );
+
+        }
+
+
+        /*
+         * 如果超過 11 幕，
+         * 不硬砍掉，讓 Worker 的結果完整播放。
+         */
+
+        currentActIndex =
+            0;
+
+
+        currentRound =
+            0;
+
 
         currentStory =
-            data.story || '';
+            '';
+
 
         history = [
 
             {
+
                 role:'user',
-                topic:topic
+
+                topic:
+                    topic
+
             },
 
             {
-                role:'assistant',
 
-                story:
-                    currentStory,
+                role:'system',
 
-                action:
-                    data.action || '',
-
-                actionNarration:
-                    getActionNarration(data),
-
-                actionPurpose:
-                    data.actionPurpose || '',
-
-                round:
-                    data.round
+                message:
+                    '已取得完整冒險，共 ' +
+                    acts.length +
+                    ' 幕。'
 
             }
 
         ];
 
-        appendStory(
-            currentMode === 'senior'
-                ? '🌿 活動開始'
-                : '📖 第一章',
-            currentStory
-        );
 
-        await speak(
-            currentStory
-        );
+        $('welcomeMessage')
+            .classList
+            .add(
+                'hidden'
+            );
+
+
+        $('storyDisplay')
+            .innerHTML =
+            '';
+
+
+        $('storyDisplay')
+            .classList
+            .remove(
+                'hidden'
+            );
+
 
         /*
-         * ⭐⭐⭐ 最重要的修正 ⭐⭐⭐
-         *
-         * 不再使用：
-         *
-         *     data.done || !data.action
-         *
-         * 因為 actionRequired=false
-         * 不代表故事結束。
+         * ⭐ 顯示故事標題
          */
 
-        if (data.completed === true) {
-
-            showEnding(data);
-
-        }
-
-        else if (
-            data.actionRequired === true &&
-            data.action
+        if (
+            adventure.title
         ) {
 
-            lockAction();
+            appendStory(
 
-            const actionText =
-                getActionNarration(data);
+                currentMode === 'senior'
 
-            await speak(
-                actionText
+                    ?
+
+                '🌿 ' +
+                adventure.title
+
+                    :
+
+                '✨ ' +
+                adventure.title,
+
+                adventure.summary ||
+                '故事冒險即將開始……'
+
             );
-
-            showAction(data);
 
         }
 
-        else {
 
-            await continueWithoutAction(
-                data
-            );
+        /*
+         * ⭐ 開始第一幕
+         */
 
-        }
+        await showCurrentAct(
+            true
+        );
 
-        $('btnSpeak').disabled =
+
+        $('btnSpeak')
+            .disabled =
             false;
 
-        if (bleCharacteristic) {
+
+        if (
+            bleCharacteristic
+        ) {
 
             await sendBLE(
+
                 currentMode === 'senior'
-                    ? 'START'
-                    : 'START_STORY'
+
+                    ?
+
+                'START'
+
+                    :
+
+                'START_STORY'
+
             );
 
         }
 
+
         showToast(
-            '✨ 新冒險建立完成！'
+            `✨ 完整冒險建立完成！共 ${acts.length} 幕`
         );
+
 
     }
 
     catch(e) {
 
-        console.error(e);
+        console.error(
+            e
+        );
+
 
         showToast(
             '故事生成失敗：' +
             e.message
+        );
+
+
+        console.error(
+            'Worker 錯誤：',
+            e
         );
 
     }
@@ -2896,20 +3649,37 @@ async function generateStory() {
     finally {
 
         $('btnText').textContent =
+
             currentMode === 'senior'
-                ? '開始健康活動'
-                : '開始精彩故事冒險';
+
+                ?
+
+            '開始健康活動'
+
+                :
+
+            '開始精彩故事冒險';
+
 
         $('btnIcon').className =
             'fa-solid fa-wand-magic-sparkles';
 
-        btn.disabled = false;
 
-        busy = false;
+        btn.disabled =
+            false;
+
+
+        busy =
+            false;
 
     }
 
 }
+
+
+/* =====================================================
+   語音初始化
+===================================================== */
 
 function primeSpeech() {
 
@@ -2935,29 +3705,45 @@ function primeSpeech() {
 ===================================================== */
 
 document.addEventListener(
+
     'DOMContentLoaded',
+
     () => {
+
 
         renderChildThemes();
 
+
         loadVoiceSettings();
+
 
         updateVoiceSettingUI();
 
+
         primeSpeech();
+
 
         if (
             'speechSynthesis' in window
         ) {
 
             speechSynthesis.addEventListener(
+
                 'voiceschanged',
+
                 loadVoices
+
             );
 
         }
 
+
         loadVoices();
+
+
+        /*
+         * BLE
+         */
 
         $('btnConnect')
             .addEventListener(
@@ -2965,18 +3751,32 @@ document.addEventListener(
                 connectBLE
             );
 
+
+        /*
+         * 開始故事
+         */
+
         $('btnGenerate')
             .addEventListener(
                 'click',
                 generateStory
             );
 
+
+        /*
+         * 手動完成動作
+         */
+
         $('btnManualAction')
             .addEventListener(
+
                 'click',
+
                 async () => {
 
-                    if (!waitingForAction) {
+                    if (
+                        !waitingForAction
+                    ) {
 
                         showToast(
                             '🔒 目前沒有等待中的動作。'
@@ -2986,16 +3786,25 @@ document.addEventListener(
 
                     }
 
+
                     await handleAction(
                         expectedAction
                     );
 
                 }
+
             );
+
+
+        /*
+         * 自訂主題
+         */
 
         $('customTopicInput')
             .addEventListener(
+
                 'input',
+
                 () => {
 
                     const value =
@@ -3003,59 +3812,86 @@ document.addEventListener(
                         .value
                         .trim();
 
-                    if (!value) return;
+
+                    if (!value)
+                        return;
+
 
                     document
                         .querySelectorAll(
                             '.theme-btn'
                         )
-                        .forEach(b => {
+                        .forEach(
+                            b => {
 
-                            b.className =
-                                'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+                                b.className =
+                                    'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
 
-                        });
+                            }
+                        );
 
                 }
+
             );
+
+
+        /*
+         * 長輩難度
+         */
 
         document
             .querySelectorAll(
                 '.difficulty-btn'
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    'click',
-                    () => {
+                    button.addEventListener(
 
-                        document
-                            .querySelectorAll(
-                                '.difficulty-btn'
-                            )
-                            .forEach(b => {
+                        'click',
 
-                                b.classList.remove(
-                                    'active'
+                        () => {
+
+                            document
+                                .querySelectorAll(
+                                    '.difficulty-btn'
+                                )
+                                .forEach(
+                                    b => {
+
+                                        b.classList.remove(
+                                            'active'
+                                        );
+
+                                    }
                                 );
 
-                            });
 
-                        button.classList.add(
-                            'active'
-                        );
+                            button.classList.add(
+                                'active'
+                            );
 
-                        selectedDifficulty =
-                            button.dataset.difficulty;
 
-                    }
-                );
+                            selectedDifficulty =
+                                button.dataset.difficulty;
 
-            });
+                        }
+
+                    );
+
+                }
+            );
+
+
+        /*
+         * 語音設定
+         */
 
         $('btnVoiceSettings')
             .addEventListener(
+
                 'click',
+
                 () => {
 
                     loadVoices();
@@ -3064,26 +3900,38 @@ document.addEventListener(
 
                     $('voiceModal')
                         .classList
-                        .remove('hidden');
+                        .remove(
+                            'hidden'
+                        );
 
                 }
+
             );
+
 
         $('btnCloseVoiceSettings')
             .addEventListener(
+
                 'click',
+
                 () => {
 
                     $('voiceModal')
                         .classList
-                        .add('hidden');
+                        .add(
+                            'hidden'
+                        );
 
                 }
+
             );
+
 
         $('voiceModal')
             .addEventListener(
+
                 'click',
+
                 event => {
 
                     if (
@@ -3093,26 +3941,40 @@ document.addEventListener(
 
                         $('voiceModal')
                             .classList
-                            .add('hidden');
+                            .add(
+                                'hidden'
+                            );
 
                     }
 
                 }
+
             );
+
+
+        /*
+         * 選擇聲音
+         */
 
         $('voiceSelect')
             .addEventListener(
+
                 'change',
+
                 () => {
 
                     const value =
-                        $('voiceSelect').value;
+                        $('voiceSelect')
+                        .value;
+
 
                     if (
-                        value === '__AUTO__'
+                        value ===
+                        '__AUTO__'
                     ) {
 
-                        selectedVoice = null;
+                        selectedVoice =
+                            null;
 
                         voiceSettings.voiceURI =
                             '';
@@ -3123,119 +3985,188 @@ document.addEventListener(
 
                     }
 
+
                     selectedVoice =
                         availableVoices.find(
+
                             voice =>
                                 voice.voiceURI ===
                                 value
-                        ) || null;
+
+                        )
+                        ||
+                        null;
+
 
                     voiceSettings.voiceURI =
                         selectedVoice
                             ? value
                             : '';
 
+
                     saveVoiceSettings();
 
                 }
+
             );
+
+
+        /*
+         * 語速
+         */
 
         $('rateRange')
             .addEventListener(
+
                 'input',
+
                 () => {
 
                     voiceSettings.rate =
                         Number(
-                            $('rateRange').value
+                            $('rateRange')
+                            .value
                         );
+
 
                     $('rateValue').textContent =
                         voiceSettings.rate
                         .toFixed(2);
 
+
                     saveVoiceSettings();
 
                 }
+
             );
+
+
+        /*
+         * 音調
+         */
 
         $('pitchRange')
             .addEventListener(
+
                 'input',
+
                 () => {
 
                     voiceSettings.pitch =
                         Number(
-                            $('pitchRange').value
+                            $('pitchRange')
+                            .value
                         );
+
 
                     $('pitchValue').textContent =
                         voiceSettings.pitch
                         .toFixed(2);
 
+
                     saveVoiceSettings();
 
                 }
+
             );
+
+
+        /*
+         * 音量
+         */
 
         $('volumeRange')
             .addEventListener(
+
                 'input',
+
                 () => {
 
                     voiceSettings.volume =
                         Number(
-                            $('volumeRange').value
+                            $('volumeRange')
+                            .value
                         );
+
 
                     $('volumeValue').textContent =
                         voiceSettings.volume
                         .toFixed(2);
 
+
                     saveVoiceSettings();
 
                 }
+
             );
+
+
+        /*
+         * 語氣
+         */
 
         document
             .querySelectorAll(
                 '.voice-emotion'
             )
-            .forEach(button => {
+            .forEach(
 
-                button.addEventListener(
-                    'click',
-                    () => {
+                button => {
 
-                        voiceSettings.emotion =
-                            button.dataset.emotion;
+                    button.addEventListener(
 
-                        document
-                            .querySelectorAll(
-                                '.voice-emotion'
-                            )
-                            .forEach(b => {
+                        'click',
 
-                                b.classList.toggle(
-                                    'active',
-                                    b === button
+                        () => {
+
+                            voiceSettings.emotion =
+                                button.dataset.emotion;
+
+
+                            document
+                                .querySelectorAll(
+                                    '.voice-emotion'
+                                )
+                                .forEach(
+                                    b => {
+
+                                        b.classList.toggle(
+
+                                            'active',
+
+                                            b ===
+                                            button
+
+                                        );
+
+                                    }
                                 );
 
-                            });
 
-                        saveVoiceSettings();
+                            saveVoiceSettings();
 
-                    }
-                );
+                        }
 
-            });
+                    );
+
+                }
+
+            );
+
+
+        /*
+         * 測試聲音
+         */
 
         $('btnVoiceTest')
             .addEventListener(
+
                 'click',
+
                 async () => {
 
                     const text =
+
                         currentMode === 'senior'
 
                             ?
@@ -3246,50 +4177,83 @@ document.addEventListener(
 
                         '等等！前面好像出現了什麼……我們一起看看接下來會發生什麼。';
 
-                    await speak(text);
+
+                    await speak(
+                        text
+                    );
 
                 }
+
             );
+
+
+        /*
+         * 恢復語音預設
+         */
 
         $('btnVoiceReset')
             .addEventListener(
+
                 'click',
+
                 () => {
 
                     stopSpeech();
 
+
                     voiceSettings = {
 
                         rate:1,
+
                         pitch:1,
+
                         volume:1,
+
                         emotion:'natural',
+
                         voiceURI:'',
+
                         version:5
 
                     };
 
-                    selectedVoice = null;
+
+                    selectedVoice =
+                        null;
+
 
                     saveVoiceSettings();
 
+
                     loadVoices();
 
+
                     updateVoiceSettingUI();
+
 
                     showToast(
                         '🎙️ 已恢復預設聲音設定'
                     );
 
                 }
+
             );
+
+
+        /*
+         * 播放目前故事
+         */
 
         $('btnSpeak')
             .addEventListener(
+
                 'click',
+
                 async () => {
 
-                    if (speechPlaying) {
+                    if (
+                        speechPlaying
+                    ) {
 
                         stopSpeech();
 
@@ -3297,41 +4261,64 @@ document.addEventListener(
 
                     }
 
-                    if (!currentStory) return;
+
+                    if (
+                        !currentStory
+                    ) {
+
+                        return;
+
+                    }
+
 
                     const oldAction =
                         expectedAction;
 
+
+                    const oldNarration =
+                        currentActionNarration;
+
+
                     const oldPurpose =
                         currentActionPurpose;
 
+
                     lockAction();
+
 
                     await speak(
                         currentStory
                     );
 
-                    if (oldAction) {
 
-                        const actionText =
+                    if (
+                        oldAction
+                    ) {
+
+                        await speak(
+                            oldNarration ||
                             getActionNarration({
 
                                 action:
                                     oldAction,
 
+                                actionText:
+                                    oldNarration,
+
                                 actionPurpose:
                                     oldPurpose
 
-                            });
-
-                        await speak(
-                            actionText
+                            })
                         );
+
 
                         showAction({
 
                             action:
                                 oldAction,
+
+                            actionText:
+                                oldNarration,
 
                             actionPurpose:
                                 oldPurpose
@@ -3341,12 +4328,15 @@ document.addEventListener(
                     }
 
                 }
+
             );
 
     }
+
 );
 
 </script>
 
 </body>
+
 </html>
