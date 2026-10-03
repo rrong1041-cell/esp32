@@ -2515,20 +2515,66 @@ async function switchMode(
 
 async function parseAIResponse(res) {
 
-    const raw =
-        await res.json();
+    const rawText = await res.text();
 
-    if (!res.ok) {
+    let raw;
+
+    try {
+        raw = JSON.parse(rawText);
+    } catch (error) {
 
         throw new Error(
-            raw.error ||
-            'Worker 回應失敗'
+            'Worker 回傳的不是有效 JSON：\n\n' +
+            rawText
         );
 
     }
 
-    return raw;
+    if (!res.ok || raw.ok === false) {
 
+        const detail =
+            typeof raw.detail === 'string'
+                ? raw.detail
+                : JSON.stringify(
+                    raw.detail || {},
+                    null,
+                    2
+                  );
+
+        const geminiError =
+            raw.geminiError
+                ? JSON.stringify(
+                    raw.geminiError,
+                    null,
+                    2
+                  )
+                : '';
+
+        throw new Error(
+            'Gemini API 發生錯誤\n\n' +
+
+            'HTTP 狀態：' +
+            res.status +
+            '\n\n' +
+
+            'Worker 錯誤：\n' +
+            (raw.error || '未知錯誤') +
+
+            '\n\n' +
+
+            '詳細資訊：\n' +
+            detail +
+
+            (
+                geminiError
+                    ? '\n\nGemini 詳細錯誤：\n' +
+                      geminiError
+                    : ''
+            )
+        );
+    }
+
+    return raw;
 }
 
 
