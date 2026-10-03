@@ -539,7 +539,7 @@ class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
 id="btnManualAction"
 class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
 
-✨ 模擬完成目前動作
+✨ 模擬一次目前動作
 
 </button>
 
@@ -547,7 +547,7 @@ class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3
 class="text-xs text-slate-400 mt-3 leading-relaxed">
 
 裝置實體動作會觸發故事。<br>
-完成目前動作後，故事會進入下一幕。
+達成指定次數或持續秒數後，故事會進入下一幕。
 
 </p>
 
@@ -622,6 +622,12 @@ class="flex items-center gap-2 text-pink-300 font-bold">
 id="actionSubText"
 class="text-sm text-slate-300 mt-2">
 </div>
+<div id="actionProgressPanel" class="hidden mt-3">
+  <div id="actionProgressText" class="text-base font-bold text-amber-300" role="status" aria-live="polite"></div>
+  <progress id="actionProgressBar" class="w-full mt-2" max="1" value="0" aria-label="目前動作完成進度"></progress>
+  <div id="actionProgressHint" class="text-xs text-slate-400 mt-1"></div>
+</div>
+
 
 </div>
 
@@ -947,7 +953,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 10.0
+   FRONTEND 10.1 — Worker 2.0 動作進度
 
    新架構：
 
@@ -957,7 +963,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
       ↓
    Worker
       ↓
-   Gemini
+   AI
       ↓
    完整 11 幕故事
       ↓
@@ -1049,7 +1055,92 @@ let expectedAction = '';
 
 let busy = false;
 
-let lastActionTime = 0;
+// 每次 BLE 通知代表一次離散動作；不以時間 debounce 丟棄連續次數。
+let actionCount = 0;
+let actionTargetCount = 1;
+let actionHoldSeconds = 0;
+let holdStartedAt = null;
+let holdLastSignalAt = null;
+let holdTimer = null;
+let holdSource = '';
+let manualHolding = false;
+let actTimer = null;
+let adventureVersion = 0;
+let actVersion = 0;
+// 韌體需持續回報相符動作（建議每 100–500ms），停止回報或別的動作即中斷。
+const HOLD_SIGNAL_TIMEOUT_MS = 1200;
+
+function stopHold() {
+    clearInterval(holdTimer);
+    holdTimer = null;
+    holdStartedAt = null;
+    holdLastSignalAt = null;
+    holdSource = '';
+    manualHolding = false;
+}
+
+function resetActionProgress(data = {}) {
+    stopHold();
+    actionCount = 0;
+    const count = Number(data.targetCount);
+    const seconds = Number(data.holdSeconds);
+    actionTargetCount = Number.isFinite(count) && count >= 1 ? Math.floor(count) : 1;
+    actionHoldSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    renderActionProgress();
+}
+
+function renderActionProgress() {
+    const holding = actionHoldSeconds > 0;
+    const elapsed = holdStartedAt === null ? 0 :
+        Math.min(actionHoldSeconds, (performance.now() - holdStartedAt) / 1000);
+    $('actionProgressPanel').classList.toggle('hidden', !currentAction);
+    $('actionProgressText').textContent = holding
+        ? `持續 ${elapsed.toFixed(1)} / ${actionHoldSeconds} 秒・剩餘 ${Math.max(0, Math.ceil(actionHoldSeconds - elapsed))} 秒`
+        : `動作進度 ${actionCount}/${actionTargetCount}`;
+    $('actionProgressBar').max = holding ? actionHoldSeconds : actionTargetCount;
+    $('actionProgressBar').value = holding ? elapsed : actionCount;
+    $('actionProgressHint').textContent = holding
+        ? '保持動作；訊號中斷會重新計時。手動測試可開始／停止模擬撐住。'
+        : '每次相符動作累積一次，達標才繼續故事。';
+    $('btnManualAction').textContent = holding
+        ? (manualHolding ? '⏹ 停止模擬撐住' : '🙌 開始模擬撐住')
+        : '✨ 模擬一次目前動作';
+}
+
+function startHold(source) {
+    const now = performance.now();
+    if (holdStartedAt !== null && holdSource !== source) return;
+    if (holdStartedAt !== null && source === 'ble' &&
+        now - holdLastSignalAt > HOLD_SIGNAL_TIMEOUT_MS) stopHold();
+    holdLastSignalAt = now;
+    if (holdStartedAt !== null) return;
+    holdStartedAt = now;
+    holdSource = source;
+    manualHolding = source === 'manual';
+    const version = actVersion;
+    holdTimer = setInterval(() => {
+        if (version !== actVersion || !waitingForAction || busy || document.hidden) {
+            stopHold();
+            renderActionProgress();
+            return;
+        }
+        if (holdSource === 'ble' && performance.now() - holdLastSignalAt > HOLD_SIGNAL_TIMEOUT_MS) {
+            stopHold();
+            renderActionProgress();
+            return;
+        }
+        renderActionProgress();
+        // BLE 完成由相符通知確認，避免最後一個封包後仍靠計時器自行成功。
+        if (holdSource === 'manual' && performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
+            void completeAction(expectedAction);
+        }
+    }, 100);
+    renderActionProgress();
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { stopHold(); renderActionProgress(); }
+});
 
 
 /* =====================================================
@@ -2025,6 +2116,7 @@ async function connectBLE() {
                 bleCharacteristic =
                     null;
 
+                if (holdSource === 'ble') { stopHold(); renderActionProgress(); }
                 showToast(
                     '故事裝置已斷線'
                 );
@@ -2148,39 +2240,7 @@ async function onBleEvent(event) {
     }
 
 
-    const now =
-        Date.now();
-
-    if (
-        now -
-        lastActionTime <
-        1500
-    ) {
-
-        return;
-
-    }
-
-
-    const expected =
-        normalizeAction(
-            expectedAction
-        );
-
-
-    if (
-        value ===
-        expected
-    ) {
-
-        lastActionTime =
-            now;
-
-        await handleAction(
-            expected
-        );
-
-    }
+    await handleAction(value, 'ble');
 
 }
 
@@ -2287,6 +2347,11 @@ function renderChildThemes() {
 ===================================================== */
 
 function resetAdventure() {
+    adventureVersion++;
+    actVersion++;
+    clearTimeout(actTimer);
+    resetActionProgress();
+    $('actionProgressPanel').classList.add('hidden');
 
     stopSpeech();
 
@@ -2551,7 +2616,7 @@ async function parseAIResponse(res) {
                 : '';
 
         throw new Error(
-            'Gemini API 發生錯誤\n\n' +
+            'Worker / AI 服務發生錯誤\n\n' +
 
             'HTTP 狀態：' +
             res.status +
@@ -2567,7 +2632,7 @@ async function parseAIResponse(res) {
 
             (
                 geminiError
-                    ? '\n\nGemini 詳細錯誤：\n' +
+                    ? '\n\nWorker / AI 詳細錯誤：\n' +
                       geminiError
                     : ''
             )
@@ -2854,6 +2919,13 @@ async function showCurrentAct(
     }
 
 
+    clearTimeout(actTimer);
+    const version = ++actVersion;
+    waitingForAction = false;
+    expectedAction = '';
+    stopHold();
+    $('actionPrompt').classList.add('hidden');
+
     const act =
         acts[
             currentActIndex
@@ -2891,6 +2963,8 @@ async function showCurrentAct(
             act.action
         );
 
+
+    resetActionProgress(act);
 
     currentActionNarration =
         getActionNarration(
@@ -2969,6 +3043,8 @@ async function showCurrentAct(
     }
 
 
+    if (version !== actVersion) return;
+
     /*
      * 顯示動作
      */
@@ -2977,9 +3053,7 @@ async function showCurrentAct(
         currentAction
     ) {
 
-        showAction(
-            act
-        );
+        lockAction();
 
 
         /*
@@ -2996,13 +3070,16 @@ async function showCurrentAct(
 
         }
 
+        if (version !== actVersion) return;
+        showAction(act);
+        busy = false;
         return;
 
     }
 
 
     /*
-     * 如果 Gemini 某一幕真的沒有 action
+     * 如果 AI 某一幕真的沒有 action
      *
      * 不把它當結局。
      *
@@ -3025,12 +3102,10 @@ async function showCurrentAct(
         acts.length - 1
     ) {
 
-        setTimeout(
+        actTimer = setTimeout(
             async () => {
-
-                if (!busy)
-                    return;
-
+                if (version !== actVersion) return;
+                busy = true;
                 currentActIndex++;
 
                 await showCurrentAct(
@@ -3057,6 +3132,7 @@ async function showCurrentAct(
 ===================================================== */
 
 function showAction(data) {
+    renderActionProgress();
 
     let action =
         normalizeAction(
@@ -3144,6 +3220,9 @@ function showAction(data) {
 ===================================================== */
 
 function lockAction() {
+    waitingForAction = false;
+    stopHold();
+    renderActionProgress();
 
     $('actionPrompt')
         .classList
@@ -3168,6 +3247,10 @@ function lockAction() {
 ===================================================== */
 
 function showEnding() {
+    actVersion++;
+    clearTimeout(actTimer);
+    stopHold();
+    $('actionProgressPanel').classList.add('hidden');
 
     waitingForAction =
         false;
@@ -3245,46 +3328,40 @@ function showEnding() {
    ⭐ 完成動作
 ===================================================== */
 
-async function handleAction(
-    action
-) {
-
-    if (
-        !waitingForAction ||
-        busy
-    ) {
-
+async function handleAction(action, source = 'manual') {
+    if (!waitingForAction || busy || document.hidden) return;
+    // Match raw device values: normalizeAction's senior fallback must not turn
+    // an unrelated or unknown hardware signal into a successful ARM_UP.
+    const received = String(action || '').trim().toUpperCase();
+    if (received !== expectedAction) {
+        if (source === 'ble' && holdSource === 'ble') {
+            stopHold();
+            renderActionProgress();
+        }
         return;
-
     }
-
-
-    const received =
-        normalizeAction(
-            action
-        );
-
-
-    const expected =
-        normalizeAction(
-            expectedAction
-        );
-
-
-    /*
-     * 防止錯誤動作直接推進故事
-     */
-
-    if (
-        received !==
-        expected
-    ) {
-
+    if (actionHoldSeconds > 0) {
+        if (source === 'manual' && manualHolding) {
+            stopHold();
+            renderActionProgress();
+            return;
+        }
+        startHold(source);
+        if (source === 'ble' && holdSource === 'ble' && holdStartedAt !== null &&
+            performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
+            await completeAction(received);
+        }
         return;
-
     }
+    actionCount = Math.min(actionTargetCount, actionCount + 1);
+    renderActionProgress();
+    if (actionCount >= actionTargetCount) await completeAction(received);
+}
 
-
+async function completeAction(received) {
+    if (!waitingForAction || busy) return;
+    const version = actVersion;
+    stopHold();
     waitingForAction =
         false;
 
@@ -3366,6 +3443,8 @@ async function handleAction(
      * 直接進下一幕。
      */
 
+    if (version !== actVersion) return;
+
     currentActIndex++;
 
 
@@ -3426,6 +3505,7 @@ async function generateStory() {
 
     resetAdventure();
 
+    const requestVersion = adventureVersion;
     primeSpeech();
 
     busy =
@@ -3508,6 +3588,7 @@ async function generateStory() {
          * 找出完整 11 幕
          */
 
+        if (requestVersion !== adventureVersion) return;
         adventure =
             extractAdventure(
                 data
@@ -3520,7 +3601,7 @@ async function generateStory() {
 
         /*
          * 保險：
-         * 如果 Gemini 多產生幾幕，
+         * 如果 AI 多產生幾幕，
          * 前端仍可以正常播放。
          */
 
@@ -4317,6 +4398,8 @@ document.addEventListener(
                     }
 
 
+                    const replayVersion = actVersion;
+                    const wasWaiting = waitingForAction;
                     const oldAction =
                         expectedAction;
 
@@ -4337,9 +4420,8 @@ document.addEventListener(
                     );
 
 
-                    if (
-                        oldAction
-                    ) {
+                    if (replayVersion !== actVersion) return;
+                    if (oldAction && wasWaiting) {
 
                         await speak(
                             oldNarration ||
@@ -4358,6 +4440,7 @@ document.addEventListener(
                         );
 
 
+                        if (replayVersion !== actVersion) return;
                         showAction({
 
                             action:
