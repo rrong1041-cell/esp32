@@ -622,6 +622,10 @@ class="flex items-center gap-2 text-pink-300 font-bold">
 id="actionSubText"
 class="text-sm text-slate-300 mt-2">
 </div>
+<div id="actionSequencePanel" class="hidden mt-3">
+  <div id="actionSequenceText" class="text-sm font-bold text-purple-300"></div>
+  <ol id="actionSequenceList" class="flex flex-wrap gap-2 mt-2 text-xs" aria-label="本幕動作順序"></ol>
+</div>
 <div id="actionProgressPanel" class="hidden mt-3">
   <div id="actionProgressText" class="text-base font-bold text-amber-300" role="status" aria-live="polite"></div>
   <progress id="actionProgressBar" class="w-full mt-2" max="1" value="0" aria-label="目前動作完成進度"></progress>
@@ -953,7 +957,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 10.1 — Worker 2.0 動作進度
+   FRONTEND 11.0 — 一幕多動作
 
    新架構：
 
@@ -1067,6 +1071,12 @@ let manualHolding = false;
 let actTimer = null;
 let adventureVersion = 0;
 let actVersion = 0;
+let actionStepVersion = 0;
+let actionSteps = [];
+let currentActionStepIndex = 0;
+let currentStepStory = '';
+let replayInProgress = false;
+let replayCancelRequested = false;
 // 韌體需持續回報相符動作（建議每 100–500ms），停止回報或別的動作即中斷。
 const HOLD_SIGNAL_TIMEOUT_MS = 1200;
 
@@ -1090,6 +1100,7 @@ function resetActionProgress(data = {}) {
 }
 
 function renderActionProgress() {
+    renderActionSequence();
     const holding = actionHoldSeconds > 0;
     const elapsed = holdStartedAt === null ? 0 :
         Math.min(actionHoldSeconds, (performance.now() - holdStartedAt) / 1000);
@@ -1107,6 +1118,62 @@ function renderActionProgress() {
         : '✨ 模擬一次目前動作';
 }
 
+// 新故事使用 actions[]；舊故事的一個 action 會當成單一步驟。
+function getActActions(act) {
+    const candidates = Array.isArray(act.actions) && act.actions.length
+        ? act.actions : (act.action ? [act] : []);
+    return candidates.filter(step => step && String(step.action || '').trim() &&
+        !['NONE', 'NULL'].includes(String(step.action).trim().toUpperCase()))
+        .map(step => ({ ...step, action: normalizeAction(step.action) }));
+}
+
+function renderActionSequence(completed = false) {
+    const panel = $('actionSequencePanel');
+    panel.classList.toggle('hidden', actionSteps.length < 2);
+    $('actionSequenceText').textContent = completed
+        ? `本幕動作全部完成 ${actionSteps.length}/${actionSteps.length}`
+        : `本幕動作 ${Math.min(currentActionStepIndex + 1, actionSteps.length)}/${actionSteps.length}・已完成 ${currentActionStepIndex} 個`;
+    const list = $('actionSequenceList');
+    list.replaceChildren();
+    actionSteps.forEach((step, index) => {
+        const item = document.createElement('li');
+        const done = completed || index < currentActionStepIndex;
+        const active = !completed && index === currentActionStepIndex;
+        item.className = 'px-2 py-1 rounded-lg border ' + (done
+            ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+            : active ? 'bg-pink-950/60 border-pink-500/50 text-pink-200'
+            : 'bg-slate-800/60 border-slate-700 text-slate-400');
+        item.textContent = `${done ? '✓' : index + 1} ${getActionIcon(step.action)} ${getActionNarration(step)}`;
+        if (active) item.setAttribute('aria-current', 'step');
+        list.appendChild(item);
+    });
+}
+
+async function prepareCurrentAction(speakIt = true, version = actVersion) {
+    const step = actionSteps[currentActionStepIndex];
+    if (!step || version !== actVersion) return;
+    const stepVersion = ++actionStepVersion;
+    busy = true;
+    waitingForAction = false;
+    expectedAction = '';
+    currentAction = step.action;
+    currentActionNarration = getActionNarration(step);
+    currentActionPurpose = step.actionPurpose || '完成這個動作，故事就會繼續。';
+    currentStepStory = String(step.storyBefore || '').trim();
+    resetActionProgress(step);
+    lockAction();
+    $('promptText').textContent = `📖 本幕第 ${currentActionStepIndex + 1} 個動作正在準備……`;
+    if (currentStepStory) {
+        appendStory(`🎭 第 ${currentRound} 幕・動作 ${currentActionStepIndex + 1}/${actionSteps.length}`, currentStepStory);
+        if (speakIt) await speak(currentStepStory);
+    }
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    if (speakIt) await speak(currentActionNarration);
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    showAction(step);
+    busy = false;
+}
+
 function startHold(source) {
     const now = performance.now();
     if (holdStartedAt !== null && holdSource !== source) return;
@@ -1118,8 +1185,9 @@ function startHold(source) {
     holdSource = source;
     manualHolding = source === 'manual';
     const version = actVersion;
+    const stepVersion = actionStepVersion;
     holdTimer = setInterval(() => {
-        if (version !== actVersion || !waitingForAction || busy || document.hidden) {
+        if (version !== actVersion || stepVersion !== actionStepVersion || !waitingForAction || busy || document.hidden) {
             stopHold();
             renderActionProgress();
             return;
@@ -2349,6 +2417,16 @@ function renderChildThemes() {
 function resetAdventure() {
     adventureVersion++;
     actVersion++;
+    actionStepVersion++;
+    actionSteps = [];
+    currentActionStepIndex = 0;
+    currentStepStory = '';
+    replayInProgress = false;
+    replayCancelRequested = false;
+    busy = false;
+    $('btnGenerate').disabled = false;
+    $('btnText').textContent = currentMode === 'senior' ? '開始健康活動' : '開始精彩故事冒險';
+    $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
     clearTimeout(actTimer);
     resetActionProgress();
     $('actionProgressPanel').classList.add('hidden');
@@ -2958,24 +3036,12 @@ async function showCurrentAct(
         ).trim();
 
 
-    currentAction =
-        normalizeAction(
-            act.action
-        );
-
-
-    resetActionProgress(act);
-
-    currentActionNarration =
-        getActionNarration(
-            act
-        );
-
-
-    currentActionPurpose =
-        act.actionPurpose ||
-        '完成這個動作，故事就會繼續。';
-
+    actionSteps = getActActions(act);
+    currentActionStepIndex = 0;
+    currentStepStory = '';
+    actionStepVersion++;
+    currentAction = actionSteps[0]?.action || '';
+    resetActionProgress(actionSteps[0] || {});
 
     /*
      * ⭐ 顯示第幾幕
@@ -3049,34 +3115,10 @@ async function showCurrentAct(
      * 顯示動作
      */
 
-    if (
-        currentAction
-    ) {
-
-        lockAction();
-
-
-        /*
-         * 故事講完後才念動作
-         */
-
-        if (
-            speakIt
-        ) {
-
-            await speak(
-                currentActionNarration
-            );
-
-        }
-
-        if (version !== actVersion) return;
-        showAction(act);
-        busy = false;
+    if (actionSteps.length) {
+        await prepareCurrentAction(speakIt, version);
         return;
-
     }
-
 
     /*
      * 如果 AI 某一幕真的沒有 action
@@ -3359,115 +3401,48 @@ async function handleAction(action, source = 'manual') {
 }
 
 async function completeAction(received) {
-    if (!waitingForAction || busy) return;
+    if (!waitingForAction || busy || received !== expectedAction) return;
     const version = actVersion;
+    const stepVersion = actionStepVersion;
+    const completedStep = actionSteps[currentActionStepIndex] || {};
+    waitingForAction = false;
+    expectedAction = '';
+    busy = true;
+    // Keep the bar full while announcing this step's success.
+    $('actionProgressBar').value = actionHoldSeconds > 0 ? actionHoldSeconds : actionTargetCount;
+    $('actionProgressText').textContent = actionHoldSeconds > 0
+        ? `持續 ${actionHoldSeconds}/${actionHoldSeconds} 秒・完成！`
+        : `動作進度 ${actionCount}/${actionTargetCount}・完成！`;
     stopHold();
-    waitingForAction =
-        false;
-
-    expectedAction =
-        '';
-
-    busy =
-        true;
-
-
-    $('actionPrompt')
-        .classList
-        .add(
-            'action-locked'
-        );
-
-
-    $('promptText').textContent =
-        '✨ 做得好！';
-
-
-    $('actionSubText').textContent =
-        '故事正在繼續……';
-
-
+    $('btnManualAction').textContent = '✨ 正在準備下一個動作……';
+    $('actionPrompt').classList.add('action-locked');
+    $('promptText').textContent = '✨ 做得好！';
+    $('actionSubText').textContent = currentActionStepIndex + 1 < actionSteps.length
+        ? '這個動作完成了，本幕故事正在繼續……' : '本幕動作全部完成，故事正在繼續……';
     stopSpeech();
-
-
-    await sendBLE(
-        'ACTION_OK'
-    );
-
-
-    /*
-     * 記錄本幕
-     */
-
-    const completedAct =
-        acts[
-            currentActIndex
-        ];
-
-
-    history.push({
-
-        role:'user',
-
-        action:
-            received,
-
-        round:
-            currentRound,
-
-        title:
-            completedAct?.title ||
-            ''
-
-    });
-
-
-    /*
-     * 稍微停一下，
-     * 讓玩家感覺有「成功 → 下一幕」的節奏
-     */
-
-    await new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                500
-            )
-    );
-
-
-    /*
-     * ⭐ 核心：
-     * 完全不呼叫 Worker。
-     *
-     * 直接進下一幕。
-     */
-
-    if (version !== actVersion) return;
-
-    currentActIndex++;
-
-
-    if (
-        currentActIndex >=
-        acts.length
-    ) {
-
-        showEnding();
-
-        return;
-
+    await sendBLE('ACTION_OK');
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    history.push({role:'user',action:received,round:currentRound,
+        actionStep:currentActionStepIndex + 1,targetCount:actionTargetCount,
+        holdSeconds:actionHoldSeconds,title:acts[currentActIndex]?.title || ''});
+    const resultStory = String(completedStep.storyAfter || '').trim();
+    if (resultStory) {
+        appendStory('✨ 你的行動改變了故事', resultStory);
+        await speak(resultStory);
     }
-
-
-    await showCurrentAct(
-        true
-    );
-
-
-    busy =
-        false;
-
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    await new Promise(resolve => setTimeout(resolve, 500));
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    if (currentActionStepIndex + 1 < actionSteps.length) {
+        currentActionStepIndex++;
+        await prepareCurrentAction(true, version);
+        return;
+    }
+    renderActionSequence(true);
+    currentActIndex++;
+    if (currentActIndex >= acts.length) { showEnding(); return; }
+    await showCurrentAct(true);
+    if (version + 1 === actVersion) busy = false;
 }
 
 
@@ -3718,6 +3693,7 @@ async function generateStory() {
             true
         );
 
+        if (requestVersion !== adventureVersion) return;
 
         $('btnSpeak')
             .disabled =
@@ -3745,6 +3721,7 @@ async function generateStory() {
         }
 
 
+        if (requestVersion !== adventureVersion) return;
         showToast(
             `✨ 完整冒險建立完成！共 ${acts.length} 幕`
         );
@@ -3754,6 +3731,7 @@ async function generateStory() {
 
     catch(e) {
 
+        if (requestVersion !== adventureVersion) return;
         console.error(
             e
         );
@@ -3774,29 +3752,13 @@ async function generateStory() {
 
     finally {
 
-        $('btnText').textContent =
-
-            currentMode === 'senior'
-
-                ?
-
-            '開始健康活動'
-
-                :
-
-            '開始精彩故事冒險';
-
-
-        $('btnIcon').className =
-            'fa-solid fa-wand-magic-sparkles';
-
-
-        btn.disabled =
-            false;
-
-
-        busy =
-            false;
+        if (requestVersion === adventureVersion) {
+            $('btnText').textContent = currentMode === 'senior'
+                ? '開始健康活動' : '開始精彩故事冒險';
+            $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
+            btn.disabled = false;
+            busy = false;
+        }
 
     }
 
@@ -4381,6 +4343,7 @@ document.addEventListener(
                         speechPlaying
                     ) {
 
+                        if (replayInProgress) replayCancelRequested = true;
                         stopSpeech();
 
                         return;
@@ -4397,62 +4360,24 @@ document.addEventListener(
                     }
 
 
+                    if (busy || replayInProgress) return;
                     const replayVersion = actVersion;
+                    const replayStepVersion = actionStepVersion;
                     const wasWaiting = waitingForAction;
-                    const oldAction =
-                        expectedAction;
-
-
-                    const oldNarration =
-                        currentActionNarration;
-
-
-                    const oldPurpose =
-                        currentActionPurpose;
-
-
+                    const step = actionSteps[currentActionStepIndex];
+                    replayInProgress = true;
+                    replayCancelRequested = false;
                     lockAction();
-
-
-                    await speak(
-                        currentStory
-                    );
-
-
-                    if (replayVersion !== actVersion) return;
-                    if (oldAction && wasWaiting) {
-
-                        await speak(
-                            oldNarration ||
-                            getActionNarration({
-
-                                action:
-                                    oldAction,
-
-                                actionText:
-                                    oldNarration,
-
-                                actionPurpose:
-                                    oldPurpose
-
-                            })
-                        );
-
-
-                        if (replayVersion !== actVersion) return;
-                        showAction({
-
-                            action:
-                                oldAction,
-
-                            actionText:
-                                oldNarration,
-
-                            actionPurpose:
-                                oldPurpose
-
-                        });
-
+                    try {
+                        await speak([currentStory, currentStepStory].filter(Boolean).join('。'));
+                        if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
+                        if (wasWaiting && step) {
+                            if (!replayCancelRequested) await speak(getActionNarration(step));
+                            if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
+                            showAction(step);
+                        }
+                    } finally {
+                        if (replayVersion === actVersion) replayInProgress = false;
                     }
 
                 }
