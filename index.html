@@ -96,6 +96,16 @@ body.mode-senior {
 
 }
 
+body.mode-senior .theme-btn, body.mode-senior .difficulty-btn {font-size:1.1rem;min-height:58px;}
+body.mode-senior #customTopicInput {font-size:1.1rem;min-height:54px;}
+body.mode-senior #promptText, body.mode-senior #actionProgressText {font-size:1.45rem;line-height:1.7;}
+body.mode-senior #actionSubText, body.mode-senior #actionProgressHint,
+body.mode-senior #controllerHint,body.mode-senior #selectedTopicLabel {font-size:1rem;line-height:1.8;}
+body.mode-senior #btnCalibrate,body.mode-senior #btnLearnHold,body.mode-senior #btnInvertDirections {font-size:1rem;min-height:52px;}
+body.mode-senior #btnManualAction {font-size:1.1rem;min-height:58px;}
+body.mode-senior #storyDisplay p {font-size:1.35rem;line-height:1.95;}
+body.mode-senior .action-big {animation:none;}
+
 .glow-button {
 
     box-shadow:
@@ -596,8 +606,8 @@ id="welcomeTitle">
 class="text-sm text-slate-400 mt-1"
 id="welcomeDesc">
 
-選擇主題或自訂故事，
-AI 會建立完整冒險。
+適合 5～8 歲：選擇喜歡的主題，
+跟著簡單的小故事動一動。
 
 </p>
 
@@ -648,7 +658,7 @@ class="text-sm text-slate-300 mt-2">
 
 <div class="space-y-2">
 
-<div class="flex items-center justify-between">
+<div id="childThemeHeader" class="flex items-center justify-between">
 
 <div class="text-xs text-purple-300 font-bold">
 📚 選擇故事主題
@@ -677,7 +687,7 @@ class="hidden mt-3">
 
 <button
 data-difficulty="easy"
-class="difficulty-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">
+class="difficulty-btn active bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
 🟢 簡單
 </button>
 
@@ -695,9 +705,10 @@ class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 p
 
 </div>
 
+<p id="seniorDifficultyHint" class="text-base text-emerald-200 mt-3 leading-relaxed"></p>
 </div>
 
-<div class="flex gap-2 mt-3">
+<div id="customTopicPanel" class="flex gap-2 mt-3">
 
 <input
 type="text"
@@ -711,6 +722,10 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 
 </div>
 
+<div id="seniorStoryControls" class="hidden space-y-2">
+<button id="btnPauseStory" disabled class="w-full bg-emerald-950 border border-emerald-400/50 text-emerald-100 text-lg font-bold px-4 py-3 rounded-xl">⏸ 休息一下</button>
+<p id="pauseStoryHint" class="text-base text-slate-300 leading-relaxed">可以隨時休息，左右轉的已完成次數會保留。</p>
+</div>
 <div class="flex gap-3">
 
 <button
@@ -730,6 +745,8 @@ class="fa-solid fa-wand-magic-sparkles">
 
 <button
 id="btnSpeak"
+aria-label="重聽目前故事"
+title="重聽目前故事"
 disabled
 class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
 
@@ -739,6 +756,8 @@ class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 r
 
 <button
 id="btnVoiceSettings"
+aria-label="聲音設定"
+title="聲音設定"
 class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition"
 title="聲音設定">
 
@@ -966,7 +985,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 12.0 — 持續動作與跳躍計次
+   FRONTEND 12.2 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1079,6 +1098,8 @@ let holdTimer = null;
 let holdSource = '';
 let manualHolding = false;
 let controllerLearning = false;
+let adventurePaused=false,storyFinished=false;
+let pauseWaiters=[];
 let controllerSetupTimer = null;
 let connectionPending = false;
 let generationController = null;
@@ -1130,6 +1151,7 @@ function resetActionProgress(data = {}) {
 }
 
 function renderActionProgress() {
+    refreshStoryControls();
     renderActionSequence();
     const holding = actionHoldSeconds > 0;
     const elapsed = holdStartedAt === null ? 0 :
@@ -1199,8 +1221,10 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
         appendStory(`🎭 第 ${currentRound} 幕・動作 ${currentActionStepIndex + 1}/${actionSteps.length}`, currentStepStory);
         if (speakIt) await speak(currentStepStory);
     }
+    await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
     if (speakIt) await speak(currentActionNarration);
+    await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
     showAction(step);
     busy = false;
@@ -1219,7 +1243,7 @@ function startHold(source) {
     const version = actVersion;
     const stepVersion = actionStepVersion;
     holdTimer = setInterval(() => {
-        if (version !== actVersion || stepVersion !== actionStepVersion || !waitingForAction || busy || document.hidden) {
+        if (version !== actVersion || stepVersion !== actionStepVersion || !waitingForAction || busy || adventurePaused || controllerLearning || document.hidden) {
             stopHold();
             renderActionProgress();
             return;
@@ -1376,6 +1400,27 @@ const SENIOR_THEME =
 /* =====================================================
    動作
 ===================================================== */
+
+function refreshStoryControls(){
+    $('seniorStoryControls').classList.toggle('hidden',currentMode!=='senior');
+    $('btnPauseStory').disabled=!acts.length || storyFinished;
+    $('seniorDifficultyHint').textContent=({easy:'簡單：持續動作 2～3 秒，左右轉 1 次。',normal:'普通：持續動作 2～4 秒，左右轉最多 2 次。',challenge:'挑戰：持續動作 2～6 秒，左右轉最多 3 次。'})[selectedDifficulty] || '';
+    $('pauseStoryHint').textContent=adventurePaused?'故事已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+    $('btnPauseStory').textContent=adventurePaused?'▶ 我休息好了，繼續故事':'⏸ 休息一下';
+    $('btnManualAction').disabled=adventurePaused || controllerLearning || !waitingForAction;
+}
+function releasePauseWaiters(){const waiting=pauseWaiters;pauseWaiters=[];waiting.forEach(resolve=>resolve());}
+function waitForAdventureResume(version){
+    return adventurePaused && version===actVersion ? new Promise(resolve=>pauseWaiters.push(resolve)) : Promise.resolve();
+}
+function toggleAdventurePause(){
+    if(!acts.length || storyFinished)return;
+    adventurePaused=!adventurePaused;
+    if(adventurePaused){stopHold();stopSpeech();void sendBLE('PAUSE');}
+    else {releasePauseWaiters();void syncControllerAction();}
+    renderActionProgress();refreshStoryControls();
+    $('pauseStoryHint').textContent=adventurePaused?'故事已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+}
 
 const ACTION_INSTRUCTIONS = {
 
@@ -2024,6 +2069,9 @@ function stopSpeech() {
 
 
 async function speak(text) {
+    const sceneVersion=actVersion;
+    await waitForAdventureResume(sceneVersion);
+    if(sceneVersion!==actVersion)return;
 
     if (
         !text ||
@@ -2165,6 +2213,11 @@ async function speak(text) {
         speechPlaying =
             false;
 
+    }
+
+    if(adventurePaused && sceneVersion===actVersion){
+        await waitForAdventureResume(sceneVersion);
+        if(sceneVersion===actVersion)return speak(text);
     }
 
 }
@@ -2346,7 +2399,7 @@ async function sendBLE(command) {
 }
 
 async function syncControllerAction() {
-    await sendBLE(!controllerLearning && waitingForAction && !busy && expectedAction
+    await sendBLE(!adventurePaused && !controllerLearning && waitingForAction && !busy && expectedAction
         ? (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + expectedAction : 'PAUSE');
 }
 
@@ -2355,9 +2408,12 @@ async function syncControllerAction() {
 ===================================================== */
 
 function updateSelectedTopicLabel() {
-    const topic=$('customTopicInput').value.trim() || selectedTheme;
+    const senior=currentMode==='senior';
+    for(const id of ['childThemeHeader','themeButtonsContainer','customTopicPanel','selectedTopicLabel'])$(id).classList.toggle('hidden',senior);
+    $('customTopicInput').disabled=senior;
+    const topic=senior?SENIOR_THEME:$('customTopicInput').value.trim() || selectedTheme;
     $('selectedTopicLabel').textContent='本次主題：'+topic+' · 每次生成全新情節';
-    $('themeCount').textContent=currentMode==='senior'?'坐姿活動主題':CHILD_THEMES.length+' 個冒險世界';
+    $('themeCount').textContent=CHILD_THEMES.length+' 個冒險世界';
 }
 function renderChildThemes() {
 
@@ -2366,6 +2422,7 @@ function renderChildThemes() {
 
     container.innerHTML = '';
 
+    if(currentMode==='senior')return;
     CHILD_THEMES.forEach(
         (theme,index) => {
 
@@ -2431,6 +2488,7 @@ function renderChildThemes() {
 ===================================================== */
 
 function resetAdventure() {
+    adventurePaused=false;storyFinished=false;releasePauseWaiters();
     if(generationController){generationController.abort();generationController=null;}
     void sendBLE('PAUSE');
     adventureVersion++;
@@ -2505,6 +2563,7 @@ function resetAdventure() {
 
     $('btnSpeak').disabled =
         true;
+    refreshStoryControls();
 
 }
 
@@ -2518,10 +2577,11 @@ async function switchMode(
     notifyDevice = true
 ) {
 
+    if(mode===currentMode)return;
     const previous=modeTopics[currentMode];
-    if(previous){previous.theme=selectedTheme;previous.custom=$('customTopicInput').value || '';}
+    if(currentMode==='child' && previous){previous.theme=selectedTheme;previous.custom=$('customTopicInput').value || '';}
     resetAdventure();
-    $('customTopicInput').value=modeTopics[mode]?.custom || '';
+    $('customTopicInput').value=mode==='child' ? modeTopics.child.custom : '';
 
     currentMode =
         mode;
@@ -2570,26 +2630,10 @@ async function switchMode(
             '準備好開始今日健康活動了嗎？';
 
         $('welcomeDesc').textContent =
-            '請坐在有椅背的椅子上，AI 會依照劇情安排自然的活動。';
+            '請坐在有椅背的椅子上，選擇適合的難度，再開始故事活動。';
 
-        $('themeButtonsContainer').innerHTML =
-            `
-            <div class="col-span-2 md:col-span-3 bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-4 text-center">
-
-                <div class="text-2xl mb-2">
-                    🌿
-                </div>
-
-                <div class="text-sm font-bold text-emerald-300">
-                    坐姿健康活動
-                </div>
-
-                <div class="text-xs text-slate-400 mt-1">
-                    AI 會依照難度安排坐姿活動
-                </div>
-
-            </div>
-            `;
+        selectedTheme=modeTopics.senior.theme;
+        renderChildThemes();
 
         $('seniorDifficultyPanel')
             .classList
@@ -2599,10 +2643,9 @@ async function switchMode(
             '開始健康活動';
 
         $('customTopicInput').placeholder =
-            '長輩模式會依照難度安排坐姿活動';
+            '也可以輸入想聽的故事主題，例如：老朋友的茶館';
 
-        selectedTheme =
-            SENIOR_THEME;
+        selectedTheme = modeTopics.senior.theme;
 
 
         if (
@@ -2643,7 +2686,7 @@ async function switchMode(
             '準備好開始冒險了嗎？';
 
         $('welcomeDesc').textContent =
-            '選擇主題或自訂故事，AI 會建立完整冒險。';
+            '適合 5～8 歲：選擇喜歡的主題，跟著簡單的小故事動一動。';
 
         selectedTheme = modeTopics.child.theme;
 
@@ -2674,6 +2717,7 @@ async function switchMode(
     }
 
     updateSelectedTopicLabel();
+    refreshStoryControls();
 }
 
 
@@ -3134,6 +3178,7 @@ async function showCurrentAct(
     }
 
 
+    await waitForAdventureResume(version);
     if (version !== actVersion) return;
 
     /*
@@ -3171,7 +3216,8 @@ async function showCurrentAct(
 
         actTimer = setTimeout(
             async () => {
-                if (version !== actVersion) return;
+                await waitForAdventureResume(version);
+    if (version !== actVersion) return;
                 busy = true;
                 currentActIndex++;
 
@@ -3274,13 +3320,11 @@ function showAction(data) {
         currentActionNarration;
 
 
-    $('actionSubText').textContent =
+    const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'向左傾斜一次，再回到中間。',TILT_RIGHT:'向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
+    $('actionSubText').textContent='💡 '+currentActionPurpose+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
 
-        '💡 '
-        +
-        currentActionPurpose;
-
-    void sendBLE(controllerLearning ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
+    void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
+    refreshStoryControls();
 
 }
 
@@ -3318,6 +3362,7 @@ function lockAction() {
 ===================================================== */
 
 function showEnding() {
+    storyFinished=true;adventurePaused=false;releasePauseWaiters();refreshStoryControls();
     actVersion++;
     clearTimeout(actTimer);
     stopHold();
@@ -3400,7 +3445,7 @@ function showEnding() {
 ===================================================== */
 
 async function handleAction(action, source = 'manual') {
-    if (!waitingForAction || busy || controllerLearning || document.hidden) return;
+    if (!waitingForAction || busy || adventurePaused || controllerLearning || document.hidden) return;
     // Match raw device values: normalizeAction's senior fallback must not turn
     // an unrelated or unknown hardware signal into a successful ARM_UP.
     const received = String(action || '').trim().toUpperCase();
@@ -3431,11 +3476,12 @@ async function handleAction(action, source = 'manual') {
 }
 
 async function completeAction(received) {
-    if (!waitingForAction || busy || received !== expectedAction) return;
+    if (!waitingForAction || busy || adventurePaused || controllerLearning || received !== expectedAction) return;
     const version = actVersion;
     const stepVersion = actionStepVersion;
     const completedStep = actionSteps[currentActionStepIndex] || {};
     waitingForAction = false;
+    refreshStoryControls();
     expectedAction = '';
     busy = true;
     // Keep the bar full while announcing this step's success.
@@ -3446,13 +3492,15 @@ async function completeAction(received) {
     stopHold();
     $('btnManualAction').textContent = '✨ 正在準備下一個動作……';
     $('actionPrompt').classList.add('action-locked');
-    $('promptText').textContent = '✨ 做得好！';
+    $('promptText').textContent = currentMode==='senior'?'✓ 這個步驟完成了。':'✨ 做得好！';
     $('actionSubText').textContent = currentActionStepIndex + 1 < actionSteps.length
         ? '這個動作完成了，本幕故事正在繼續……' : '本幕動作全部完成，故事正在繼續……';
     stopSpeech();
     await sendBLE('PAUSE');
+    await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
     await sendBLE('ACTION_OK');
+    await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
     history.push({role:'user',action:received,round:currentRound,
         actionStep:currentActionStepIndex + 1,targetCount:actionTargetCount,
@@ -3462,8 +3510,10 @@ async function completeAction(received) {
         appendStory('✨ 你的行動改變了故事', resultStory);
         await speak(resultStory);
     }
+    await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
     await new Promise(resolve => setTimeout(resolve, 500));
+    await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
     if (currentActionStepIndex + 1 < actionSteps.length) {
         currentActionStepIndex++;
@@ -3519,9 +3569,7 @@ async function generateStory() {
         .trim();
 
 
-    const topic =
-        custom ||
-        selectedTheme;
+    const topic = currentMode==='senior' ? SENIOR_THEME : custom || selectedTheme;
 
 
     if (!topic) {
@@ -3599,8 +3647,7 @@ async function generateStory() {
                         mode:
                             currentMode,
 
-                        topic:
-                            topic,
+                        ...(currentMode==='child' ? {topic} : {}),
 
                         difficulty:
                             selectedDifficulty,
@@ -3868,6 +3915,8 @@ document.addEventListener(
 
 
         renderChildThemes();
+        refreshStoryControls();
+        $('btnPauseStory').addEventListener('click',toggleAdventurePause);
         updateSelectedTopicLabel();
         $('customTopicInput').addEventListener('input',updateSelectedTopicLabel);
 
@@ -3991,7 +4040,7 @@ document.addEventListener(
                         .trim();
 
 
-                    if (!value) {if(currentMode==='child')renderChildThemes();return;}
+                    if (!value) {renderChildThemes();return;}
 
 
                     document
@@ -4051,6 +4100,7 @@ document.addEventListener(
 
                             selectedDifficulty =
                                 button.dataset.difficulty;
+                            refreshStoryControls();
 
                         }
 
