@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="zh-TW">
 
 <head>
@@ -490,8 +491,7 @@ class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex item
 
 <span
 id="statusIndicator"
-class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow">
-</span>
+class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow"> </span>
 
 <div>
 
@@ -513,8 +513,7 @@ class="font-bold text-slate-200 text-sm">
 
 <i
 id="statusIcon"
-class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl">
-</i>
+class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl"> </i>
 
 </div>
 
@@ -547,7 +546,7 @@ class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3
 class="text-xs text-slate-400 mt-3 leading-relaxed">
 
 裝置實體動作會觸發故事。<br>
-AI 會依照劇情決定下一個自然的互動。
+AI 會依照完整劇情安排自然的互動。
 
 </p>
 
@@ -661,20 +660,17 @@ class="hidden mt-3">
 <button
 data-difficulty="easy"
 class="difficulty-btn active bg-emerald-900/50 border border-emerald-500 text-emerald-200 py-2 px-2 rounded-xl text-xs font-semibold">
-🟢 簡單
-</button>
+🟢 簡單 </button>
 
 <button
 data-difficulty="normal"
 class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-🟡 普通
-</button>
+🟡 普通 </button>
 
 <button
 data-difficulty="challenge"
 class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
-🔴 挑戰
-</button>
+🔴 挑戰 </button>
 
 </div>
 
@@ -700,8 +696,7 @@ class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indig
 
 <i
 id="btnIcon"
-class="fa-solid fa-wand-magic-sparkles">
-</i>
+class="fa-solid fa-wand-magic-sparkles"> </i>
 
 <span id="btnText">
 開始精彩故事冒險
@@ -800,6 +795,7 @@ class="voice-select">
 
 <option value="">
 載入中……
+
 </option>
 
 </select>
@@ -886,26 +882,22 @@ value="1">
 <button
 class="voice-emotion active"
 data-emotion="natural">
-🙂 自然
-</button>
+🙂 自然 </button>
 
 <button
 class="voice-emotion"
 data-emotion="lively">
-😆 活潑
-</button>
+😆 活潑 </button>
 
 <button
 class="voice-emotion"
 data-emotion="tense">
-😱 緊張
-</button>
+😱 緊張 </button>
 
 <button
 class="voice-emotion"
 data-emotion="gentle">
-🌿 溫柔
-</button>
+🌿 溫柔 </button>
 
 </div>
 
@@ -945,8 +937,56 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 <script>
 
 /* =====================================================
-   聲動奇境 9.0 FRONTEND
+   聲動奇境
+   Gemini 測試版
    ===================================================== */
+
+
+/* =====================================================
+   ⭐⭐⭐ Gemini API 設定 ⭐⭐⭐
+   =====================================================
+
+   把你的 Gemini API Key 貼到下面。
+
+   例如：
+
+   const GEMINI_API_KEY =
+       'AIzaSyxxxxxxxxxxxxxxxx';
+
+   ⚠️ 這是「測試版」。
+   API Key 放在 GitHub Pages 前端並不安全。
+   正式比賽版本之後應該改成後端代理。
+
+===================================================== */
+
+const GEMINI_API_KEY =
+    '把你的 Gemini API Key 貼在這裡';
+
+
+/*
+ * 使用目前 Google 官方文件列出的模型。
+ *
+ * 如果你的 API Key / 帳號暫時不能使用這個模型，
+ * 可以改成：
+ *
+ * gemini-3.6-flash
+ *
+ * 或你在 AI Studio 可以使用的模型。
+ */
+
+const GEMINI_MODEL =
+    'gemini-3.8-flash';
+
+
+const GEMINI_URL =
+    'https://generativelanguage.googleapis.com/v1beta/models/' +
+    GEMINI_MODEL +
+    ':generateContent';
+
+
+/* =====================================================
+   BLE
+===================================================== */
 
 const BLE_CONFIG = {
 
@@ -958,47 +998,99 @@ const BLE_CONFIG = {
 
 };
 
-const WORKER_URL =
-    'https://empty-credit-1539.rrong1041.workers.dev';
 
 let bleDevice = null;
+
 let bleCharacteristic = null;
 
-let currentMode = 'child';
+
+/* =====================================================
+   狀態
+===================================================== */
+
+let currentMode =
+    'child';
 
 let selectedTheme =
     '勇敢的小騎士與巨龍';
 
-let selectedDifficulty = 'easy';
+let selectedDifficulty =
+    'easy';
 
-let currentStory = '';
 
-let currentAction = '';
-let currentActionNarration = '';
-let currentActionPurpose = '';
+let currentStory =
+    '';
 
-let storyMemory = null;
-let adventureSeed = '';
+let currentAction =
+    '';
 
-let currentRound = 0;
-let maxRound = 11;
+let currentActionNarration =
+    '';
 
-let sceneId = '';
-let sceneSeed = '';
+let currentActionPurpose =
+    '';
 
-let history = [];
 
-let waitingForAction = false;
-let expectedAction = '';
+/*
+ * ⭐ Gemini 會一次產生完整故事。
+ *
+ * storyPlan 結構：
+ *
+ * {
+ *   title,
+ *   openingStyle,
+ *   world,
+ *   characters,
+ *   mainGoal,
+ *   hiddenTruth,
+ *   chapters: [
+ *      {
+ *        round:1,
+ *        title,
+ *        story,
+ *        action,
+ *        actionNarration,
+ *        actionPurpose,
+ *        mood,
+ *        consequence
+ *      }
+ *   ]
+ * }
+ */
 
-let busy = false;
+let storyPlan =
+    null;
 
-let lastActionTime = 0;
 
-let speechPlaying = false;
+let currentRound =
+    0;
+
+let maxRound =
+    11;
+
+
+let history =
+    [];
+
+let waitingForAction =
+    false;
+
+let expectedAction =
+    '';
+
+let busy =
+    false;
+
+let lastActionTime =
+    0;
+
+let speechPlaying =
+    false;
+
 
 const $ =
-    id => document.getElementById(id);
+    id =>
+        document.getElementById(id);
 
 
 /* =====================================================
@@ -1117,6 +1209,7 @@ const CHILD_THEMES = [
 
 ];
 
+
 const SENIOR_THEME =
     '午後健康活動';
 
@@ -1127,34 +1220,64 @@ const SENIOR_THEME =
 
 const ACTION_INSTRUCTIONS = {
 
-    SWIPE_LEFT:'現在向左閃避！',
+    SWIPE_LEFT:
+        '現在向左閃避！',
 
-    SWIPE_RIGHT:'現在向右閃避！',
+    SWIPE_RIGHT:
+        '現在向右閃避！',
 
-    JUMP:'現在跳起來！',
+    JUMP:
+        '現在跳起來！',
 
-    SHAKE:'現在搖一搖，把它甩開！',
+    SHAKE:
+        '現在搖一搖，把它甩開！',
 
-    RUN:'現在快跑，追上去！',
+    RUN:
+        '現在快跑，追上去！',
 
-    ARM_UP:'現在把手抬高！',
+    ARM_UP:
+        '現在把手抬高！',
 
-    ARM_DOWN:'現在把手放下！',
+    ARM_DOWN:
+        '現在把手放下！',
 
-    TILT_LEFT:'現在向左傾斜！',
+    TILT_LEFT:
+        '現在向左傾斜！',
 
-    TILT_RIGHT:'現在向右傾斜！',
+    TILT_RIGHT:
+        '現在向右傾斜！',
 
-    HOLD_UP:'現在把手抬起並保持住！'
+    HOLD_UP:
+        '現在把手抬起並保持住！'
 
 };
+
+
+const VALID_ACTIONS = [
+
+    'SWIPE_LEFT',
+    'SWIPE_RIGHT',
+    'JUMP',
+    'SHAKE',
+    'RUN',
+    'ARM_UP',
+    'ARM_DOWN',
+    'TILT_LEFT',
+    'TILT_RIGHT',
+    'HOLD_UP'
+
+];
+
 
 function getActionNarration(data) {
 
     const action =
-        String(data?.action || '')
+        String(
+            data?.action || ''
+        )
         .trim()
         .toUpperCase();
+
 
     return ACTION_INSTRUCTIONS[action]
         ||
@@ -1166,24 +1289,37 @@ function getActionNarration(data) {
 
 }
 
+
 function getActionIcon(action) {
 
     const icons = {
 
         SWIPE_LEFT:'⬅️',
+
         SWIPE_RIGHT:'➡️',
+
         JUMP:'⬆️',
+
         SHAKE:'📳',
+
         RUN:'🏃',
+
         ARM_UP:'🙋',
+
         ARM_DOWN:'🙆',
+
         TILT_LEFT:'↩️',
+
         TILT_RIGHT:'↪️',
+
         HOLD_UP:'✋'
 
     };
 
-    return icons[action] || '✨';
+
+    return icons[action]
+        ||
+        '✨';
 
 }
 
@@ -1194,27 +1330,40 @@ function getActionIcon(action) {
 
 function showToast(msg) {
 
-    const t = $('toast');
+    const t =
+        $('toast');
 
-    t.textContent = msg;
+
+    t.textContent =
+        msg;
+
 
     t.classList.remove(
         'opacity-0',
         'pointer-events-none'
     );
 
-    t.classList.add('opacity-100');
 
-    setTimeout(() => {
+    t.classList.add(
+        'opacity-100'
+    );
 
-        t.classList.remove('opacity-100');
 
-        t.classList.add(
-            'opacity-0',
-            'pointer-events-none'
-        );
+    setTimeout(
+        () => {
 
-    },3000);
+            t.classList.remove(
+                'opacity-100'
+            );
+
+            t.classList.add(
+                'opacity-0',
+                'pointer-events-none'
+            );
+
+        },
+        3000
+    );
 
 }
 
@@ -1225,7 +1374,9 @@ function showToast(msg) {
 
 function removeEmoji(text) {
 
-    if (!text) return '';
+    if (!text)
+        return '';
+
 
     try {
 
@@ -1234,7 +1385,10 @@ function removeEmoji(text) {
                 /[\p{Extended_Pictographic}\uFE0F]/gu,
                 ''
             )
-            .replace(/\s{2,}/g,' ')
+            .replace(
+                /\s{2,}/g,
+                ' '
+            )
             .trim();
 
     }
@@ -1255,21 +1409,34 @@ function removeEmoji(text) {
 const VOICE_STORAGE_KEY =
     'soundAdventureVoiceSettings';
 
-let availableVoices = [];
-let selectedVoice = null;
 
-let speechToken = 0;
+let availableVoices =
+    [];
+
+let selectedVoice =
+    null;
+
+
+let speechToken =
+    0;
+
 
 let voiceSettings = {
 
     rate:1,
+
     pitch:1,
+
     volume:1,
+
     emotion:'natural',
+
     voiceURI:'',
+
     version:5
 
 };
+
 
 const EMOTION_PROFILES = {
 
@@ -1295,6 +1462,7 @@ const EMOTION_PROFILES = {
 
 };
 
+
 function loadVoiceSettings() {
 
     try {
@@ -1304,11 +1472,17 @@ function loadVoiceSettings() {
                 VOICE_STORAGE_KEY
             );
 
-        if (!saved) return;
+
+        if (!saved)
+            return;
+
 
         voiceSettings = {
+
             ...voiceSettings,
+
             ...JSON.parse(saved)
+
         };
 
     }
@@ -1320,6 +1494,7 @@ function loadVoiceSettings() {
     }
 
 }
+
 
 function saveVoiceSettings() {
 
@@ -1338,34 +1513,55 @@ function saveVoiceSettings() {
 
 }
 
+
 function updateVoiceStatus(message) {
 
-    const el = $('voiceStatus');
+    const el =
+        $('voiceStatus');
+
 
     if (el) {
-        el.textContent = message;
+
+        el.textContent =
+            message;
+
     }
 
 }
+
 
 function populateVoiceSelect() {
 
     const select =
         $('voiceSelect');
 
-    if (!select) return;
 
-    select.innerHTML = '';
+    if (!select)
+        return;
+
+
+    select.innerHTML =
+        '';
+
 
     const auto =
-        document.createElement('option');
+        document.createElement(
+            'option'
+        );
 
-    auto.value = '__AUTO__';
+
+    auto.value =
+        '__AUTO__';
+
 
     auto.textContent =
         '✨ 自動（使用裝置自然語音）';
 
-    select.appendChild(auto);
+
+    select.appendChild(
+        auto
+    );
+
 
     const chinese =
         availableVoices.filter(
@@ -1374,42 +1570,70 @@ function populateVoiceSelect() {
                 /Chinese|中文|Taiwan|台灣/i.test(v.name)
         );
 
+
     const others =
         availableVoices.filter(
-            v => !chinese.includes(v)
+            v =>
+                !chinese.includes(v)
         );
 
+
     [
+
         ...chinese,
+
         ...others
-    ].forEach(voice => {
 
-        const option =
-            document.createElement('option');
+    ].forEach(
+        voice => {
 
-        option.value =
-            voice.voiceURI;
+            const option =
+                document.createElement(
+                    'option'
+                );
 
-        option.textContent =
-            `${voice.name} (${voice.lang})`;
 
-        select.appendChild(option);
+            option.value =
+                voice.voiceURI;
 
-    });
+
+            option.textContent =
+                `${voice.name} (${voice.lang})`;
+
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
+
 
     restoreSelectedVoice();
 
+
     updateVoiceStatus(
+
         availableVoices.length
-            ? `已找到 ${availableVoices.length} 個裝置語音。`
-            : '尚未取得裝置語音。'
+
+            ?
+
+        `已找到 ${availableVoices.length} 個裝置語音。`
+
+            :
+
+        '尚未取得裝置語音。'
+
     );
 
 }
 
+
 function loadVoices() {
 
-    if (!('speechSynthesis' in window)) {
+    if (
+        !('speechSynthesis' in window)
+    ) {
 
         updateVoiceStatus(
             '此瀏覽器不支援語音朗讀。'
@@ -1419,18 +1643,25 @@ function loadVoices() {
 
     }
 
+
     availableVoices =
         speechSynthesis.getVoices();
+
 
     populateVoiceSelect();
 
 }
 
+
 function restoreSelectedVoice() {
 
-    selectedVoice = null;
+    selectedVoice =
+        null;
 
-    if (voiceSettings.voiceURI) {
+
+    if (
+        voiceSettings.voiceURI
+    ) {
 
         selectedVoice =
             availableVoices.find(
@@ -1443,8 +1674,10 @@ function restoreSelectedVoice() {
 
     }
 
+
     const select =
         $('voiceSelect');
+
 
     if (select) {
 
@@ -1457,47 +1690,60 @@ function restoreSelectedVoice() {
 
 }
 
+
 function updateVoiceSettingUI() {
 
     $('rateRange').value =
         voiceSettings.rate;
 
+
     $('pitchRange').value =
         voiceSettings.pitch;
 
+
     $('volumeRange').value =
         voiceSettings.volume;
+
 
     $('rateValue').textContent =
         Number(
             voiceSettings.rate
         ).toFixed(2);
 
+
     $('pitchValue').textContent =
         Number(
             voiceSettings.pitch
         ).toFixed(2);
+
 
     $('volumeValue').textContent =
         Number(
             voiceSettings.volume
         ).toFixed(2);
 
+
     document
-        .querySelectorAll('.voice-emotion')
-        .forEach(button => {
+        .querySelectorAll(
+            '.voice-emotion'
+        )
+        .forEach(
+            button => {
 
-            button.classList.toggle(
-                'active',
-                button.dataset.emotion ===
-                voiceSettings.emotion
-            );
+                button.classList.toggle(
+                    'active',
+                    button.dataset.emotion ===
+                    voiceSettings.emotion
+                );
 
-        });
+            }
+        );
+
 
     restoreSelectedVoice();
 
 }
+
 
 function getSentenceEmotion(text) {
 
@@ -1508,20 +1754,29 @@ function getSentenceEmotion(text) {
         ||
         EMOTION_PROFILES.natural;
 
+
     let rate =
-        Number(voiceSettings.rate) *
+        Number(
+            voiceSettings.rate
+        ) *
         profile.rate;
 
+
     let pitch =
-        Number(voiceSettings.pitch) *
+        Number(
+            voiceSettings.pitch
+        ) *
         profile.pitch;
+
 
     if (/！!/.test(text)) {
 
         rate *= 1.04;
+
         pitch *= 1.07;
 
     }
+
 
     if (/？\?/.test(text)) {
 
@@ -1529,45 +1784,58 @@ function getSentenceEmotion(text) {
 
     }
 
+
     if (
         /危險|快跑|救命|小心|怪獸|糟糕|逃|攻擊|火焰/.test(text)
     ) {
 
         rate *= 1.06;
+
         pitch *= 1.06;
 
     }
+
 
     if (
         /慢慢|輕輕|溫柔|放心|安心|休息/.test(text)
     ) {
 
         rate *= .94;
+
         pitch *= .96;
 
     }
+
 
     return {
 
         rate:
             Math.max(
                 .65,
-                Math.min(1.35,rate)
+                Math.min(
+                    1.35,
+                    rate
+                )
             ),
 
         pitch:
             Math.max(
                 .5,
-                Math.min(2,pitch)
+                Math.min(
+                    2,
+                    pitch
+                )
             )
 
     };
 
 }
 
+
 function stopSpeech() {
 
     speechToken++;
+
 
     try {
 
@@ -1577,45 +1845,64 @@ function stopSpeech() {
 
     catch(e) {}
 
-    speechPlaying = false;
+
+    speechPlaying =
+        false;
 
 }
+
 
 async function speak(text) {
 
     if (
+
         !text ||
+
         !('speechSynthesis' in window)
+
     ) {
 
         return;
 
     }
 
+
     const clean =
         removeEmoji(text);
 
-    if (!clean) return;
+
+    if (!clean)
+        return;
+
 
     stopSpeech();
+
 
     const token =
         speechToken;
 
-    speechPlaying = true;
+
+    speechPlaying =
+        true;
+
 
     const utterance =
         new SpeechSynthesisUtterance(
             clean
         );
 
+
     const emotion =
-        getSentenceEmotion(clean);
+        getSentenceEmotion(
+            clean
+        );
+
 
     if (selectedVoice) {
 
         utterance.voice =
             selectedVoice;
+
 
         utterance.lang =
             selectedVoice.lang ||
@@ -1630,71 +1917,98 @@ async function speak(text) {
 
     }
 
+
     utterance.rate =
         emotion.rate;
+
 
     utterance.pitch =
         emotion.pitch;
 
+
     utterance.volume =
         voiceSettings.volume;
 
-    await new Promise(resolve => {
 
-        let finished = false;
+    await new Promise(
+        resolve => {
 
-        let timer = null;
+            let finished =
+                false;
 
-        const finish = () => {
 
-            if (finished) return;
+            let timer =
+                null;
 
-            finished = true;
 
-            clearTimeout(timer);
+            const finish =
+                () => {
 
-            resolve();
+                    if (finished)
+                        return;
 
-        };
 
-        utterance.onend = finish;
-        utterance.onerror = finish;
+                    finished =
+                        true;
 
-        timer =
-            setTimeout(
-                finish,
-                Math.max(
-                    7000,
-                    clean.length *
-                    500 /
+
+                    clearTimeout(
+                        timer
+                    );
+
+
+                    resolve();
+
+                };
+
+
+            utterance.onend =
+                finish;
+
+
+            utterance.onerror =
+                finish;
+
+
+            timer =
+                setTimeout(
+                    finish,
                     Math.max(
-                        emotion.rate,
-                        .5
+                        7000,
+                        clean.length *
+                        500 /
+                        Math.max(
+                            emotion.rate,
+                            .5
+                        )
                     )
-                )
-            );
+                );
 
-        try {
 
-            speechSynthesis.speak(
-                utterance
-            );
+            try {
+
+                speechSynthesis.speak(
+                    utterance
+                );
+
+            }
+
+            catch(e) {
+
+                finish();
+
+            }
 
         }
+    );
 
-        catch(e) {
-
-            finish();
-
-        }
-
-    });
 
     if (
         token === speechToken
     ) {
 
-        speechPlaying = false;
+        speechPlaying =
+            false;
 
     }
 
@@ -1717,22 +2031,26 @@ async function connectBLE() {
 
     }
 
+
     try {
 
         showToast(
             '正在搜尋故事裝置……'
         );
 
+
         bleDevice =
             await navigator.bluetooth.requestDevice({
 
-                acceptAllDevices:true,
+                acceptAllDevices:
+                    true,
 
                 optionalServices:[
                     BLE_CONFIG.serviceUuid
                 ]
 
             });
+
 
         bleDevice.addEventListener(
             'gattserverdisconnected',
@@ -1741,13 +2059,18 @@ async function connectBLE() {
                 $('statusIndicator').className =
                     'w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
 
+
                 $('statusText').textContent =
                     '已斷線';
+
 
                 $('statusIcon').className =
                     'fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
 
-                bleCharacteristic = null;
+
+                bleCharacteristic =
+                    null;
+
 
                 showToast(
                     '故事裝置已斷線'
@@ -1756,36 +2079,48 @@ async function connectBLE() {
             }
         );
 
+
         const server =
             await bleDevice.gatt.connect();
+
 
         const service =
             await server.getPrimaryService(
                 BLE_CONFIG.serviceUuid
             );
 
+
         bleCharacteristic =
             await service.getCharacteristic(
                 BLE_CONFIG.characteristicUuid
             );
 
+
         await bleCharacteristic.startNotifications();
+
 
         bleCharacteristic.addEventListener(
             'characteristicvaluechanged',
             onBleEvent
         );
 
+
         $('statusIndicator').className =
             'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
+
 
         $('statusText').textContent =
             '已連線';
 
+
         $('statusIcon').className =
             'fa-solid fa-plug-circle-check text-emerald-400 text-xl';
 
-        await sendBLE('READY');
+
+        await sendBLE(
+            'READY'
+        );
+
 
         showToast(
             '藍牙連線成功！'
@@ -1797,6 +2132,7 @@ async function connectBLE() {
 
         console.error(e);
 
+
         showToast(
             '藍牙連線失敗：' +
             e.message
@@ -1806,22 +2142,34 @@ async function connectBLE() {
 
 }
 
+
 async function onBleEvent(event) {
 
     const value =
         new TextDecoder()
-        .decode(event.target.value)
+        .decode(
+            event.target.value
+        )
         .trim()
         .toUpperCase();
+
 
     console.log(
         '收到硬體訊號：',
         value
     );
 
+
     if (
-        value === 'SWITCH_MODE_SENIOR' ||
-        value === 'MODE_SENIOR'
+
+        value ===
+        'SWITCH_MODE_SENIOR'
+
+        ||
+
+        value ===
+        'MODE_SENIOR'
+
     ) {
 
         await switchMode(
@@ -1833,9 +2181,17 @@ async function onBleEvent(event) {
 
     }
 
+
     if (
-        value === 'SWITCH_MODE_CHILD' ||
-        value === 'MODE_CHILD'
+
+        value ===
+        'SWITCH_MODE_CHILD'
+
+        ||
+
+        value ===
+        'MODE_CHILD'
+
     ) {
 
         await switchMode(
@@ -1847,6 +2203,7 @@ async function onBleEvent(event) {
 
     }
 
+
     if (
         !waitingForAction ||
         busy
@@ -1856,7 +2213,10 @@ async function onBleEvent(event) {
 
     }
 
-    const now = Date.now();
+
+    const now =
+        Date.now();
+
 
     if (
         now - lastActionTime <
@@ -1867,18 +2227,23 @@ async function onBleEvent(event) {
 
     }
 
+
     const expected =
         String(
-            expectedAction || ''
+            expectedAction ||
+            ''
         )
         .trim()
         .toUpperCase();
+
 
     if (
         value === expected
     ) {
 
-        lastActionTime = now;
+        lastActionTime =
+            now;
+
 
         await handleAction(
             expected
@@ -1888,9 +2253,12 @@ async function onBleEvent(event) {
 
 }
 
+
 async function sendBLE(command) {
 
-    if (!bleCharacteristic) return;
+    if (!bleCharacteristic)
+        return;
+
 
     try {
 
@@ -1923,7 +2291,10 @@ function renderChildThemes() {
     const container =
         $('themeButtonsContainer');
 
-    container.innerHTML = '';
+
+    container.innerHTML =
+        '';
+
 
     CHILD_THEMES.forEach(
         (theme,index) => {
@@ -1932,6 +2303,7 @@ function renderChildThemes() {
                 document.createElement(
                     'button'
                 );
+
 
             button.className =
                 index === 0
@@ -1944,8 +2316,10 @@ function renderChildThemes() {
 
                 'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
 
+
             button.innerHTML =
                 `${theme.icon} ${theme.short}`;
+
 
             button.addEventListener(
                 'click',
@@ -1955,24 +2329,30 @@ function renderChildThemes() {
                         .querySelectorAll(
                             '.theme-btn'
                         )
-                        .forEach(b => {
+                        .forEach(
+                            b => {
 
-                            b.className =
-                                'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+                                b.className =
+                                    'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
 
-                        });
+                            }
+                        );
+
 
                     button.className =
                         'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold';
 
+
                     selectedTheme =
                         theme.name;
+
 
                     $('customTopicInput').value =
                         '';
 
                 }
             );
+
 
             container.appendChild(
                 button
@@ -1992,33 +2372,48 @@ function resetAdventure() {
 
     stopSpeech();
 
-    waitingForAction = false;
 
-    expectedAction = '';
+    waitingForAction =
+        false;
 
-    currentStory = '';
 
-    currentAction = '';
+    expectedAction =
+        '';
 
-    currentActionNarration = '';
 
-    currentActionPurpose = '';
+    currentStory =
+        '';
 
-    history = [];
 
-    storyMemory = null;
+    currentAction =
+        '';
 
-    adventureSeed = '';
 
-    currentRound = 0;
+    currentActionNarration =
+        '';
 
-    maxRound = 11;
 
-    sceneId = '';
+    currentActionPurpose =
+        '';
 
-    sceneSeed = '';
+
+    history =
+        [];
+
+
+    storyPlan =
+        null;
+
+
+    currentRound =
+        0;
+
+
+    maxRound =
+        11;
 
 }
+
 
 async function switchMode(
     mode,
@@ -2027,24 +2422,33 @@ async function switchMode(
 
     resetAdventure();
 
-    currentMode = mode;
+
+    currentMode =
+        mode;
+
 
     const senior =
         mode === 'senior';
+
 
     $('actionPrompt')
         .classList
         .add('hidden');
 
-    $('storyDisplay').innerHTML = '';
+
+    $('storyDisplay').innerHTML =
+        '';
+
 
     $('storyDisplay')
         .classList
         .add('hidden');
 
+
     $('welcomeMessage')
         .classList
         .remove('hidden');
+
 
     if (senior) {
 
@@ -2052,29 +2456,38 @@ async function switchMode(
             .classList
             .add('mode-senior');
 
+
         $('modeChildBtn').className =
             'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white';
+
 
         $('modeSeniorBtn').className =
             'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md';
 
+
         $('mainTitle').className =
             'text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300';
+
 
         $('badgeText').textContent =
             '長輩模式・全程坐姿，輕鬆健康動一動';
 
+
         $('welcomeIcon').textContent =
             '🌿✨';
+
 
         $('welcomeTitle').textContent =
             '準備好開始今日健康活動了嗎？';
 
+
         $('welcomeDesc').textContent =
             '請坐在有椅背的椅子上，AI 會依照劇情安排自然的活動。';
 
+
         $('themeButtonsContainer').innerHTML =
             `
+
             <div class="col-span-2 md:col-span-3 bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-4 text-center">
 
                 <div class="text-2xl mb-2">
@@ -2090,17 +2503,22 @@ async function switchMode(
                 </div>
 
             </div>
+
             `;
+
 
         $('seniorDifficultyPanel')
             .classList
             .remove('hidden');
 
+
         $('btnText').textContent =
             '開始健康活動';
 
+
         $('customTopicInput').placeholder =
             '長輩模式會依照難度安排坐姿活動';
+
 
         if (
             notifyDevice &&
@@ -2121,41 +2539,54 @@ async function switchMode(
             .classList
             .remove('mode-senior');
 
+
         $('modeChildBtn').className =
             'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md';
+
 
         $('modeSeniorBtn').className =
             'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white';
 
+
         $('mainTitle').className =
             'text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300';
+
 
         $('badgeText').textContent =
             '沈浸式互動繪本・故事會隨你的行動改變';
 
+
         $('welcomeIcon').textContent =
             '📖✨';
+
 
         $('welcomeTitle').textContent =
             '準備好開始冒險了嗎？';
 
+
         $('welcomeDesc').textContent =
             '選擇主題或自訂故事，AI 會建立完整冒險。';
+
 
         selectedTheme =
             '勇敢的小騎士與巨龍';
 
+
         renderChildThemes();
+
 
         $('seniorDifficultyPanel')
             .classList
             .add('hidden');
 
+
         $('btnText').textContent =
             '開始精彩故事冒險';
 
+
         $('customTopicInput').placeholder =
             '或者輸入你想聽的故事，例如：會飛的橘色章魚';
+
 
         if (
             notifyDevice &&
@@ -2174,76 +2605,868 @@ async function switchMode(
 
 
 /* =====================================================
-   Worker
+   ⭐ Gemini API
 ===================================================== */
 
-async function parseAIResponse(res) {
 
-    const raw =
-        await res.json();
+/*
+ * 將 Gemini 回傳的文字轉成 JSON。
+ *
+ * 有些模型會乖乖只回 JSON，
+ * 有些情況可能會包：
+ *
+ * ```json
+ * {...}
+ * ```
+ *
+ * 所以這裡會自動清掉 Markdown。
+ */
 
-    if (!res.ok) {
+function cleanGeminiJSON(text) {
 
+    if (!text)
         throw new Error(
-            raw.error ||
-            'Worker 回應失敗'
+            'Gemini 沒有回傳內容。'
+        );
+
+
+    let cleaned =
+        String(text)
+        .trim();
+
+
+    cleaned =
+        cleaned.replace(
+            /^```json\s*/i,
+            ''
+        );
+
+
+    cleaned =
+        cleaned.replace(
+            /^```\s*/i,
+            ''
+        );
+
+
+    cleaned =
+        cleaned.replace(
+            /\s*```$/i,
+            ''
+        );
+
+
+    /*
+     * 如果前後還有其他文字，
+     * 嘗試抓第一個 { 到最後一個 }。
+     */
+
+    const first =
+        cleaned.indexOf('{');
+
+
+    const last =
+        cleaned.lastIndexOf('}');
+
+
+    if (
+        first >= 0 &&
+        last > first
+    ) {
+
+        cleaned =
+            cleaned.slice(
+                first,
+                last + 1
+            );
+
+    }
+
+
+    try {
+
+        return JSON.parse(
+            cleaned
         );
 
     }
 
-    return raw;
+    catch(e) {
+
+        console.error(
+            'Gemini 原始內容：',
+            text
+        );
+
+
+        throw new Error(
+            'Gemini 回傳的故事格式無法讀取。'
+        );
+
+    }
 
 }
 
-function updateAdventureState(data) {
 
-    if (data.storyMemory) {
+/*
+ * Gemini 產生完整故事。
+ */
 
-        storyMemory =
-            data.storyMemory;
+async function generateGeminiStory(
+    topic
+) {
 
-    }
+    if (
+        !GEMINI_API_KEY ||
+        GEMINI_API_KEY.includes(
+            '把你的 Gemini API Key'
+        )
+    ) {
 
-    if (data.adventureSeed) {
-
-        adventureSeed =
-            data.adventureSeed;
-
-    }
-
-    if (data.round !== undefined) {
-
-        currentRound =
-            Number(data.round) || 0;
-
-    }
-
-    if (data.maxRound !== undefined) {
-
-        maxRound =
-            Number(data.maxRound) || 11;
+        throw new Error(
+            '還沒有設定 Gemini API Key。請到程式最上方貼上 API Key。'
+        );
 
     }
 
-    if (data.sceneId) {
 
-        sceneId =
-            data.sceneId;
+    const modeDescription =
+        currentMode === 'senior'
+
+            ?
+
+        `
+你正在設計「長輩模式」。
+所有活動都必須以坐在有椅背的椅子上為前提。
+不要要求跳躍、奔跑、快速彎腰或危險動作。
+互動應以：
+抬手、放手、左右輕微傾斜、保持手臂、左右閃避等安全坐姿活動為主。
+故事可以有冒險感，但活動本身必須溫和。
+難度：${selectedDifficulty}
+`
+
+            :
+
+        `
+你正在設計「兒童冒險模式」。
+可以有探索、追逐、解謎、戰鬥、逃跑、奇幻事件和角色互動。
+動作必須是簡單、明確、容易理解的體感動作。
+`;
+
+
+    /*
+     * ⭐⭐⭐ 這裡是整個故事引擎最重要的 Prompt。
+     *
+     * 特別禁止以前那種：
+     *
+     * 「突然掉下東西」
+     * 「神秘力量出現」
+     * 「機器人跑出來」
+     * 「叫玩家搖一搖」
+     *
+     * 然後每個主題都長一樣。
+     */
+
+    const prompt = `
+
+你是一位非常擅長兒童互動冒險、動畫電影與遊戲劇情設計的編劇。
+
+請為「聲動奇境 ✨ 智慧互動繪本」設計一個完整、連貫、具有電影感的 11 幕互動冒險。
+
+【故事主題】
+${topic}
+
+${modeDescription}
+
+【非常重要：故事品質】
+
+這不是 11 個互不相關的小故事。
+
+你必須先在腦中建立完整故事藍圖，再寫 11 幕。
+
+整個故事必須具有：
+
+1. 清楚的世界觀。
+2. 主角。
+3. 至少一名重要夥伴。
+4. 明確的核心目標。
+5. 真正的主要衝突。
+6. 一個可以逐步揭露的秘密或伏筆。
+7. 中段轉折。
+8. 危機逐漸升高。
+9. 最終決戰或最終挑戰。
+10. 第 11 幕完整收尾。
+11. 前面埋下的伏筆必須在後面有回收。
+12. 故事不能以「未完待續」結束。
+
+【禁止公式化開場】
+
+不要每次都使用：
+
+「突然有東西從天上掉下來」
+「神秘力量出現」
+「地面發光」
+「機器人突然跑來」
+「一道聲音告訴主角世界有危險」
+
+除非這個主題真的非常適合。
+
+每次故事的第一幕必須根據主題選擇不同的自然開場。
+
+例如可以從：
+
+- 一場比賽
+- 一個普通日常
+- 一封信
+- 一場節慶
+- 一個奇怪的傳聞
+- 一個正在進行的任務
+- 一場旅行
+- 一個角色正在尋找某件東西
+- 一個已經發生一半的事件
+- 一個看似平凡但逐漸不對勁的場景
+- 一段角色之間的對話
+- 一個重要物品被發現
+- 一場暴風雨
+- 一個錯誤的選擇
+- 一個倒數中的事件
+
+而且每次生成都應該盡量不同。
+
+【故事風格】
+
+希望有：
+
+- 動畫電影般的畫面感
+- 有記憶點的角色
+- 探索感
+- 世界觀
+- 角色之間自然對話
+- 緊張與放鬆交替
+- 冒險感
+- 中段轉折
+- 最後的高潮
+- 溫暖或令人印象深刻的結局
+
+可以有類似大型奇幻冒險遊戲的「探索 → 發現 → 危機 → 戰鬥 → 平靜 → 真相 → 最終挑戰」節奏，
+但不要抄襲任何現有作品、角色或台詞。
+
+【互動設計】
+
+每一幕最多安排一個主要體感動作。
+
+動作只能從：
+
+SWIPE_LEFT
+SWIPE_RIGHT
+JUMP
+SHAKE
+RUN
+ARM_UP
+ARM_DOWN
+TILT_LEFT
+TILT_RIGHT
+HOLD_UP
+
+選擇。
+
+動作必須自然融入劇情。
+
+不要為了塞動作而塞動作。
+
+例如：
+
+錯誤：
+「前面有東西，現在搖一搖。」
+
+好的：
+「藤蔓纏住了船舵，船身開始偏向礁石。主角必須迅速把纏住船舵的藤蔓甩開。」
+
+然後：
+action = SHAKE
+
+【動作必須影響故事】
+
+完成動作後，下一幕應該感覺像是：
+
+「因為剛才玩家成功完成了動作，所以故事發生了變化。」
+
+例如：
+
+玩家向左閃避
+→ 巨獸撞碎右邊的橋
+→ 主角因此被迫走另一條路
+→ 發現新的秘密。
+
+而不是：
+
+玩家做完動作
+→ 「很好！」
+→ 完全重新開始另一件事。
+
+【11 幕節奏】
+
+第 1 幕：
+建立世界與事件。
+必須讓人想知道接下來會發生什麼。
+
+第 2 幕：
+玩家開始探索。
+出現第一個線索。
+
+第 3 幕：
+主角與夥伴關係開始建立。
+出現新的問題。
+
+第 4 幕：
+第一次重大危機。
+
+第 5 幕：
+暫時脫離危險，探索或角色交流。
+可以埋下重要伏筆。
+
+第 6 幕：
+中段轉折。
+主角發現之前理解的事情可能是錯的。
+
+第 7 幕：
+新的目標。
+故事開始加速。
+
+第 8 幕：
+危機擴大。
+角色必須做出選擇。
+
+第 9 幕：
+接近最終地點或真相。
+回收部分前面的伏筆。
+
+第 10 幕：
+最終挑戰。
+情緒與危險達到最高點。
+
+第 11 幕：
+完整結局。
+解決主要問題。
+回收重要伏筆。
+讓角色的經歷產生意義。
+不要寫「冒險才正要開始」。
+不要寫「未完待續」。
+
+【故事長度】
+
+每一幕 story 約 120～220 個中文字。
+
+不要過短。
+
+但是也不要一次生成幾千字。
+
+【角色】
+
+至少建立：
+
+主角
+夥伴
+
+夥伴必須有自己的個性與反應。
+
+不要每一幕都只是工具人。
+
+【輸出格式】
+
+你只能輸出 JSON。
+
+不要 Markdown。
+
+不要 ```json。
+
+不要解釋。
+
+JSON 格式必須如下：
+
+{
+  "title": "故事名稱",
+  "openingStyle": "這次採用的開場方式",
+  "world": "世界觀簡介",
+  "mainGoal": "主角真正想完成的事情",
+  "hiddenTruth": "故事背後的秘密",
+  "characters": [
+    {
+      "name": "角色名字",
+      "role": "角色身份",
+      "personality": "個性"
+    }
+  ],
+  "chapters": [
+    {
+      "round": 1,
+      "title": "第一幕標題",
+      "story": "第一幕故事",
+      "action": "動作代碼",
+      "actionNarration": "玩家現在要做什麼",
+      "actionPurpose": "為什麼需要做這個動作",
+      "mood": "情緒",
+      "consequence": "完成動作後故事將如何受到影響"
+    }
+  ]
+}
+
+必須剛好有 11 個 chapters。
+
+round 必須是 1 到 11。
+
+第 11 幕的 action 必須是空字串。
+
+第 11 幕的 actionNarration 必須是空字串。
+
+第 11 幕必須是完整結局。
+
+不要讓第 1 幕就解決整個故事。
+
+不要讓所有幕都只是戰鬥。
+
+一定要有至少一幕比較平靜的探索或角色交流。
+
+故事主題「${topic}」必須非常明顯。
+`;
+
+    
+    const body = {
+
+        contents: [
+
+            {
+
+                role:
+                    'user',
+
+                parts: [
+
+                    {
+                        text:
+                            prompt
+                    }
+
+                ]
+
+            }
+
+        ],
+
+        generationConfig: {
+
+            temperature:
+                1.0,
+
+            responseMimeType:
+                'application/json',
+
+            responseSchema: {
+
+                type:
+                    'OBJECT',
+
+                properties: {
+
+                    title:{
+                        type:'STRING'
+                    },
+
+                    openingStyle:{
+                        type:'STRING'
+                    },
+
+                    world:{
+                        type:'STRING'
+                    },
+
+                    mainGoal:{
+                        type:'STRING'
+                    },
+
+                    hiddenTruth:{
+                        type:'STRING'
+                    },
+
+                    characters:{
+                        type:'ARRAY',
+
+                        items:{
+
+                            type:'OBJECT',
+
+                            properties:{
+
+                                name:{
+                                    type:'STRING'
+                                },
+
+                                role:{
+                                    type:'STRING'
+                                },
+
+                                personality:{
+                                    type:'STRING'
+                                }
+
+                            },
+
+                            required:[
+                                'name',
+                                'role',
+                                'personality'
+                            ]
+
+                        }
+
+                    },
+
+                    chapters:{
+
+                        type:'ARRAY',
+
+                        items:{
+
+                            type:'OBJECT',
+
+                            properties:{
+
+                                round:{
+                                    type:'INTEGER'
+                                },
+
+                                title:{
+                                    type:'STRING'
+                                },
+
+                                story:{
+                                    type:'STRING'
+                                },
+
+                                action:{
+                                    type:'STRING'
+                                },
+
+                                actionNarration:{
+                                    type:'STRING'
+                                },
+
+                                actionPurpose:{
+                                    type:'STRING'
+                                },
+
+                                mood:{
+                                    type:'STRING'
+                                },
+
+                                consequence:{
+                                    type:'STRING'
+                                }
+
+                            },
+
+                            required:[
+
+                                'round',
+
+                                'title',
+
+                                'story',
+
+                                'action',
+
+                                'actionNarration',
+
+                                'actionPurpose',
+
+                                'mood',
+
+                                'consequence'
+
+                            ]
+
+                        }
+
+                    }
+
+                },
+
+                required:[
+
+                    'title',
+
+                    'openingStyle',
+
+                    'world',
+
+                    'mainGoal',
+
+                    'hiddenTruth',
+
+                    'characters',
+
+                    'chapters'
+
+                ]
+
+            }
+
+        }
+
+    };
+
+
+    const response =
+        await fetch(
+            GEMINI_URL,
+            {
+
+                method:
+                    'POST',
+
+                headers:{
+
+                    'Content-Type':
+                        'application/json',
+
+                    'x-goog-api-key':
+                        GEMINI_API_KEY
+
+                },
+
+                body:
+                    JSON.stringify(body)
+
+            }
+        );
+
+
+    let data =
+        null;
+
+
+    try {
+
+        data =
+            await response.json();
 
     }
 
-    if (data.sceneSeed) {
+    catch(e) {
 
-        sceneSeed =
-            data.sceneSeed;
+        throw new Error(
+            'Gemini 回應不是有效 JSON。'
+        );
 
     }
+
+
+    if (!response.ok) {
+
+        console.error(
+            'Gemini API error:',
+            data
+        );
+
+
+        const message =
+            data?.error?.message
+            ||
+            'Gemini API 呼叫失敗。';
+
+
+        throw new Error(
+            message
+        );
+
+    }
+
+
+    const text =
+        data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+
+    if (!text) {
+
+        console.error(
+            'Gemini response:',
+            data
+        );
+
+
+        throw new Error(
+            'Gemini 沒有產生故事內容。'
+        );
+
+    }
+
+
+    const plan =
+        cleanGeminiJSON(
+            text
+        );
+
+
+    validateStoryPlan(
+        plan
+    );
+
+
+    return plan;
 
 }
 
 
 /* =====================================================
-   故事顯示
+   驗證故事
+===================================================== */
+
+function validateStoryPlan(
+    plan
+) {
+
+    if (
+        !plan ||
+        typeof plan !== 'object'
+    ) {
+
+        throw new Error(
+            '故事資料格式錯誤。'
+        );
+
+    }
+
+
+    if (
+        !Array.isArray(
+            plan.chapters
+        )
+    ) {
+
+        throw new Error(
+            'Gemini 沒有產生 11 幕故事。'
+        );
+
+    }
+
+
+    if (
+        plan.chapters.length !== 11
+    ) {
+
+        throw new Error(
+            `Gemini 產生了 ${plan.chapters.length} 幕，應該是 11 幕。`
+        );
+
+    }
+
+
+    for (
+        let i = 0;
+        i < 11;
+        i++
+    ) {
+
+        const chapter =
+            plan.chapters[i];
+
+
+        if (
+            Number(
+                chapter.round
+            ) !==
+            i + 1
+        ) {
+
+            throw new Error(
+                '故事幕數順序錯誤。'
+            );
+
+        }
+
+
+        if (
+            !chapter.story
+        ) {
+
+            throw new Error(
+                `第 ${i + 1} 幕沒有故事內容。`
+            );
+
+        }
+
+
+        if (
+            i < 10
+        ) {
+
+            if (
+                !VALID_ACTIONS.includes(
+                    String(
+                        chapter.action ||
+                        ''
+                    )
+                    .toUpperCase()
+                )
+            ) {
+
+                throw new Error(
+                    `第 ${i + 1} 幕的動作無效：` +
+                    chapter.action
+                );
+
+            }
+
+        }
+
+    }
+
+
+    /*
+     * 第 11 幕一定是結局，
+     * 不要求動作。
+     */
+
+    plan.chapters[10].action =
+        '';
+
+    plan.chapters[10].actionNarration =
+        '';
+
+}
+
+
+/* =====================================================
+   取得目前章節
+===================================================== */
+
+function getCurrentChapter() {
+
+    if (!storyPlan)
+        return null;
+
+
+    const index =
+        currentRound - 1;
+
+
+    if (
+        index < 0 ||
+        index >= storyPlan.chapters.length
+    ) {
+
+        return null;
+
+    }
+
+
+    return storyPlan.chapters[index];
+
+}
+
+
+/* =====================================================
+   顯示故事
 ===================================================== */
 
 function appendStory(
@@ -2254,14 +3477,22 @@ function appendStory(
     const display =
         $('storyDisplay');
 
+
     const box =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     box.className =
         'p-4 rounded-xl bg-slate-900/70 border border-slate-800';
 
+
     const titleEl =
-        document.createElement('div');
+        document.createElement(
+            'div'
+        );
+
 
     titleEl.className =
         currentMode === 'senior'
@@ -2274,23 +3505,39 @@ function appendStory(
 
         'text-xs font-bold text-purple-300 mb-2';
 
+
     titleEl.textContent =
         title;
 
-    box.appendChild(titleEl);
+
+    box.appendChild(
+        titleEl
+    );
+
 
     const p =
-        document.createElement('p');
+        document.createElement(
+            'p'
+        );
+
 
     p.className =
         'text-slate-200';
 
+
     p.textContent =
         text;
 
-    box.appendChild(p);
 
-    display.appendChild(box);
+    box.appendChild(
+        p
+    );
+
+
+    display.appendChild(
+        box
+    );
+
 
     $('storyScroll').scrollTop =
         $('storyScroll').scrollHeight;
@@ -2306,39 +3553,56 @@ function showAction(data) {
 
     const action =
         String(
-            data?.action || ''
+            data?.action ||
+            ''
         )
         .trim()
         .toUpperCase();
 
+
     if (!action) {
 
-        waitingForAction = false;
+        waitingForAction =
+            false;
 
-        expectedAction = '';
+
+        expectedAction =
+            '';
+
 
         $('actionPrompt')
             .classList
             .add('hidden');
 
+
         return;
 
     }
 
+
     currentAction =
         action;
 
+
     currentActionNarration =
+        data?.actionNarration
+        ||
         getActionNarration(data);
 
+
     currentActionPurpose =
-        data?.actionPurpose ||
+        data?.actionPurpose
+        ||
         '完成這個動作，故事就會繼續。';
+
 
     expectedAction =
         action;
 
-    waitingForAction = true;
+
+    waitingForAction =
+        true;
+
 
     $('actionPrompt')
         .classList
@@ -2347,14 +3611,19 @@ function showAction(data) {
             'action-locked'
         );
 
+
     $('actionPrompt')
         .classList
-        .add('action-ready');
+        .add(
+            'action-ready'
+        );
+
 
     $('promptText').textContent =
         getActionIcon(action) +
         ' ' +
         currentActionNarration;
+
 
     $('actionSubText').textContent =
         '💡 ' +
@@ -2362,15 +3631,22 @@ function showAction(data) {
 
 }
 
+
 function lockAction() {
 
     $('actionPrompt')
         .classList
-        .remove('hidden');
+        .remove(
+            'hidden'
+        );
+
 
     $('actionPrompt')
         .classList
-        .add('action-locked');
+        .add(
+            'action-locked'
+        );
+
 
     $('actionSubText').textContent =
         '🔒 故事正在播放，請先聽完劇情。';
@@ -2379,32 +3655,56 @@ function lockAction() {
 
 
 /* =====================================================
-   真正的結局判斷
+   結局
 ===================================================== */
 
 function showEnding(data) {
 
-    waitingForAction = false;
+    waitingForAction =
+        false;
 
-    expectedAction = '';
+
+    expectedAction =
+        '';
+
 
     $('actionPrompt')
         .classList
-        .remove('hidden');
+        .remove(
+            'hidden'
+        );
+
 
     $('actionPrompt')
         .classList
-        .remove('action-locked');
+        .remove(
+            'action-locked'
+        );
+
 
     $('promptText').textContent =
         currentMode === 'senior'
-            ? '🎉 活動圓滿完成！'
-            : '🎉 冒險圓滿結束！';
+
+            ?
+
+        '🎉 活動圓滿完成！'
+
+            :
+
+        '🎉 冒險圓滿結束！';
+
 
     $('actionSubText').textContent =
         currentMode === 'senior'
-            ? '今天的健康活動已完成。'
-            : '你完成了這場完整的冒險。';
+
+            ?
+
+        '今天的健康活動已完成。'
+
+            :
+
+        '你完成了這場完整的冒險。';
+
 
     showToast(
         currentMode === 'senior'
@@ -2416,10 +3716,109 @@ function showEnding(data) {
 
 
 /* =====================================================
-   執行動作
+   播放目前章節
 ===================================================== */
 
-async function handleAction(action) {
+async function playCurrentChapter() {
+
+    const chapter =
+        getCurrentChapter();
+
+
+    if (!chapter)
+        return;
+
+
+    currentStory =
+        chapter.story;
+
+
+    currentAction =
+        String(
+            chapter.action ||
+            ''
+        )
+        .trim()
+        .toUpperCase();
+
+
+    currentActionNarration =
+        chapter.actionNarration ||
+        getActionNarration(chapter);
+
+
+    currentActionPurpose =
+        chapter.actionPurpose ||
+        '完成這個動作，故事就會繼續。';
+
+
+    appendStory(
+
+        currentRound === 11
+
+            ?
+
+        '🎉 最終章'
+
+            :
+
+        `📖 第 ${currentRound} 幕・${chapter.title}`,
+
+        chapter.story
+
+    );
+
+
+    await speak(
+        chapter.story
+    );
+
+
+    if (
+        currentRound === 11
+    ) {
+
+        showEnding({
+            completed:true
+        });
+
+
+        return;
+
+    }
+
+
+    lockAction();
+
+
+    await speak(
+        currentActionNarration
+    );
+
+
+    showAction({
+
+        action:
+            currentAction,
+
+        actionNarration:
+            currentActionNarration,
+
+        actionPurpose:
+            currentActionPurpose
+
+    });
+
+}
+
+
+/* =====================================================
+   完成動作
+===================================================== */
+
+async function handleAction(
+    action
+) {
 
     if (
         !waitingForAction ||
@@ -2430,186 +3829,84 @@ async function handleAction(action) {
 
     }
 
-    waitingForAction = false;
 
-    busy = true;
+    waitingForAction =
+        false;
 
-    expectedAction = '';
+
+    busy =
+        true;
+
+
+    expectedAction =
+        '';
+
 
     $('actionSubText').textContent =
         '✨ 動作完成，故事正在回應你的行動……';
 
-    await sendBLE('ACTION_OK');
+
+    await sendBLE(
+        'ACTION_OK'
+    );
+
 
     stopSpeech();
 
+
     try {
 
-        const res =
-            await fetch(
-                WORKER_URL +
-                '/api/action',
-                {
-
-                    method:'POST',
-
-                    headers:{
-                        'Content-Type':
-                            'application/json'
-                    },
-
-                    body:JSON.stringify({
-
-                        mode:
-                            currentMode,
-
-                        topic:
-                            selectedTheme,
-
-                        difficulty:
-                            selectedDifficulty,
-
-                        action:
-                            action,
-
-                        actionSuccess:
-                            true,
-
-                        currentStory:
-                            currentStory,
-
-                        currentScene:
-                            currentStory,
-
-                        previousAction:
-                            action,
-
-                        storyMemory:
-                            storyMemory,
-
-                        adventureSeed:
-                            adventureSeed,
-
-                        round:
-                            currentRound,
-
-                        maxRound:
-                            maxRound,
-
-                        sceneId:
-                            sceneId,
-
-                        sceneSeed:
-                            sceneSeed,
-
-                        history:
-                            history
-
-                    })
-
-                }
-            );
-
-        const data =
-            await parseAIResponse(res);
-
-        updateAdventureState(data);
-
-        currentStory =
-            data.story || '';
-
-        if (data.story) {
-
-            appendStory(
-                data.completed
-                    ? '🎉 最終章'
-                    : '✨ 劇情繼續',
-                data.story
-            );
-
-            await speak(
-                data.story
-            );
-
-        }
-
         /*
-         * ⭐ 最重要的修正
+         * 這裡不再呼叫 API。
          *
-         * 只有 completed === true
-         * 才能顯示結局。
+         * Gemini 已經把完整 11 幕故事放在 storyPlan。
          *
-         * actionRequired === false
-         * 不再被當成結局。
+         * 玩家現在完成的動作，
+         * 就代表這一幕成功，
+         * 接著進入下一幕。
          */
 
-        if (data.completed === true) {
+        const oldRound =
+            currentRound;
 
-            showEnding(data);
 
-        }
+        const oldChapter =
+            getCurrentChapter();
 
-        else if (
-            data.actionRequired === true &&
-            data.action
-        ) {
-
-            lockAction();
-
-            const actionText =
-                getActionNarration(data);
-
-            await speak(
-                actionText
-            );
-
-            showAction(data);
-
-        }
-
-        else {
-
-            /*
-             * 如果 AI 這一幕沒有動作，
-             * 不結束故事。
-             *
-             * Worker 正常情況下會提供 action，
-             * 這裡只是安全 fallback。
-             */
-
-            showToast(
-                '✨ 劇情繼續……'
-            );
-
-            await continueWithoutAction(
-                data
-            );
-
-        }
 
         history.push({
 
-            role:'assistant',
-
-            story:
-                data.story,
-
-            action:
-                data.action || '',
-
-            actionNarration:
-                getActionNarration(data),
-
-            actionPurpose:
-                data.actionPurpose || '',
+            role:
+                'player',
 
             round:
-                data.round,
+                oldRound,
 
-            completed:
-                data.completed === true
+            action:
+                action,
+
+            consequence:
+                oldChapter?.consequence ||
+                ''
 
         });
+
+
+        currentRound++;
+
+
+        if (
+            currentRound >
+            maxRound
+        ) {
+
+            currentRound =
+                maxRound;
+
+        }
+
+
+        await playCurrentChapter();
 
     }
 
@@ -2617,10 +3914,12 @@ async function handleAction(action) {
 
         console.error(e);
 
+
         showToast(
-            '故事連線失敗：' +
+            '故事播放失敗：' +
             e.message
         );
+
 
         showAction({
 
@@ -2636,43 +3935,10 @@ async function handleAction(action) {
 
     finally {
 
-        busy = false;
+        busy =
+            false;
 
     }
-
-}
-
-
-/* =====================================================
-   無動作場景
-===================================================== */
-
-async function continueWithoutAction(data) {
-
-    if (data.completed === true) {
-
-        showEnding(data);
-
-        return;
-
-    }
-
-    /*
-     * 這裡不把場景當結局。
-     *
-     * Worker 正常會在下一個需要互動的場景
-     * 回傳 action。
-     */
-
-    $('actionPrompt')
-        .classList
-        .remove('hidden');
-
-    $('promptText').textContent =
-        '📖 劇情正在推進……';
-
-    $('actionSubText').textContent =
-        '請稍等，下一個互動即將出現。';
 
 }
 
@@ -2683,16 +3949,20 @@ async function continueWithoutAction(data) {
 
 async function generateStory() {
 
-    if (busy) return;
+    if (busy)
+        return;
+
 
     const custom =
         $('customTopicInput')
         .value
         .trim();
 
+
     const topic =
         custom ||
         selectedTheme;
+
 
     if (!topic) {
 
@@ -2700,171 +3970,154 @@ async function generateStory() {
             '請先選擇或輸入主題。'
         );
 
+
         return;
 
     }
 
+
     resetAdventure();
+
 
     primeSpeech();
 
-    busy = true;
+
+    busy =
+        true;
+
 
     const btn =
         $('btnGenerate');
 
-    btn.disabled = true;
+
+    btn.disabled =
+        true;
+
 
     $('btnText').textContent =
         currentMode === 'senior'
-            ? 'AI 正在安排活動……'
-            : 'AI 正在創造冒險……';
+
+            ?
+
+        'AI 正在安排完整活動……'
+
+            :
+
+        'AI 正在創造完整冒險……';
+
 
     $('btnIcon').className =
         'fa-solid fa-spinner animate-spin';
 
+
     try {
 
-        const res =
-            await fetch(
-                WORKER_URL +
-                '/api/story',
-                {
+        showToast(
+            '🪄 Gemini 正在設計完整 11 幕冒險……'
+        );
 
-                    method:'POST',
 
-                    headers:{
-                        'Content-Type':
-                            'application/json'
-                    },
+        /*
+         * ⭐⭐⭐
+         * 只呼叫 Gemini 一次。
+         */
 
-                    body:JSON.stringify({
-
-                        mode:
-                            currentMode,
-
-                        topic:
-                            topic,
-
-                        difficulty:
-                            selectedDifficulty,
-
-                        newAdventure:true,
-
-                        storyMemory:null,
-
-                        adventureSeed:'',
-
-                        round:0
-
-                    })
-
-                }
+        storyPlan =
+            await generateGeminiStory(
+                topic
             );
 
-        const data =
-            await parseAIResponse(res);
 
-        updateAdventureState(data);
+        /*
+         * 初始化遊戲狀態。
+         */
 
-        $('welcomeMessage')
-            .classList
-            .add('hidden');
+        currentRound =
+            1;
 
-        $('storyDisplay').innerHTML = '';
 
-        $('storyDisplay')
-            .classList
-            .remove('hidden');
+        maxRound =
+            11;
 
-        currentStory =
-            data.story || '';
 
         history = [
 
             {
-                role:'user',
-                topic:topic
-            },
 
-            {
-                role:'assistant',
+                role:
+                    'user',
 
-                story:
-                    currentStory,
+                topic:
+                    topic,
 
-                action:
-                    data.action || '',
+                mode:
+                    currentMode,
 
-                actionNarration:
-                    getActionNarration(data),
-
-                actionPurpose:
-                    data.actionPurpose || '',
-
-                round:
-                    data.round
+                difficulty:
+                    selectedDifficulty
 
             }
 
         ];
 
-        appendStory(
-            currentMode === 'senior'
-                ? '🌿 活動開始'
-                : '📖 第一章',
-            currentStory
-        );
 
-        await speak(
-            currentStory
-        );
+        $('welcomeMessage')
+            .classList
+            .add('hidden');
+
+
+        $('storyDisplay').innerHTML =
+            '';
+
+
+        $('storyDisplay')
+            .classList
+            .remove(
+                'hidden'
+            );
+
 
         /*
-         * ⭐⭐⭐ 最重要的修正 ⭐⭐⭐
-         *
-         * 不再使用：
-         *
-         *     data.done || !data.action
-         *
-         * 因為 actionRequired=false
-         * 不代表故事結束。
+         * 顯示故事標題。
          */
 
-        if (data.completed === true) {
-
-            showEnding(data);
-
-        }
-
-        else if (
-            data.actionRequired === true &&
-            data.action
+        if (
+            storyPlan.title
         ) {
 
-            lockAction();
+            appendStory(
+                '✨ ' +
+                storyPlan.title,
 
-            const actionText =
-                getActionNarration(data);
+                storyPlan.world
+                    ?
+
+                `故事即將開始。\n\n${storyPlan.world}`
+
+                    :
+
+                '故事即將開始……'
+            );
+
 
             await speak(
-                actionText
-            );
-
-            showAction(data);
-
-        }
-
-        else {
-
-            await continueWithoutAction(
-                data
+                storyPlan.world ||
+                storyPlan.title
             );
 
         }
+
+
+        /*
+         * 播放第一幕。
+         */
+
+        await playCurrentChapter();
+
 
         $('btnSpeak').disabled =
             false;
+
 
         if (bleCharacteristic) {
 
@@ -2876,18 +4129,44 @@ async function generateStory() {
 
         }
 
+
         showToast(
-            '✨ 新冒險建立完成！'
+            '✨ 完整 11 幕冒險建立完成！'
         );
 
     }
 
     catch(e) {
 
-        console.error(e);
+        console.error(
+            'Gemini 故事生成失敗：',
+            e
+        );
+
 
         showToast(
             '故事生成失敗：' +
+            e.message
+        );
+
+
+        /*
+         * 讓使用者比較容易知道問題。
+         */
+
+        $('storyDisplay').innerHTML =
+            '';
+
+
+        $('storyDisplay')
+            .classList
+            .remove(
+                'hidden'
+            );
+
+
+        appendStory(
+            '⚠️ Gemini 暫時無法產生故事',
             e.message
         );
 
@@ -2900,16 +4179,22 @@ async function generateStory() {
                 ? '開始健康活動'
                 : '開始精彩故事冒險';
 
+
         $('btnIcon').className =
             'fa-solid fa-wand-magic-sparkles';
 
-        btn.disabled = false;
 
-        busy = false;
+        btn.disabled =
+            false;
+
+
+        busy =
+            false;
 
     }
 
 }
+
 
 function primeSpeech() {
 
@@ -2938,13 +4223,18 @@ document.addEventListener(
     'DOMContentLoaded',
     () => {
 
+
         renderChildThemes();
+
 
         loadVoiceSettings();
 
+
         updateVoiceSettingUI();
 
+
         primeSpeech();
+
 
         if (
             'speechSynthesis' in window
@@ -2957,7 +4247,9 @@ document.addEventListener(
 
         }
 
+
         loadVoices();
+
 
         $('btnConnect')
             .addEventListener(
@@ -2965,26 +4257,32 @@ document.addEventListener(
                 connectBLE
             );
 
+
         $('btnGenerate')
             .addEventListener(
                 'click',
                 generateStory
             );
 
+
         $('btnManualAction')
             .addEventListener(
                 'click',
                 async () => {
 
-                    if (!waitingForAction) {
+                    if (
+                        !waitingForAction
+                    ) {
 
                         showToast(
                             '🔒 目前沒有等待中的動作。'
                         );
 
+
                         return;
 
                     }
+
 
                     await handleAction(
                         expectedAction
@@ -2992,6 +4290,7 @@ document.addEventListener(
 
                 }
             );
+
 
         $('customTopicInput')
             .addEventListener(
@@ -3003,55 +4302,68 @@ document.addEventListener(
                         .value
                         .trim();
 
-                    if (!value) return;
+
+                    if (!value)
+                        return;
+
 
                     document
                         .querySelectorAll(
                             '.theme-btn'
                         )
-                        .forEach(b => {
+                        .forEach(
+                            b => {
 
-                            b.className =
-                                'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+                                b.className =
+                                    'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
 
-                        });
+                            }
+                        );
 
                 }
             );
+
 
         document
             .querySelectorAll(
                 '.difficulty-btn'
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    'click',
-                    () => {
+                    button.addEventListener(
+                        'click',
+                        () => {
 
-                        document
-                            .querySelectorAll(
-                                '.difficulty-btn'
-                            )
-                            .forEach(b => {
+                            document
+                                .querySelectorAll(
+                                    '.difficulty-btn'
+                                )
+                                .forEach(
+                                    b => {
 
-                                b.classList.remove(
-                                    'active'
+                                        b.classList.remove(
+                                            'active'
+                                        );
+
+                                    }
                                 );
 
-                            });
 
-                        button.classList.add(
-                            'active'
-                        );
+                            button.classList.add(
+                                'active'
+                            );
 
-                        selectedDifficulty =
-                            button.dataset.difficulty;
 
-                    }
-                );
+                            selectedDifficulty =
+                                button.dataset.difficulty;
 
-            });
+                        }
+                    );
+
+                }
+            );
+
 
         $('btnVoiceSettings')
             .addEventListener(
@@ -3064,10 +4376,13 @@ document.addEventListener(
 
                     $('voiceModal')
                         .classList
-                        .remove('hidden');
+                        .remove(
+                            'hidden'
+                        );
 
                 }
             );
+
 
         $('btnCloseVoiceSettings')
             .addEventListener(
@@ -3076,10 +4391,13 @@ document.addEventListener(
 
                     $('voiceModal')
                         .classList
-                        .add('hidden');
+                        .add(
+                            'hidden'
+                        );
 
                 }
             );
+
 
         $('voiceModal')
             .addEventListener(
@@ -3093,12 +4411,15 @@ document.addEventListener(
 
                         $('voiceModal')
                             .classList
-                            .add('hidden');
+                            .add(
+                                'hidden'
+                            );
 
                     }
 
                 }
             );
+
 
         $('voiceSelect')
             .addEventListener(
@@ -3108,37 +4429,49 @@ document.addEventListener(
                     const value =
                         $('voiceSelect').value;
 
+
                     if (
-                        value === '__AUTO__'
+                        value ===
+                        '__AUTO__'
                     ) {
 
-                        selectedVoice = null;
+                        selectedVoice =
+                            null;
+
 
                         voiceSettings.voiceURI =
                             '';
 
+
                         saveVoiceSettings();
+
 
                         return;
 
                     }
+
 
                     selectedVoice =
                         availableVoices.find(
                             voice =>
                                 voice.voiceURI ===
                                 value
-                        ) || null;
+                        )
+                        ||
+                        null;
+
 
                     voiceSettings.voiceURI =
                         selectedVoice
                             ? value
                             : '';
 
+
                     saveVoiceSettings();
 
                 }
             );
+
 
         $('rateRange')
             .addEventListener(
@@ -3150,14 +4483,17 @@ document.addEventListener(
                             $('rateRange').value
                         );
 
+
                     $('rateValue').textContent =
                         voiceSettings.rate
                         .toFixed(2);
+
 
                     saveVoiceSettings();
 
                 }
             );
+
 
         $('pitchRange')
             .addEventListener(
@@ -3169,14 +4505,17 @@ document.addEventListener(
                             $('pitchRange').value
                         );
 
+
                     $('pitchValue').textContent =
                         voiceSettings.pitch
                         .toFixed(2);
+
 
                     saveVoiceSettings();
 
                 }
             );
+
 
         $('volumeRange')
             .addEventListener(
@@ -3188,47 +4527,57 @@ document.addEventListener(
                             $('volumeRange').value
                         );
 
+
                     $('volumeValue').textContent =
                         voiceSettings.volume
                         .toFixed(2);
+
 
                     saveVoiceSettings();
 
                 }
             );
 
+
         document
             .querySelectorAll(
                 '.voice-emotion'
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    'click',
-                    () => {
+                    button.addEventListener(
+                        'click',
+                        () => {
 
-                        voiceSettings.emotion =
-                            button.dataset.emotion;
+                            voiceSettings.emotion =
+                                button.dataset.emotion;
 
-                        document
-                            .querySelectorAll(
-                                '.voice-emotion'
-                            )
-                            .forEach(b => {
 
-                                b.classList.toggle(
-                                    'active',
-                                    b === button
+                            document
+                                .querySelectorAll(
+                                    '.voice-emotion'
+                                )
+                                .forEach(
+                                    b => {
+
+                                        b.classList.toggle(
+                                            'active',
+                                            b === button
+                                        );
+
+                                    }
                                 );
 
-                            });
 
-                        saveVoiceSettings();
+                            saveVoiceSettings();
 
-                    }
-                );
+                        }
+                    );
 
-            });
+                }
+            );
+
 
         $('btnVoiceTest')
             .addEventListener(
@@ -3246,10 +4595,14 @@ document.addEventListener(
 
                         '等等！前面好像出現了什麼……我們一起看看接下來會發生什麼。';
 
-                    await speak(text);
+
+                    await speak(
+                        text
+                    );
 
                 }
             );
+
 
         $('btnVoiceReset')
             .addEventListener(
@@ -3258,24 +4611,36 @@ document.addEventListener(
 
                     stopSpeech();
 
+
                     voiceSettings = {
 
                         rate:1,
+
                         pitch:1,
+
                         volume:1,
+
                         emotion:'natural',
+
                         voiceURI:'',
+
                         version:5
 
                     };
 
-                    selectedVoice = null;
+
+                    selectedVoice =
+                        null;
+
 
                     saveVoiceSettings();
 
+
                     loadVoices();
 
+
                     updateVoiceSettingUI();
+
 
                     showToast(
                         '🎙️ 已恢復預設聲音設定'
@@ -3284,12 +4649,15 @@ document.addEventListener(
                 }
             );
 
+
         $('btnSpeak')
             .addEventListener(
                 'click',
                 async () => {
 
-                    if (speechPlaying) {
+                    if (
+                        speechPlaying
+                    ) {
 
                         stopSpeech();
 
@@ -3297,19 +4665,28 @@ document.addEventListener(
 
                     }
 
-                    if (!currentStory) return;
+
+                    if (
+                        !currentStory
+                    )
+                        return;
+
 
                     const oldAction =
                         expectedAction;
 
+
                     const oldPurpose =
                         currentActionPurpose;
 
+
                     lockAction();
+
 
                     await speak(
                         currentStory
                     );
+
 
                     if (oldAction) {
 
@@ -3324,9 +4701,11 @@ document.addEventListener(
 
                             });
 
+
                         await speak(
                             actionText
                         );
+
 
                         showAction({
 
@@ -3349,4 +4728,5 @@ document.addEventListener(
 </script>
 
 </body>
+
 </html>
