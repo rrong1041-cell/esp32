@@ -528,6 +528,8 @@ class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 round
 <button id="btnCalibrate" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">
   🎯 重新校正姿勢
 </button>
+<button id="btnLearnHold" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">🙌 設定撐住姿勢</button>
+<button id="btnInvertDirections" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">↔️ 反轉左右方向</button>
 <p id="controllerHint" class="text-xs text-slate-400 mt-2 leading-relaxed">固定好腕部裝置，以舒適中立姿勢保持不動 2 秒，再開始體感故事。</p>
 
 
@@ -652,7 +654,7 @@ class="text-sm text-slate-300 mt-2">
 📚 選擇故事主題
 </div>
 
-<div class="text-xs text-slate-500">
+<div id="themeCount" class="text-xs text-slate-500">
 18 個冒險世界
 </div>
 
@@ -700,10 +702,12 @@ class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 p
 <input
 type="text"
 id="customTopicInput"
+maxlength="200"
 placeholder="或者輸入你想聽的故事，例如：會飛的橘色章魚"
-class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
 
 </div>
+<p id="selectedTopicLabel" class="text-xs text-purple-300 mt-2 break-words" aria-live="polite"></p>
 
 </div>
 
@@ -962,7 +966,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 11.2 — 持續動作與跳躍計次
+   FRONTEND 12.0 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1074,6 +1078,25 @@ let holdLastSignalAt = null;
 let holdTimer = null;
 let holdSource = '';
 let manualHolding = false;
+let controllerLearning = false;
+let controllerSetupTimer = null;
+let connectionPending = false;
+let generationController = null;
+let finishSpeech = null;
+const modeTopics = {child:{theme:'勇敢的小騎士與巨龍',custom:''},senior:{theme:'午後健康活動',custom:''}};
+function stopControllerSetup() {
+    controllerLearning=false;clearTimeout(controllerSetupTimer);controllerSetupTimer=null;
+}
+function startControllerSetup(message, timeoutMs = 0) {
+    stopControllerSetup();controllerLearning=true;stopHold();renderActionProgress();
+    $('controllerHint').textContent=message;
+    if(timeoutMs)controllerSetupTimer=setTimeout(async()=>{
+        if(!controllerLearning)return;
+        stopControllerSetup();await sendBLE('CANCEL_HOLD');
+        $('controllerHint').textContent='設定未收到完成回覆，請確認裝置程式已更新，再重新設定姿勢。';
+        showToast($('controllerHint').textContent);await syncControllerAction();
+    },timeoutMs);
+}
 let actTimer = null;
 let adventureVersion = 0;
 let actVersion = 0;
@@ -1922,7 +1945,7 @@ function getSentenceEmotion(text) {
         ) *
         profile.pitch;
 
-    if (/！!/.test(text)) {
+    if (/[！!]/.test(text)) {
 
         rate *= 1.04;
 
@@ -1984,6 +2007,7 @@ function getSentenceEmotion(text) {
 function stopSpeech() {
 
     speechToken++;
+    if (finishSpeech) { const finish=finishSpeech;finishSpeech=null;finish(); }
 
     try {
 
@@ -2078,13 +2102,14 @@ async function speak(text) {
                     finished =
                         true;
 
-                    clearTimeout(
-                        timer
-                    );
+                    clearTimeout(timer);
+                    if(finishSpeech === finish)finishSpeech=null;
 
                     resolve();
 
                 };
+
+            finishSpeech=finish;
 
             utterance.onend =
                 finish;
@@ -2095,7 +2120,10 @@ async function speak(text) {
             timer =
                 setTimeout(
 
-                    finish,
+                    () => {
+                        if(token===speechToken) {try {speechSynthesis.cancel();}catch(_) {}}
+                        finish();
+                    },
 
                     Math.max(
 
@@ -2146,123 +2174,53 @@ async function speak(text) {
    BLE
 ===================================================== */
 
+function clearBLEConnection() {
+    if(bleCharacteristic)bleCharacteristic.removeEventListener?.('characteristicvaluechanged',onBleEvent);
+    bleCharacteristic=null;bleWriteQueue=Promise.resolve();stopControllerSetup();
+    for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections'])$(id).disabled=true;
+    $('statusIndicator').className='w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
+    $('statusText').textContent='已斷線';
+    $('statusIcon').className='fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
+    if(holdSource==='ble'){stopHold();renderActionProgress();}
+}
 async function connectBLE() {
-
-    if (!navigator.bluetooth) {
-
-        showToast(
-            '此瀏覽器不支援 Web Bluetooth。'
-        );
-
-        return;
-
-    }
-
+    if(connectionPending)return;
+    if(!navigator.bluetooth){showToast('此瀏覽器不支援裝置藍牙，請使用支援 Web Bluetooth 的瀏覽器。');return;}
+    if(bleDevice?.gatt?.connected && bleCharacteristic){showToast('裝置已連線。');return;}
+    connectionPending=true;$('btnConnect').disabled=true;
+    let selectedDevice=null;
     try {
-
-        showToast(
-            '正在搜尋故事裝置……'
-        );
-
-        bleDevice =
-            await navigator.bluetooth.requestDevice({
-
-                acceptAllDevices:true,
-
-                optionalServices:[
-                    BLE_CONFIG.serviceUuid
-                ]
-
-            });
-
-        bleDevice.addEventListener(
-
-            'gattserverdisconnected',
-
-            () => {
-
-                $('statusIndicator').className =
-                    'w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
-
-                $('statusText').textContent =
-                    '已斷線';
-
-                $('statusIcon').className =
-                    'fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
-
-                bleCharacteristic =
-                    null;
-                bleWriteQueue = Promise.resolve();
-                $('btnCalibrate').disabled = true;
-
-                if (holdSource === 'ble') { stopHold(); renderActionProgress(); }
-                showToast(
-                    '故事裝置已斷線'
-                );
-
-            }
-
-        );
-
-        const server =
-            await bleDevice.gatt.connect();
-
-        const service =
-            await server.getPrimaryService(
-                BLE_CONFIG.serviceUuid
-            );
-
-        bleCharacteristic =
-            await service.getCharacteristic(
-                BLE_CONFIG.characteristicUuid
-            );
-
-        bleWriteQueue = Promise.resolve();
-        await bleCharacteristic.startNotifications();
-
-        bleCharacteristic.addEventListener(
-            'characteristicvaluechanged',
-            onBleEvent
-        );
-
-        $('statusIndicator').className =
-            'w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
-
-        $('statusText').textContent =
-            '已連線';
-
-        $('statusIcon').className =
-            'fa-solid fa-plug-circle-check text-emerald-400 text-xl';
-
-        await sendBLE(
-            'READY'
-        );
-
-        $('btnCalibrate').disabled = false;
-        await sendBLE(currentMode === 'senior' ? 'MODE_SENIOR' : 'MODE_CHILD');
-        await syncControllerAction();
-
-        showToast(
-            '藍牙連線成功！'
-        );
-
-    }
-
-    catch(e) {
-
-        console.error(e);
-
-        showToast(
-            '藍牙連線失敗：' +
-            e.message
-        );
-
-    }
-
+        showToast('正在搜尋故事裝置……');
+        selectedDevice=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_CONFIG.serviceUuid]});
+        bleDevice=selectedDevice;
+        const disconnect=()=>{
+            if(bleDevice!==selectedDevice)return;
+            selectedDevice.removeEventListener('gattserverdisconnected',disconnect);
+            clearBLEConnection();showToast('故事裝置已斷線，可重新連接。');
+        };
+        selectedDevice.addEventListener('gattserverdisconnected',disconnect);
+        const server=await selectedDevice.gatt.connect();
+        const service=await server.getPrimaryService(BLE_CONFIG.serviceUuid);
+        const characteristic=await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
+        bleCharacteristic=characteristic;bleWriteQueue=Promise.resolve();
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged',onBleEvent);
+        $('statusIndicator').className='w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
+        $('statusText').textContent='已連線';
+        $('statusIcon').className='fa-solid fa-plug-circle-check text-emerald-400 text-xl';
+        for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections'])$(id).disabled=false;
+        await sendBLE(currentMode==='senior'?'MODE_SENIOR':'MODE_CHILD');
+        await sendBLE('READY');await syncControllerAction();
+        showToast('藍牙連線成功！');
+    } catch(e) {
+        if(selectedDevice?.gatt?.connected)selectedDevice.gatt.disconnect();
+        clearBLEConnection();console.error(e);
+        showToast(e.name==='NotFoundError'?'已取消裝置選擇。':'藍牙連線失敗：'+e.message);
+    } finally {connectionPending=false;$('btnConnect').disabled=false;}
 }
 
-
 async function onBleEvent(event) {
+    if(event.target?.uuid && event.target !== bleCharacteristic)return;
 
     const value =
         new TextDecoder()
@@ -2279,24 +2237,43 @@ async function onBleEvent(event) {
 
 
     // 狀態通知不是運動；不讓 READY / START 打斷正在撐住的計時。
-    if (value === 'READY') return;
+    if (value === 'READY') {stopControllerSetup();await syncControllerAction();return;}
     if (value === 'CALIBRATING') {
-        stopHold(); renderActionProgress();
-        $('controllerHint').textContent = '正在校正，請保持舒適中立姿勢不動 2 秒。';
+        startControllerSetup('正在校正，請保持舒適中立姿勢不動 2 秒。');
         showToast('🎯 正在校正姿勢，請保持不動。');
         return;
     }
     if (value === 'CALIBRATED') {
+        stopControllerSetup();
         stopHold(); renderActionProgress();
         $('controllerHint').textContent = '姿勢校正完成。每次動作回到中立，再做下一次。';
         await syncControllerAction();
         showToast('🎯 姿勢校正完成！');
         return;
     }
+    if (value === 'HOLDPOSE_WAIT') {
+        startControllerSetup('請舉起手臂並改變腕部傾角，保持不動一秒；八秒內完成。',10000);return;
+    }
+    if (value === 'HOLDPOSE_SAVED' || value === 'HOLDPOSE_FAILED') {
+        stopControllerSetup();stopHold();renderActionProgress();
+        $('controllerHint').textContent=value === 'HOLDPOSE_SAVED'
+            ? '撐住姿勢已記住，故事提示時做同樣姿勢，放回中立就停止。'
+            : '未記錄到姿勢。先校正中立，再抬手並改變腕部傾角後重試。';
+        showToast($('controllerHint').textContent);await syncControllerAction();return;
+    }
+    if (value === 'LR_INVERTED' || value === 'LR_DEFAULT') {
+        stopHold();renderActionProgress();
+        $('controllerHint').textContent='左右方向已切換，回到中間，再依故事提示試一次。';
+        showToast('左右方向已切換。');await syncControllerAction();return;
+    }
     if (value === 'HOLD_END') {
         if (holdSource === 'ble') { stopHold(); renderActionProgress(); }
         return;
     }
+    if (value === 'SENSOR_ERROR') {
+        startControllerSetup('裝置感測器讀取失敗，請檢查接線或重新啟動裝置。');return;
+    }
+    if(value==='SENSOR_READY'){stopControllerSetup();await syncControllerAction();return;}
     if (value === 'START') {
         if (!busy && !acts.length) await generateStory();
         else showToast('故事已開始，請依目前提示做動作。');
@@ -2369,7 +2346,7 @@ async function sendBLE(command) {
 }
 
 async function syncControllerAction() {
-    await sendBLE(waitingForAction && !busy && expectedAction
+    await sendBLE(!controllerLearning && waitingForAction && !busy && expectedAction
         ? (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + expectedAction : 'PAUSE');
 }
 
@@ -2377,6 +2354,11 @@ async function syncControllerAction() {
    主題 UI
 ===================================================== */
 
+function updateSelectedTopicLabel() {
+    const topic=$('customTopicInput').value.trim() || selectedTheme;
+    $('selectedTopicLabel').textContent='本次主題：'+topic+' · 每次生成全新情節';
+    $('themeCount').textContent=currentMode==='senior'?'坐姿活動主題':CHILD_THEMES.length+' 個冒險世界';
+}
 function renderChildThemes() {
 
     const container =
@@ -2393,7 +2375,7 @@ function renderChildThemes() {
                 );
 
             button.className =
-                index === 0
+                theme.name === selectedTheme && !$('customTopicInput').value.trim()
 
                     ?
 
@@ -2429,6 +2411,7 @@ function renderChildThemes() {
 
                     $('customTopicInput').value =
                         '';
+                    updateSelectedTopicLabel();
 
                 }
             );
@@ -2448,11 +2431,16 @@ function renderChildThemes() {
 ===================================================== */
 
 function resetAdventure() {
+    if(generationController){generationController.abort();generationController=null;}
     void sendBLE('PAUSE');
     adventureVersion++;
     actVersion++;
     actionStepVersion++;
     actionSteps = [];
+    $('actionPrompt').classList.add('hidden');
+    $('actionSequencePanel').classList.add('hidden');
+    $('storyDisplay').replaceChildren();$('storyDisplay').classList.add('hidden');
+    $('welcomeMessage').classList.remove('hidden');
     currentActionStepIndex = 0;
     currentStepStory = '';
     replayInProgress = false;
@@ -2530,7 +2518,10 @@ async function switchMode(
     notifyDevice = true
 ) {
 
+    const previous=modeTopics[currentMode];
+    if(previous){previous.theme=selectedTheme;previous.custom=$('customTopicInput').value || '';}
     resetAdventure();
+    $('customTopicInput').value=modeTopics[mode]?.custom || '';
 
     currentMode =
         mode;
@@ -2654,8 +2645,7 @@ async function switchMode(
         $('welcomeDesc').textContent =
             '選擇主題或自訂故事，AI 會建立完整冒險。';
 
-        selectedTheme =
-            '勇敢的小騎士與巨龍';
+        selectedTheme = modeTopics.child.theme;
 
         renderChildThemes();
 
@@ -2683,6 +2673,7 @@ async function switchMode(
 
     }
 
+    updateSelectedTopicLabel();
 }
 
 
@@ -3189,7 +3180,8 @@ async function showCurrentAct(
                 );
 
             },
-            900
+            speakIt && !('speechSynthesis' in window)
+                ? Math.min(20000,Math.max(4000,currentStory.length*150)) : 900
         );
 
     }
@@ -3288,7 +3280,7 @@ function showAction(data) {
         +
         currentActionPurpose;
 
-    void sendBLE((actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
+    void sendBLE(controllerLearning ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
 
 }
 
@@ -3408,7 +3400,7 @@ function showEnding() {
 ===================================================== */
 
 async function handleAction(action, source = 'manual') {
-    if (!waitingForAction || busy || document.hidden) return;
+    if (!waitingForAction || busy || controllerLearning || document.hidden) return;
     // Match raw device values: normalizeAction's senior fallback must not turn
     // an unrelated or unknown hardware signal into a successful ARM_UP.
     const received = String(action || '').trim().toUpperCase();
@@ -3498,15 +3490,19 @@ function getRecentStories() {
         if (!Array.isArray(items)) return [];
         return items.slice(-5).filter(item => item && typeof item === 'object').map(item => ({
             title: String(item.title || '').slice(0, 80),
-            opening: String(item.opening || '').slice(0, 220)
+            opening: String(item.opening || '').slice(0, 220),
+            ending:String(item.ending || '').slice(0,180),topic:String(item.topic || '').slice(0,200),
+            variation:item.variation && typeof item.variation==='object' ? Object.fromEntries(['opening','mission','twist'].map(key=>[key,String(item.variation[key] || '').slice(0,100)])) : {}
         }));
     } catch (_) { return []; }
 }
-function rememberStory(story) {
+function rememberStory(story, topic = '') {
     try {
         const items = getRecentStories();
         items.push({title: String(story.title || '').slice(0, 80),
-            opening: String(story.opening || story.acts?.[0]?.story || '').slice(0, 220)});
+            opening: String(story.opening || story.acts?.[0]?.story || '').slice(0, 220),
+            ending:String(story.ending || story.acts?.[story.acts.length-1]?.story || '').slice(0,180),
+            topic:String(story.requestedTopic || topic).slice(0,200),variation:story.variation || {}});
         localStorage.setItem(RECENT_STORIES_KEY, JSON.stringify(items.slice(-5)));
     } catch (_) { /* 禁用瀏覽器儲存時不阻擋故事。 */ }
 }
@@ -3542,6 +3538,8 @@ async function generateStory() {
     resetAdventure();
 
     const requestVersion = adventureVersion;
+    const requestController=new AbortController();generationController=requestController;
+    const requestTimer=setTimeout(()=>requestController.abort(),90000);
     primeSpeech();
 
     busy =
@@ -3589,6 +3587,7 @@ async function generateStory() {
                 {
 
                     method:'POST',
+                    signal:requestController.signal,
 
                     headers:{
                         'Content-Type':
@@ -3620,6 +3619,9 @@ async function generateStory() {
                 res
             );
 
+
+        clearTimeout(requestTimer);
+        if(generationController===requestController)generationController=null;
 
         /*
          * 找出完整 11 幕
@@ -3662,7 +3664,7 @@ async function generateStory() {
          * 不硬砍掉，讓 Worker 的結果完整播放。
          */
 
-        rememberStory(adventure);
+        rememberStory(adventure,topic);
 
         currentActIndex =
             0;
@@ -3742,7 +3744,7 @@ async function generateStory() {
                 '✨ ' +
                 adventure.title,
 
-                adventure.summary ||
+                adventure.opening || adventure.summary ||
                 '故事冒險即將開始……'
 
             );
@@ -3803,8 +3805,7 @@ async function generateStory() {
 
 
         showToast(
-            '故事生成失敗：' +
-            e.message
+            e.name==='AbortError' ? '故事生成等候逾時，請稍後再試。' : '故事生成失敗：' + e.message
         );
 
 
@@ -3816,6 +3817,8 @@ async function generateStory() {
     }
 
     finally {
+        clearTimeout(requestTimer);
+        if(generationController===requestController)generationController=null;
 
         if (requestVersion === adventureVersion) {
             $('btnText').textContent = currentMode === 'senior'
@@ -3865,7 +3868,8 @@ document.addEventListener(
 
 
         renderChildThemes();
-
+        updateSelectedTopicLabel();
+        $('customTopicInput').addEventListener('input',updateSelectedTopicLabel);
 
         loadVoiceSettings();
 
@@ -3904,11 +3908,25 @@ document.addEventListener(
                 connectBLE
             );
 
+        $('btnLearnHold').addEventListener('click', async () => {
+            if (!bleCharacteristic || controllerLearning) return;
+            startControllerSetup('舉起手臂並改變腕部傾角，保持不動一秒。',10000);
+            await sendBLE('PAUSE');
+            if (!await sendBLE('LEARN_HOLD')) {
+                stopControllerSetup();
+                showToast('傳送失敗，請重新連線後設定姿勢。');await syncControllerAction();
+            }
+        });
+        $('btnInvertDirections').addEventListener('click', async () => {
+            if (!bleCharacteristic || controllerLearning) return;
+            stopHold();renderActionProgress();await sendBLE('PAUSE');
+            if (!await sendBLE('INVERT_LR')) {showToast('左右設定傳送失敗，請重新連線。');await syncControllerAction();}
+        });
         $('btnCalibrate').addEventListener('click', async () => {
             if (!bleCharacteristic) { showToast('請先連接故事裝置。'); return; }
-            stopHold(); renderActionProgress();
+            startControllerSetup('正在校正，請保持舒適中立姿勢不動 2 秒。');
             await sendBLE('PAUSE');
-            await sendBLE('CALIBRATE');
+            if(!await sendBLE('CALIBRATE')){stopControllerSetup();showToast('校正指令傳送失敗，請重新連線。');await syncControllerAction();}
         });
 
 
@@ -3973,8 +3991,7 @@ document.addEventListener(
                         .trim();
 
 
-                    if (!value)
-                        return;
+                    if (!value) {if(currentMode==='child')renderChildThemes();return;}
 
 
                     document
