@@ -988,7 +988,7 @@ const BLE_CONFIG = {
 };
 
 const WORKER_URL =
-    'https://lucky-waterfall-f8a2.shopcom2009.workers.dev/';
+    'https://lucky-waterfall-f8a2.shopcom2009.workers.dev';
 
 
 let bleDevice = null;
@@ -3548,8 +3548,7 @@ async function generateStory() {
         const res =
             await fetch(
 
-                WORKER_URL +
-                '/generate',
+                WORKER_URL.replace(/\/+$/, '') + '/generate',
 
                 {
 
