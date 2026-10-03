@@ -525,6 +525,11 @@ class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 round
 連接故事裝置
 
 </button>
+<button id="btnCalibrate" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">
+  🎯 重新校正姿勢
+</button>
+<p id="controllerHint" class="text-xs text-slate-400 mt-2 leading-relaxed">固定好腕部裝置，以舒適中立姿勢保持不動 2 秒，再開始體感故事。</p>
+
 
 </div>
 
@@ -957,7 +962,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 11.0 — 一幕多動作
+   FRONTEND 11.1 — 腕部控制器與一幕多動作
 
    新架構：
 
@@ -997,6 +1002,7 @@ const WORKER_URL =
 
 let bleDevice = null;
 let bleCharacteristic = null;
+let bleWriteQueue = Promise.resolve();
 
 
 /* =====================================================
@@ -2183,6 +2189,8 @@ async function connectBLE() {
 
                 bleCharacteristic =
                     null;
+                bleWriteQueue = Promise.resolve();
+                $('btnCalibrate').disabled = true;
 
                 if (holdSource === 'ble') { stopHold(); renderActionProgress(); }
                 showToast(
@@ -2206,6 +2214,7 @@ async function connectBLE() {
                 BLE_CONFIG.characteristicUuid
             );
 
+        bleWriteQueue = Promise.resolve();
         await bleCharacteristic.startNotifications();
 
         bleCharacteristic.addEventListener(
@@ -2225,6 +2234,10 @@ async function connectBLE() {
         await sendBLE(
             'READY'
         );
+
+        $('btnCalibrate').disabled = false;
+        await sendBLE(currentMode === 'senior' ? 'MODE_SENIOR' : 'MODE_CHILD');
+        await syncControllerAction();
 
         showToast(
             '藍牙連線成功！'
@@ -2261,6 +2274,31 @@ async function onBleEvent(event) {
         value
     );
 
+
+    // 狀態通知不是運動；不讓 READY / START 打斷正在撐住的計時。
+    if (value === 'READY') return;
+    if (value === 'CALIBRATING') {
+        stopHold(); renderActionProgress();
+        $('controllerHint').textContent = '正在校正，請保持舒適中立姿勢不動 2 秒。';
+        showToast('🎯 正在校正姿勢，請保持不動。');
+        return;
+    }
+    if (value === 'CALIBRATED') {
+        stopHold(); renderActionProgress();
+        $('controllerHint').textContent = '姿勢校正完成。每次動作回到中立，再做下一次。';
+        await syncControllerAction();
+        showToast('🎯 姿勢校正完成！');
+        return;
+    }
+    if (value === 'HOLD_END') {
+        if (holdSource === 'ble') { stopHold(); renderActionProgress(); }
+        return;
+    }
+    if (value === 'START') {
+        if (!busy && !acts.length) await generateStory();
+        else showToast('故事已開始，請依目前提示做動作。');
+        return;
+    }
 
     if (
         value ===
@@ -2314,31 +2352,23 @@ async function onBleEvent(event) {
 
 
 async function sendBLE(command) {
-
-    if (!bleCharacteristic)
-        return;
-
-    try {
-
-        await bleCharacteristic.writeValue(
-            new TextEncoder().encode(
-                command
-            )
-        );
-
-    }
-
-    catch(e) {
-
-        console.error(
-            'BLE 傳送失敗',
-            e
-        );
-
-    }
-
+    const characteristic = bleCharacteristic;
+    if (!characteristic) return false;
+    const operation = bleWriteQueue.then(async () => {
+        if (characteristic !== bleCharacteristic) return false;
+        await characteristic.writeValue(new TextEncoder().encode(command));
+        return true;
+    });
+    // BLE 寫入依序執行，避免 PAUSE / EXPECT / 震動指令互相碰撞。
+    bleWriteQueue = operation.catch(() => false);
+    try { return await operation; }
+    catch (e) { console.error('BLE 傳送失敗', e); return false; }
 }
 
+async function syncControllerAction() {
+    await sendBLE(waitingForAction && !busy && expectedAction
+        ? 'EXPECT:' + expectedAction : 'PAUSE');
+}
 
 /* =====================================================
    主題 UI
@@ -2415,6 +2445,7 @@ function renderChildThemes() {
 ===================================================== */
 
 function resetAdventure() {
+    void sendBLE('PAUSE');
     adventureVersion++;
     actVersion++;
     actionStepVersion++;
@@ -3254,6 +3285,8 @@ function showAction(data) {
         +
         currentActionPurpose;
 
+    void sendBLE('EXPECT:' + action);
+
 }
 
 
@@ -3262,6 +3295,7 @@ function showAction(data) {
 ===================================================== */
 
 function lockAction() {
+    void sendBLE('PAUSE');
     waitingForAction = false;
     stopHold();
     renderActionProgress();
@@ -3398,6 +3432,7 @@ async function handleAction(action, source = 'manual') {
     actionCount = Math.min(actionTargetCount, actionCount + 1);
     renderActionProgress();
     if (actionCount >= actionTargetCount) await completeAction(received);
+    else if (source === 'ble') void sendBLE('ACTION_TICK');
 }
 
 async function completeAction(received) {
@@ -3420,6 +3455,8 @@ async function completeAction(received) {
     $('actionSubText').textContent = currentActionStepIndex + 1 < actionSteps.length
         ? '這個動作完成了，本幕故事正在繼續……' : '本幕動作全部完成，故事正在繼續……';
     stopSpeech();
+    await sendBLE('PAUSE');
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
     await sendBLE('ACTION_OK');
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
     history.push({role:'user',action:received,round:currentRound,
@@ -3838,6 +3875,13 @@ document.addEventListener(
                 'click',
                 connectBLE
             );
+
+        $('btnCalibrate').addEventListener('click', async () => {
+            if (!bleCharacteristic) { showToast('請先連接故事裝置。'); return; }
+            stopHold(); renderActionProgress();
+            await sendBLE('PAUSE');
+            await sendBLE('CALIBRATE');
+        });
 
 
         /*
