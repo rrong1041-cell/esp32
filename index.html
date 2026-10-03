@@ -962,7 +962,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 11.1 — 腕部控制器與一幕多動作
+   FRONTEND 11.2 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1101,7 +1101,8 @@ function resetActionProgress(data = {}) {
     const count = Number(data.targetCount);
     const seconds = Number(data.holdSeconds);
     actionTargetCount = Number.isFinite(count) && count >= 1 ? Math.floor(count) : 1;
-    actionHoldSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    actionHoldSeconds = String(data.action || currentAction).trim().toUpperCase() !== 'JUMP' &&
+        Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
     renderActionProgress();
 }
 
@@ -1117,10 +1118,12 @@ function renderActionProgress() {
     $('actionProgressBar').max = holding ? actionHoldSeconds : actionTargetCount;
     $('actionProgressBar').value = holding ? elapsed : actionCount;
     $('actionProgressHint').textContent = holding
-        ? '保持動作；訊號中斷會重新計時。手動測試可開始／停止模擬撐住。'
+        ? (['RUN', 'SHAKE', 'SWIPE_LEFT', 'SWIPE_RIGHT'].includes(currentAction)
+            ? '持續反覆做動作；停止或訊號中斷會重新計時。'
+            : '保持指定姿勢；放下或訊號中斷會重新計時。')
         : '每次相符動作累積一次，達標才繼續故事。';
     $('btnManualAction').textContent = holding
-        ? (manualHolding ? '⏹ 停止模擬撐住' : '🙌 開始模擬撐住')
+        ? (manualHolding ? '⏹ 停止模擬持續動作' : '⏱ 開始模擬持續動作')
         : '✨ 模擬一次目前動作';
 }
 
@@ -2367,7 +2370,7 @@ async function sendBLE(command) {
 
 async function syncControllerAction() {
     await sendBLE(waitingForAction && !busy && expectedAction
-        ? 'EXPECT:' + expectedAction : 'PAUSE');
+        ? (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + expectedAction : 'PAUSE');
 }
 
 /* =====================================================
@@ -3285,7 +3288,7 @@ function showAction(data) {
         +
         currentActionPurpose;
 
-    void sendBLE('EXPECT:' + action);
+    void sendBLE((actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
 
 }
 
@@ -3487,6 +3490,27 @@ async function completeAction(received) {
    ⭐ 開始完整故事
 ===================================================== */
 
+// 僅儲存少量已生成摘要，讓下次故事避開同樣開場；儲存不可用時仍可生成。
+const RECENT_STORIES_KEY = 'story-adventure-recent-v1';
+function getRecentStories() {
+    try {
+        const items = JSON.parse(localStorage.getItem(RECENT_STORIES_KEY) || '[]');
+        if (!Array.isArray(items)) return [];
+        return items.slice(-5).filter(item => item && typeof item === 'object').map(item => ({
+            title: String(item.title || '').slice(0, 80),
+            opening: String(item.opening || '').slice(0, 220)
+        }));
+    } catch (_) { return []; }
+}
+function rememberStory(story) {
+    try {
+        const items = getRecentStories();
+        items.push({title: String(story.title || '').slice(0, 80),
+            opening: String(story.opening || story.acts?.[0]?.story || '').slice(0, 220)});
+        localStorage.setItem(RECENT_STORIES_KEY, JSON.stringify(items.slice(-5)));
+    } catch (_) { /* 禁用瀏覽器儲存時不阻擋故事。 */ }
+}
+
 async function generateStory() {
 
     if (busy)
@@ -3580,7 +3604,9 @@ async function generateStory() {
                             topic,
 
                         difficulty:
-                            selectedDifficulty
+                            selectedDifficulty,
+
+                        recentStories: getRecentStories()
 
                     })
 
@@ -3635,6 +3661,8 @@ async function generateStory() {
          * 如果超過 11 幕，
          * 不硬砍掉，讓 Worker 的結果完整播放。
          */
+
+        rememberStory(adventure);
 
         currentActIndex =
             0;
