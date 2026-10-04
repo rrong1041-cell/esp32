@@ -833,8 +833,8 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
-<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">優先固定台灣中文聲線</label>
-<p class="text-xs text-slate-400 mb-3">需要先設定語音服務；未啟用或額度不足時，使用下方裝置聲音。固定聲線使用語速和音量，音高與語氣選项只影響裝置朗讀。</p>
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">優先 Cloudflare 固定中文配音</label>
+<p class="text-xs text-slate-400 mb-3">使用先前試聽的中文聲線。未啟用或額度不足時，使用下方裝置聲音。語速與音量可調整；音高與語氣只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -1012,7 +1012,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 13.6 — 持續動作與跳躍計次
+   FRONTEND 13.7 — 持續動作與跳躍計次
 
    新架構：
 
@@ -2178,23 +2178,24 @@ async function playFixedVoice(text,token){
     const age=Number(selectedChildAge)||6;
     const pace=currentMode==='senior'?.9:age<=6?.94:1;
     const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
-    const key=JSON.stringify([WORKER_URL,text,rate]);
+    const key=JSON.stringify(['melotts-v1',WORKER_URL,text,rate]);
     let bytes=cloudAudioCache.get(key);
     if(!bytes)bytes=await savedAudio('get',key);
     if(token!==speechToken)return 'cancelled';
     if(!bytes && Date.now()<cloudSpeechCooldownUntil)return null;
     if(!bytes){
         const controller=new AbortController();cloudSpeechController=controller;
-        let timer;
+        let timer,failureReason='Cloudflare 配音暫時無法使用';
         const cancelled=new Promise(resolve=>{
             const finish=()=>{controller.abort();resolve('cancelled');};finishSpeech=finish;
         });
         const download=(async()=>{
             try{
-                timer=setTimeout(()=>controller.abort(),18000);
-                const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts',{
+                timer=setTimeout(()=>controller.abort(),45000);
+                const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-cloudflare',{
                     method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate})});
-                if(!response.ok || !response.headers.get('Content-Type')?.includes('audio/'))throw new Error('unavailable');
+                if(!response.ok){const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);throw new Error('unavailable');}
+                if(!response.headers.get('Content-Type')?.includes('audio/'))throw new Error('unavailable');
                 const blob=await response.blob();if(!blob.size || blob.size>2000000)throw new Error('empty');
                 return blob;
             }catch(_){return null;}finally{clearTimeout(timer);}
@@ -2202,7 +2203,7 @@ async function playFixedVoice(text,token){
         const result=await Promise.race([download,cancelled]);
         if(cloudSpeechController===controller){cloudSpeechController=null;finishSpeech=null;}
         if(result==='cancelled' || token!==speechToken)return 'cancelled';
-        if(!result){cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus('固定聲線未設定、額度不足或暫時無法使用，已改用裝置朗讀。');return null;}
+        if(!result){cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus(failureReason+'，已改用裝置朗讀。');showToast(failureReason+'；將使用裝置聲音。');return null;}
         bytes=result;cloudAudioCache.set(key,bytes);
         void savedAudio('put',key,bytes);
         while(cloudAudioCache.size>50)cloudAudioCache.delete(cloudAudioCache.keys().next().value);
@@ -2210,6 +2211,8 @@ async function playFixedVoice(text,token){
     if(token!==speechToken)return 'cancelled';
     return new Promise(resolve=>{
         const url=URL.createObjectURL(bytes),audio=new Audio(url);activeCloudAudio=audio;
+        audio.playbackRate=rate;
+        audio.preservesPitch=true;
         audio.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
         let ended=false,timer;
         const finish=(outcome='cancelled')=>{
@@ -2220,7 +2223,7 @@ async function playFixedVoice(text,token){
         const watch=()=>{clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),30000);};
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
         audio.onplaying=audio.ontimeupdate=watch;watch();
-        updateVoiceStatus('正在使用固定台灣中文聲線。已取得的音檔會保存供重聽。');
+        updateVoiceStatus('正在使用 Cloudflare 固定中文配音。已取得的音檔會保存供重聽。');
         try{const played=audio.play();played?.catch(()=>finish('error'));}catch(_){finish('error');}
     });
 }
