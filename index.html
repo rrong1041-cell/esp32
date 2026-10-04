@@ -843,7 +843,7 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 <label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">使用 Worker 中文配音（失敗時自動切換備用聲音）</label>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
-<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時跟隨手機的預設中文聲音。取消勾選可直接跟隨手機，不同裝置的聲線可能不同。也能在下方指定其他備用聲音。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
+<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。取消勾選可直接使用裝置朗讀；不同裝置的聲線可能不同。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -1021,7 +1021,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.3 — 合作與保存故事，預設系統中文聲音
+   FRONTEND 16.4 — 合作與保存故事，預設系統中文聲音
 
    新架構：
 
@@ -1861,9 +1861,9 @@ let voiceSettings = {
 
     emotion:'natural',
 
-    voiceURI:'__SYSTEM_TW__',
+    voiceURI:getDefaultDeviceVoiceURI(),
 
-    version:10
+    version:11
 
 };
 
@@ -1917,6 +1917,12 @@ function loadVoiceSettings() {
             voiceSettings.voiceURI='__SYSTEM_TW__';
             voiceSettings.version=10;
             cloudSpeechCooldownUntil=0;saveVoiceSettings();
+        }
+        // Correct earlier phone-only defaults on computers, without changing
+        // a named voice or the user's choice to enable/disable Worker audio.
+        if(Number(voiceSettings.version || 0)<11){
+            if(getVoicePlatform()==='desktop' && voiceSettings.voiceURI==='__SYSTEM_TW__')voiceSettings.voiceURI='';
+            voiceSettings.version=11;saveVoiceSettings();
         }
         voiceSettings.rate=Math.min(1.35,Math.max(.65,Number(voiceSettings.rate)||.94));
         voiceSettings.pitch=Math.min(1.2,Math.max(.8,Number(voiceSettings.pitch)||1));
@@ -1989,7 +1995,7 @@ function populateVoiceSelect() {
     select.appendChild(auto);
     const systemDefault=document.createElement('option');
     systemDefault.value='__SYSTEM_TW__';
-    systemDefault.textContent='跟隨手機';
+    systemDefault.textContent=getDeviceVoiceLabel();
     select.appendChild(systemDefault);
 
     const chinese =
@@ -2165,6 +2171,8 @@ function getVoicePlatform(){
     if(/Android/i.test(ua))return 'android';
     return 'desktop';
 }
+function getDeviceVoiceLabel(){return getVoicePlatform()==='desktop'?'跟隨電腦':'跟隨手機';}
+function getDefaultDeviceVoiceURI(){return getVoicePlatform()==='ios'?'__SYSTEM_TW__':'';}
 function getAutomaticVoiceLabel(){
     const platform=getVoicePlatform();
     return platform==='ios'?'跟隨手機':platform==='android'?'優先 Google 中文（台灣中文優先）':'優先 Yating 台灣中文';
@@ -2396,7 +2404,7 @@ function speakChunk(text,token){
         const utterance=new SpeechSynthesisUtterance(text);activeSpeechUtterance=utterance;
         const voice=chooseSpeechVoice(),emotion=getSentenceEmotion(text);
         if(voice)utterance.voice=voice;
-        updateVoiceStatus(voice?'正在使用裝置備用聲音：'+voice.name+'（'+voice.lang+'）。':'正在跟隨手機的預設中文聲音。');
+        updateVoiceStatus(voice?'正在使用裝置備用聲音：'+voice.name+'（'+voice.lang+'）。':'正在'+getDeviceVoiceLabel()+'的預設中文聲音。');
         utterance.lang=voice?.lang || 'zh-TW';utterance.rate=emotion.rate;utterance.pitch=emotion.pitch;
         utterance.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
         let ended=false,timer;
@@ -4566,7 +4574,7 @@ document.addEventListener(
                     if(value==='__SYSTEM_TW__'){
                         selectedVoice=null;voiceSettings.voiceURI=value;
                         saveVoiceSettings();
-                        updateVoiceStatus('已選擇跟隨手機，使用手機的預設中文聲音。');
+                        updateVoiceStatus('已選擇'+getDeviceVoiceLabel()+'，使用裝置的預設中文聲音。');
                         return;
                     }
 
@@ -4817,9 +4825,9 @@ document.addEventListener(
 
                         emotion:'natural',
 
-                        voiceURI:'__SYSTEM_TW__',
+                        voiceURI:getDefaultDeviceVoiceURI(),
 
-                        version:10
+                        version:11
 
                     };
 
