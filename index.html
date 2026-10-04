@@ -1000,7 +1000,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 13.1 — 持續動作與跳躍計次
+   FRONTEND 13.2 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1041,6 +1041,7 @@ const WORKER_URL =
 let bleDevice = null;
 let bleCharacteristic = null;
 let bleWriteQueue = Promise.resolve();
+let lastPhysicalButtonLock = null;
 
 
 /* =====================================================
@@ -1475,6 +1476,7 @@ async function startTurnTrial(){
     await showCurrentAct(true);
 }
 function refreshStoryControls(){
+    void syncPhysicalButtonLock();
     $('btnTurnTrial').classList.toggle('hidden',currentMode==='senior');
     $('btnTurnTrial').disabled=!bleCharacteristic || busy || controllerLearning || (acts.length>0 && !storyFinished);
     refreshChildAgeUI();
@@ -2326,6 +2328,7 @@ async function speak(text) {
 ===================================================== */
 
 function clearBLEConnection() {
+    lastPhysicalButtonLock=null;
     if(bleCharacteristic)bleCharacteristic.removeEventListener?.('characteristicvaluechanged',onBleEvent);
     bleCharacteristic=null;bleWriteQueue=Promise.resolve();stopControllerSetup();
     for(const id of ['btnDisconnect','btnCalibrate','btnLearnHold','btnInvertDirections','btnTurnTrial'])$(id).disabled=true;
@@ -2363,7 +2366,7 @@ async function connectBLE() {
         const server=await selectedDevice.gatt.connect();
         const service=await server.getPrimaryService(BLE_CONFIG.serviceUuid);
         const characteristic=await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
-        bleCharacteristic=characteristic;bleWriteQueue=Promise.resolve();
+        bleCharacteristic=characteristic;bleWriteQueue=Promise.resolve();lastPhysicalButtonLock=null;
         await characteristic.startNotifications();
         characteristic.addEventListener('characteristicvaluechanged',onBleEvent);
         $('btnDisconnect').disabled=false;
@@ -2519,7 +2522,16 @@ async function sendBLE(command) {
     catch (e) { console.error('BLE 傳送失敗', e); return false; }
 }
 
+async function syncPhysicalButtonLock() {
+    if(!bleCharacteristic)return;
+    const locked=!storyFinished && (busy || acts.length>0);
+    if(lastPhysicalButtonLock===locked)return;
+    lastPhysicalButtonLock=locked;
+    const characteristic=bleCharacteristic;
+    if(!await sendBLE(locked?'GAME_ACTIVE':'GAME_IDLE') && bleCharacteristic===characteristic && lastPhysicalButtonLock===locked)lastPhysicalButtonLock=null;
+}
 async function syncControllerAction() {
+    await syncPhysicalButtonLock();
     await sendBLE(!adventurePaused && !controllerLearning && waitingForAction && !busy && expectedAction
         ? (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + expectedAction : 'PAUSE');
 }
@@ -3722,6 +3734,8 @@ async function generateStory() {
     busy =
         true;
 
+    await syncPhysicalButtonLock();
+
 
     const btn =
         $('btnGenerate');
@@ -4002,6 +4016,7 @@ async function generateStory() {
             $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
             btn.disabled = false;
             busy = false;
+            refreshStoryControls();
         }
 
     }
