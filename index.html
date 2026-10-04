@@ -748,7 +748,7 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 
 <div class="space-y-2 mb-3">
 <button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
-<p class="text-sm text-slate-300">每天最多新增 2 次，已保存內容可重玩。依目前年齡、主題和難度選取。</p>
+<p class="text-sm text-slate-300">每天最多嘗試新增 2 次（失敗也計入），台灣時間早上 8 點重置。重玩請按「播放已保存內容」。</p><p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
 </div>
 <div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
 <div id="seniorStoryControls" class="hidden space-y-2">
@@ -767,7 +767,7 @@ class="fa-solid fa-wand-magic-sparkles">
 </i>
 
 <span id="btnText">
-開始精彩故事冒險
+生成新故事
 </span>
 
 </button>
@@ -1018,7 +1018,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 15.1 — 家人控制首次載入綁定修正
+   FRONTEND 15.2 — 明確區分新增、載入與開始遊玩
 
    新架構：
 
@@ -2715,6 +2715,7 @@ function renderChildThemes() {
 ===================================================== */
 
 function resetAdventure() {
+    $('generationStatus').textContent='';
     audioBuildController?.abort();storyPreview=false;stopCoop();
     adventurePaused=false;storyFinished=false;releasePauseWaiters();
     if(generationController){generationController.abort();generationController=null;}
@@ -2733,7 +2734,7 @@ function resetAdventure() {
     replayCancelRequested = false;
     busy = false;
     $('btnGenerate').disabled = false;
-    $('btnText').textContent = currentMode === 'senior' ? '開始坐姿健康操' : '開始精彩故事冒險';
+    $('btnText').textContent = currentMode === 'senior' ? '生成新健康操' : '生成新故事';
     $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
     clearTimeout(actTimer);
     resetActionProgress();
@@ -2868,7 +2869,7 @@ async function switchMode(
             .remove('hidden');
 
         $('btnText').textContent =
-            '開始坐姿健康操';
+            '生成新健康操';
 
         $('customTopicInput').placeholder =
             '也可以輸入想聽的故事主題，例如：老朋友的茶館';
@@ -2925,7 +2926,7 @@ async function switchMode(
             .add('hidden');
 
         $('btnText').textContent =
-            '開始精彩故事冒險';
+            '生成新故事';
 
         $('customTopicInput').placeholder =
             '或者輸入你想聽的故事，例如：會飛的橘色章魚';
@@ -3844,9 +3845,11 @@ async function generateStory(preferSaved=false) {
     const selection=librarySelection(topic);
     const localRows=readLocalLibrary().filter(row=>row.key===selection);
     const limited=!preferSaved && !reserveLocalStory();
-    const useSaved=preferSaved || limited;
+    if(limited){const message='今天已用完 2 次新增嘗試，本次沒有生成新內容。台灣時間早上 8 點重置；重玩請按「播放已保存內容」。';$('generationStatus').textContent=message;showToast(message);return;}
+    const useSaved=preferSaved;
     let localRow=useSaved && localRows.length?localRows[Math.floor(Math.random()*localRows.length)]:null;
     resetAdventure();
+    $('generationStatus').textContent=preferSaved?'正在尋找已保存內容，不會生成新故事。':'正在生成新內容，請稍候……';
 
     const requestVersion = adventureVersion;
     const requestController=new AbortController();generationController=requestController;
@@ -3936,14 +3939,20 @@ async function generateStory(preferSaved=false) {
         }
         catch(error){
           if(requestVersion!==adventureVersion)throw error;
-          if(!localRows.length)throw error;
-          localRow=localRows[Math.floor(Math.random()*localRows.length)];
-          data={story:localRow.story,libraryId:localRow.id,source:'library',notice:'AI 暫時無法使用，改用已保存內容。'};
+          throw error;
         }
         }
 
 
 
+        if(!preferSaved && data.source==='library'){
+            if(requestVersion!==adventureVersion)return;
+            const reason=String(data.notice || '服務目前無法新增內容。').replace(/，改用已保存內容[。.]?/g,'。');
+            const message=reason+' 本次沒有生成新內容。重玩請按「播放已保存內容」。';
+            $('generationStatus').textContent=message;showToast(message);return;
+        }
+        if(requestVersion!==adventureVersion)return;
+        $('generationStatus').textContent=data.source==='library'?'已載入保存內容，這次沒有重新生成。請按「開始遊玩」。':'新內容已生成並保存。可先製作配音，或直接按「開始遊玩」。';
         clearTimeout(requestTimer);
         if(generationController===requestController)generationController=null;
 
@@ -4072,8 +4081,8 @@ async function generateStory(preferSaved=false) {
                 '✨ ' +
                 adventure.title,
 
-                adventure.opening || adventure.summary ||
-                '故事冒險即將開始……'
+                adventure.opening || adventure.summary || adventure.acts?.[0]?.story ||
+                '內容已準備好，請按下方「開始遊玩」。'
 
             );
 
@@ -4126,6 +4135,7 @@ async function generateStory(preferSaved=false) {
     catch(e) {
 
         if (requestVersion !== adventureVersion) return;
+        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+e.message+(preferSaved?'':'。本次沒有自動載入舊故事；可按「播放已保存內容」重玩。');
         console.error(
             e
         );
@@ -4149,7 +4159,7 @@ async function generateStory(preferSaved=false) {
 
         if (requestVersion === adventureVersion) {
             $('btnText').textContent = currentMode === 'senior'
-                ? '開始坐姿健康操' : '開始精彩故事冒險';
+                ? '生成新健康操' : '生成新故事';
             $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
             btn.disabled = false;
             busy = false;
