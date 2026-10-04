@@ -560,7 +560,7 @@ class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3
 
 </button>
 
-<p
+<p id="manualActionHint"
 class="text-xs text-slate-400 mt-3 leading-relaxed">
 
 裝置實體動作會觸發故事。<br>
@@ -985,7 +985,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 12.4 — 持續動作與跳躍計次
+   FRONTEND 12.6 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1104,7 +1104,7 @@ let controllerSetupTimer = null;
 let connectionPending = false;
 let generationController = null;
 let finishSpeech = null;
-const modeTopics = {child:{theme:'勇敢的小騎士與巨龍',custom:''},senior:{theme:'午後健康活動',custom:''}};
+const modeTopics = {child:{theme:'勇敢的小騎士與巨龍',custom:''},senior:{theme:'坐姿健康操',custom:''}};
 function stopControllerSetup() {
     controllerLearning=false;clearTimeout(controllerSetupTimer);controllerSetupTimer=null;
 }
@@ -1166,7 +1166,7 @@ function renderActionProgress() {
         ? (['RUN', 'SHAKE', 'SWIPE_LEFT', 'SWIPE_RIGHT'].includes(currentAction)
             ? '持續反覆做動作；停止或訊號中斷會重新計時。'
             : '保持指定姿勢；放下或訊號中斷會重新計時。')
-        : '每次相符動作累積一次，達標才繼續故事。';
+        : (currentMode==='senior' ? '每次相符動作累積一次，達標才繼續活動。' : '每次相符動作累積一次，達標才繼續故事。');
     $('btnManualAction').textContent = holding
         ? (manualHolding ? '⏹ 停止模擬持續動作' : '⏱ 開始模擬持續動作')
         : '✨ 模擬一次目前動作';
@@ -1212,13 +1212,13 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     expectedAction = '';
     currentAction = step.action;
     currentActionNarration = getActionNarration(step);
-    currentActionPurpose = step.actionPurpose || '完成這個動作，故事就會繼續。';
+    currentActionPurpose = step.actionPurpose || (currentMode==='senior'?'以舒適幅度完成這個操作。':'完成這個動作，故事就會繼續。');
     currentStepStory = String(step.storyBefore || '').trim();
     resetActionProgress(step);
     lockAction();
     $('promptText').textContent = `📖 本幕第 ${currentActionStepIndex + 1} 個動作正在準備……`;
     if (currentStepStory) {
-        appendStory(`🎭 第 ${currentRound} 幕・動作 ${currentActionStepIndex + 1}/${actionSteps.length}`, currentStepStory);
+        appendStory(currentMode==='senior' ? `🌿 第 ${currentRound} 個活動・動作 ${currentActionStepIndex + 1}/${actionSteps.length}` : `🎭 第 ${currentRound} 幕・動作 ${currentActionStepIndex + 1}/${actionSteps.length}`, currentStepStory);
         if (speakIt) await speak(currentStepStory);
     }
     await waitForAdventureResume(version);
@@ -1394,7 +1394,7 @@ const CHILD_THEMES = [
 ];
 
 const SENIOR_THEME =
-    '午後健康活動';
+    '坐姿健康操';
 
 
 /* =====================================================
@@ -1402,11 +1402,14 @@ const SENIOR_THEME =
 ===================================================== */
 
 function refreshStoryControls(){
+    $('manualActionHint').textContent=currentMode==='senior'?'裝置會辨識目前動作。達成指定次數或持續秒數後，進入下一段活動。':'裝置實體動作會觸發故事。達成指定次數或持續秒數後，故事會進入下一幕。';
     $('seniorStoryControls').classList.toggle('hidden',currentMode!=='senior');
     $('btnPauseStory').disabled=!acts.length || storyFinished;
     $('seniorDifficultyHint').textContent=({easy:'簡單：持續動作 2～3 秒，左右轉 1 次。',normal:'普通：持續動作 2～4 秒，左右轉最多 2 次。',challenge:'挑戰：持續動作 2～6 秒，左右轉最多 3 次。'})[selectedDifficulty] || '';
-    $('pauseStoryHint').textContent=adventurePaused?'故事已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
-    $('btnPauseStory').textContent=adventurePaused?'▶ 我休息好了，繼續故事':'⏸ 休息一下';
+    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+    $('btnSpeak').setAttribute('aria-label',currentMode==='senior'?'重聽目前活動說明':'重聽目前故事');
+    $('btnSpeak').setAttribute('title',currentMode==='senior'?'重聽目前活動說明':'重聽目前故事');
+    $('btnPauseStory').textContent=adventurePaused?'▶ 我休息好了，繼續活動':'⏸ 休息一下';
     $('btnManualAction').disabled=adventurePaused || controllerLearning || !waitingForAction;
 }
 function releasePauseWaiters(){const waiting=pauseWaiters;pauseWaiters=[];waiting.forEach(resolve=>resolve());}
@@ -1419,7 +1422,7 @@ function toggleAdventurePause(){
     if(adventurePaused){stopHold();stopSpeech();void sendBLE('PAUSE');}
     else {releasePauseWaiters();void syncControllerAction();}
     renderActionProgress();refreshStoryControls();
-    $('pauseStoryHint').textContent=adventurePaused?'故事已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
 }
 
 const ACTION_INSTRUCTIONS = {
@@ -2522,7 +2525,7 @@ function resetAdventure() {
     replayCancelRequested = false;
     busy = false;
     $('btnGenerate').disabled = false;
-    $('btnText').textContent = currentMode === 'senior' ? '開始健康活動' : '開始精彩故事冒險';
+    $('btnText').textContent = currentMode === 'senior' ? '開始坐姿健康操' : '開始精彩故事冒險';
     $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
     clearTimeout(actTimer);
     resetActionProgress();
@@ -2638,16 +2641,16 @@ async function switchMode(
             'text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300';
 
         $('badgeText').textContent =
-            '長輩模式・全程坐姿，輕鬆健康動一動';
+            '長輩模式・AI 坐姿健康操';
 
         $('welcomeIcon').textContent =
             '🌿✨';
 
         $('welcomeTitle').textContent =
-            '準備好開始今日健康活動了嗎？';
+            '準備好開始坐姿健康操了嗎？';
 
         $('welcomeDesc').textContent =
-            '請坐在有椅背的椅子上，選擇適合的難度，再開始故事活動。';
+            '坐在穩固、有椅背的椅子上，雙腳平放地面。選擇難度，跟著語音做輕柔手部活動。';
 
         selectedTheme=modeTopics.senior.theme;
         renderChildThemes();
@@ -2657,7 +2660,7 @@ async function switchMode(
             .remove('hidden');
 
         $('btnText').textContent =
-            '開始健康活動';
+            '開始坐姿健康操';
 
         $('customTopicInput').placeholder =
             '也可以輸入想聽的故事主題，例如：老朋友的茶館';
@@ -3230,6 +3233,7 @@ async function showCurrentAct(
         currentActIndex <
         acts.length - 1
     ) {
+        if(currentMode==='senior' && Number(act.restSeconds)>0) appendStory('⏳ 放鬆與準備',`請慢慢放鬆 ${Math.min(60,Number(act.restSeconds))} 秒，再進入下一段活動。`);
 
         actTimer = setTimeout(
             async () => {
@@ -3243,8 +3247,8 @@ async function showCurrentAct(
                 );
 
             },
-            speakIt && !('speechSynthesis' in window)
-                ? Math.min(20000,Math.max(4000,currentStory.length*150)) : 900
+            Math.max(currentMode==='senior' ? Math.min(60,Math.max(0,Number(act.restSeconds)||0))*1000 : 0, speakIt && !('speechSynthesis' in window)
+                ? Math.min(20000,Math.max(4000,currentStory.length*150)) : 900)
         );
 
     }
@@ -3300,7 +3304,7 @@ function showAction(data) {
 
     currentActionPurpose =
         data?.actionPurpose ||
-        '完成這個動作，故事就會繼續。';
+        (currentMode==='senior'?'以舒適幅度完成這個操作。':'完成這個動作，故事就會繼續。');
 
 
     expectedAction =
@@ -3511,7 +3515,7 @@ async function completeAction(received) {
     $('actionPrompt').classList.add('action-locked');
     $('promptText').textContent = currentMode==='senior'?'✓ 這個步驟完成了。':'✨ 做得好！';
     $('actionSubText').textContent = currentActionStepIndex + 1 < actionSteps.length
-        ? '這個動作完成了，本幕故事正在繼續……' : '本幕動作全部完成，故事正在繼續……';
+        ? (currentMode==='senior' ? '動作完成，準備下一個活動……' : '這個動作完成了，本幕故事正在繼續……') : (currentMode==='senior' ? '本段活動完成，請慢慢放鬆。' : '本幕動作全部完成，故事正在繼續……');
     stopSpeech();
     await sendBLE('PAUSE');
     await waitForAdventureResume(version);
@@ -3524,7 +3528,7 @@ async function completeAction(received) {
         holdSeconds:actionHoldSeconds,title:acts[currentActIndex]?.title || ''});
     const resultStory = String(completedStep.storyAfter || '').trim();
     if (resultStory) {
-        appendStory('✨ 你的行動改變了故事', resultStory);
+        appendStory(currentMode==='senior' ? '✓ 動作完成・放鬆一下' : '✨ 你的行動改變了故事', resultStory);
         await speak(resultStory);
     }
     await waitForAdventureResume(version);
@@ -3559,7 +3563,7 @@ function getRecentStories() {
             title: String(item.title || '').slice(0, 80),
             opening: String(item.opening || '').slice(0, 220),
             ending:String(item.ending || '').slice(0,180),topic:String(item.topic || '').slice(0,200),
-            variation:item.variation && typeof item.variation==='object' ? Object.fromEntries(['opening','mission','twist'].map(key=>[key,String(item.variation[key] || '').slice(0,100)])) : {}
+            variation:item.variation && typeof item.variation==='object' ? Object.fromEntries(['opening','mission','twist','plotFamily'].map(key=>[key,String(item.variation[key] || '').slice(0,100)])) : {}
         }));
     } catch (_) { return []; }
 }
@@ -3625,7 +3629,7 @@ async function generateStory() {
 
             ?
 
-        'AI 正在安排完整活動……'
+        'AI 正在安排坐姿健康操……'
 
             :
 
@@ -3869,7 +3873,7 @@ async function generateStory() {
 
 
         showToast(
-            e.name==='AbortError' ? '故事生成等候逾時，請稍後再試。' : '故事生成失敗：' + e.message
+            e.name==='AbortError' ? '故事生成等候逾時，請稍後再試。' : (currentMode==='senior'?'健康操生成失敗：':'故事生成失敗：') + e.message
         );
 
 
@@ -3886,7 +3890,7 @@ async function generateStory() {
 
         if (requestVersion === adventureVersion) {
             $('btnText').textContent = currentMode === 'senior'
-                ? '開始健康活動' : '開始精彩故事冒險';
+                ? '開始坐姿健康操' : '開始精彩故事冒險';
             $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
             btn.disabled = false;
             busy = false;
