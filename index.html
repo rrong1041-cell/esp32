@@ -1021,7 +1021,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.1 — 合作與保存故事，預設系統中文聲音
+   FRONTEND 16.2 — 合作與保存故事，預設系統中文聲音
 
    新架構：
 
@@ -2167,7 +2167,7 @@ function getVoicePlatform(){
 }
 function getAutomaticVoiceLabel(){
     const platform=getVoicePlatform();
-    return platform==='ios'?'優先可用的中文 Siri 聲音':platform==='android'?'優先 Google 中文（台灣中文優先）':'優先 Yating 台灣中文';
+    return platform==='ios'?'iPhone 系統預設中文（舊版方式）':platform==='android'?'優先 Google 中文（台灣中文優先）':'優先 Yating 台灣中文';
 }
 function chooseSpeechVoice(){
     if(voiceSettings.voiceURI==='__SYSTEM_TW__')return null;
@@ -2179,6 +2179,8 @@ function chooseSpeechVoice(){
     const explicit=availableVoices.find(v=>v.voiceURI===voiceSettings.voiceURI);
     if(explicit)return explicit;
     const platform=getVoicePlatform();
+    // On iPhone, automatic must use the same system-selected voice the user confirmed.
+    if(platform==='ios')return null;
     const language=v=>String(v.lang || '').replace(/_/g,'-');
     const label=v=>String(v.name || '')+' '+String(v.voiceURI || '');
     const chinese=availableVoices.filter(v=>{
