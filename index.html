@@ -834,6 +834,8 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 </div>
 
 <label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">優先 Cloudflare 固定中文配音</label>
+<button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
+<p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
 <p class="text-xs text-slate-400 mb-3">使用先前試聽的中文聲線。未啟用或額度不足時，使用下方裝置聲音。語速與音量可調整；音高與語氣只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
@@ -1012,7 +1014,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 13.7 — 持續動作與跳躍計次
+   FRONTEND 13.9 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1160,32 +1162,53 @@ let replayCancelRequested = false;
 const HOLD_SIGNAL_TIMEOUT_MS = 1200;
 
 let feedbackAudio = null;
+let feedbackAudioWarningShown = false;
+let holdLastFeedbackSecond = 0;
 function primeFeedbackAudio(){
     try {
         const AudioClass=window.AudioContext || window.webkitAudioContext;
         if(!AudioClass)return;
-        if(!feedbackAudio)feedbackAudio=new AudioClass();
-        if(feedbackAudio.state==='suspended')void feedbackAudio.resume().catch(()=>{});
+        if(!feedbackAudio || feedbackAudio.state==='closed')feedbackAudio=new AudioClass();
+        if(feedbackAudio.state!=='running')void feedbackAudio.resume().catch(()=>{});
     } catch(_) { /* 聲音不可用時仍顯示成功文字。 */ }
 }
-function playFeedbackTone(kind){
+async function playFeedbackTone(kind){
     try {
-        if(!feedbackAudio || feedbackAudio.state!=='running')return;
         const volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
-        if(!volume)return;
+        if(!volume)return false;
+        primeFeedbackAudio();
+        const version=actVersion,stepVersion=actionStepVersion,context=feedbackAudio;
+        if(context && context.state!=='running'){
+            let resumeTimer;
+            try{await Promise.race([context.resume(),new Promise(resolve=>{resumeTimer=setTimeout(resolve,500);})]);}
+            finally{clearTimeout(resumeTimer);}
+        }
+        if(version!==actVersion || stepVersion!==actionStepVersion || document.hidden)return false;
+        if(!context || context.state!=='running'){
+            if(!feedbackAudioWarningShown){feedbackAudioWarningShown=true;showToast('提示音尚未啟用，請在聲音設定按「測試動作提示音」。');}
+            return false;
+        }
+        feedbackAudioWarningShown=false;
         const notes=kind==='complete'?[660,880]:kind==='interrupted'?[330]:kind==='start'?[520]:[780];
         notes.forEach((frequency,index)=>{
-            const at=feedbackAudio.currentTime+index*0.11;
-            const oscillator=feedbackAudio.createOscillator(),gain=feedbackAudio.createGain();
+            const at=context.currentTime+index*0.17;
+            const oscillator=context.createOscillator(),gain=context.createGain();
             oscillator.type='sine';oscillator.frequency.value=frequency;
-            gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(0.1*volume,at+0.008);
-            gain.gain.exponentialRampToValueAtTime(0.001,at+0.085);
-            oscillator.connect(gain);gain.connect(feedbackAudio.destination);
+            gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(0.22*volume,at+0.012);
+            gain.gain.exponentialRampToValueAtTime(0.001,at+0.135);
+            oscillator.connect(gain);gain.connect(context.destination);
             oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
-            oscillator.start(at);oscillator.stop(at+0.1);
+            oscillator.start(at);oscillator.stop(at+0.15);
         });
-    } catch(_) { /* 不阻擋動作流程。 */ }
+        return true;
+    } catch(_) {
+        if(!feedbackAudioWarningShown){feedbackAudioWarningShown=true;showToast('提示音播放受阻，請在聲音設定按「測試動作提示音」。');}
+        return false;
+    }
 }
+// Unlock early during a real touch/click, before any AI or BLE awaits.
+document.addEventListener('pointerdown',primeFeedbackAudio,{capture:true});
+document.addEventListener('keydown',event=>{if(event.key==='Enter' || event.key===' ')primeFeedbackAudio();},{capture:true});
 function showActionFeedback(text,kind){
     $('actionFeedback').textContent=text;
     $('actionFeedback').className='text-base font-bold mt-2 min-h-6 '+(kind==='interrupted'?'text-amber-300':'text-emerald-300');
@@ -1199,6 +1222,7 @@ function stopHold(reason = '') {
     holdStartedAt = null;
     holdLastSignalAt = null;
     holdSource = '';
+    holdLastFeedbackSecond = 0;
     manualHolding = false;
 }
 
@@ -1261,7 +1285,7 @@ function renderActionSequence(completed = false) {
             ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
             : active ? 'bg-pink-950/60 border-pink-500/50 text-pink-200'
             : 'bg-slate-800/60 border-slate-700 text-slate-400');
-        item.textContent = `${done ? '✓' : index + 1} ${getActionIcon(step.action)} ${getActionNarration(step)}`;
+        item.textContent = `${done ? '✓' : index + 1} ${getActionIcon(step.action)} ${getActionMovementNarration(step)}`;
         if (active) item.setAttribute('aria-current', 'step');
         list.appendChild(item);
     });
@@ -1302,6 +1326,7 @@ function startHold(source) {
     holdLastSignalAt = now;
     if (holdStartedAt !== null) return;
     holdStartedAt = now;
+    holdLastFeedbackSecond = 0;
     holdSource = source;
     manualHolding = source === 'manual';
     showActionFeedback('✓ 已偵測到動作，開始計時。','start');
@@ -1319,6 +1344,11 @@ function startHold(source) {
             return;
         }
         renderActionProgress();
+        const elapsedSeconds=Math.floor((performance.now()-holdStartedAt)/1000);
+        if(elapsedSeconds>holdLastFeedbackSecond && elapsedSeconds<actionHoldSeconds){
+            holdLastFeedbackSecond=elapsedSeconds;
+            showActionFeedback(`✓ 已持續 ${elapsedSeconds} 秒，繼續保持。`,'tick');
+        }
         // BLE 完成由相符通知確認，避免最後一個封包後仍靠計時器自行成功。
         if (holdSource === 'manual' && performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
             void completeAction(expectedAction);
@@ -1607,7 +1637,21 @@ function normalizeAction(action) {
    ⭐ 取得動作文字
 ===================================================== */
 
+function getActionContext(data) {
+    if(currentMode==='senior')return '';
+    const purpose=typeof data?.actionPurpose==='string'?data.actionPurpose.trim().replace(/[。！？!?:：，,\s]+$/g,''):'';
+    if(!purpose || purpose.length>100 || /^(完成故事目前的操作|完成目前操作|完成眼前操作|完成這個動作|以舒適幅度完成這個操作)$/.test(purpose))return '';
+    // Never repeat a conflicting direction from a free-form story field.
+    const action=normalizeAction(data?.action);
+    if(action.endsWith('_LEFT') && purpose.includes('右') && !purpose.includes('左'))return '';
+    if(action.endsWith('_RIGHT') && purpose.includes('左') && !purpose.includes('右'))return '';
+    return purpose;
+}
 function getActionNarration(data) {
+    const context=getActionContext(data),movement=getActionMovementNarration(data);
+    return context?`${context}。請${movement}。`:movement;
+}
+function getActionMovementNarration(data) {
 
     const action =
         normalizeAction(
@@ -3458,11 +3502,11 @@ function showAction(data) {
         +
         ' '
         +
-        currentActionNarration;
+        (getActionContext(data) || currentActionNarration);
 
 
     const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'手腕向左傾斜一次，再回到中間。',TILT_RIGHT:'手腕向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
-    $('actionSubText').textContent='💡 '+currentActionPurpose+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'')+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
+    $('actionSubText').textContent='💡 '+(getActionContext(data)?'做法：'+getActionMovementNarration(data):currentActionPurpose)+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'')+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
 
     void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
     refreshStoryControls();
@@ -4377,6 +4421,12 @@ document.addEventListener(
          */
 
         $('fixedVoiceToggle').addEventListener('change',()=>{voiceSettings.fixedVoice=$('fixedVoiceToggle').checked;cloudSpeechCooldownUntil=0;saveVoiceSettings();});
+        $('btnTestFeedback').addEventListener('click',async()=>{
+            primeFeedbackAudio();
+            if(Number(voiceSettings.volume)===0){showToast('目前音量是 0，請先調高下方音量。');return;}
+            const played=await playFeedbackTone('complete');
+            showToast(played?'已播放兩聲提示音；若沒聽到，請確認網站與裝置沒有靜音。':'提示音未能播放，請確認瀏覽器允許音訊後再試。');
+        });
         $('voiceSelect')
             .addEventListener(
 
