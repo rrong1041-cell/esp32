@@ -843,7 +843,7 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 <label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">使用 Worker 中文配音（失敗時自動切換備用聲音）</label>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
-<p class="text-xs text-slate-400 mb-3">平常使用 Worker 配音；失敗時，自動選擇 iPhone 的中文 Siri、Android 的 Google 中文或電腦的 Yating（需裝置有提供）。下方選「自動」即可；也能手動指定喜歡的備用聲音。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
+<p class="text-xs text-slate-400 mb-3">平常使用 Worker 配音；失敗時，自動選擇 iPhone 的中文 Siri、Android 的 Google 中文或電腦的 Yating（需裝置有提供）。下方可選「自動」、指定聲音，或「系統預設中文（舊版方式）」讓系統決定聲音。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -1021,7 +1021,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 15.9 — 直接遊玩與合作模式，預設 Worker 配音
+   FRONTEND 16.0 — 直接遊玩與合作模式，預設 Worker 配音
 
    新架構：
 
@@ -1991,6 +1991,10 @@ function populateVoiceSelect() {
         '✨ 自動（'+getAutomaticVoiceLabel()+'）';
 
     select.appendChild(auto);
+    const systemDefault=document.createElement('option');
+    systemDefault.value='__SYSTEM_TW__';
+    systemDefault.textContent='系統預設中文（舊版方式，不指定聲音）';
+    select.appendChild(systemDefault);
 
     const chinese =
         availableVoices.filter(
@@ -2091,6 +2095,7 @@ function restoreSelectedVoice() {
     const select =
         $('voiceSelect');
 
+    if(voiceSettings.voiceURI==='__SYSTEM_TW__'){if(select)select.value='__SYSTEM_TW__';return;}
     if (select) {
 
         select.value =
@@ -2169,6 +2174,7 @@ function getAutomaticVoiceLabel(){
     return platform==='ios'?'優先可用的中文 Siri 聲音':platform==='android'?'優先 Google 中文（台灣中文優先）':'優先 Yating 台灣中文';
 }
 function chooseSpeechVoice(){
+    if(voiceSettings.voiceURI==='__SYSTEM_TW__')return null;
     if(typeof speechSynthesis.getVoices==='function'){
         const voices=speechSynthesis.getVoices();
         // Some mobile browsers temporarily return an empty list after loading it.
@@ -4558,6 +4564,13 @@ document.addEventListener(
                         $('voiceSelect')
                         .value;
 
+
+                    if(value==='__SYSTEM_TW__'){
+                        selectedVoice=null;voiceSettings.voiceURI=value;
+                        saveVoiceSettings();
+                        updateVoiceStatus('已選舊版方式：只指定台灣中文，由系統決定實際聲音。');
+                        return;
+                    }
 
                     if (
                         value ===
