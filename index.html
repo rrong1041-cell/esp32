@@ -1018,7 +1018,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 15.0 — 雙裝置合作與保存故事配音
+   FRONTEND 15.1 — 家人控制首次載入綁定修正
 
    新架構：
 
@@ -2861,7 +2861,6 @@ async function switchMode(
             '坐在穩固、有椅背的椅子上，雙腳平放地面。選擇難度，跟著語音做輕柔手部活動。';
 
         selectedTheme=modeTopics.senior.theme;
-        initializeCooperationUI();
         renderChildThemes();
 
         $('seniorDifficultyPanel')
@@ -4197,6 +4196,7 @@ document.addEventListener(
     () => {
 
 
+        initializeCooperationUI();
         renderChildThemes();
         refreshStoryControls();
         $('btnPauseStory').addEventListener('click',toggleAdventurePause);
@@ -4827,7 +4827,7 @@ document.addEventListener(
 
 );
 
-let familyDevice=null,familyCharacteristic=null,familyQueue=Promise.resolve(),familyConnecting=false,familyLearning=false;
+let familyDevice=null,familyCharacteristic=null,familyQueue=Promise.resolve(),familyConnecting=false,familyLearning=false,cooperationUIInitialized=false;
 let coopStates=null,coopTimer=null,storyPreview=false,audioBuildController=null,familySetupTimer=null;
 const coopCommands={child:{},family:{}};
 function resetCoopCommands(){coopCommands.child={};coopCommands.family={};}
@@ -4855,8 +4855,9 @@ function clearFamily(){
     resetCoopHolds();if(coopStates){syncCoopDevices();renderCoopProgress();}
 }
 async function connectFamily(){
-    if(familyConnecting || familyCharacteristic)return;
-    if(!navigator.bluetooth){showToast('此瀏覽器無法連接藍牙裝置，請用電腦 Chrome 或 Edge。');return;}
+    if(familyConnecting){showToast('正在連接家人裝置，請先完成裝置選擇。');return;}
+    if(familyCharacteristic){showToast('家人裝置已連線。要換裝置，請先中斷家人連線。');return;}
+    if(typeof navigator.bluetooth?.requestDevice!=='function'){familyNotice('未找到網頁藍牙。iPhone 請在 Safari 啟用 Beacio 並允許此網站，再重新整理；Android 或電腦請使用支援藍牙的瀏覽器。');return;}
     familyConnecting=true;$('btnConnectFamily').disabled=true;let device;
     try{
         device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_CONFIG.serviceUuid]});
@@ -4991,13 +4992,16 @@ async function buildStoryAudio(){
     }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
     finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
 }
+function familyNotice(message){$('familyStatus').textContent=message;showToast(message);}
 function initializeCooperationUI(){
+    if(cooperationUIInitialized)return;
+    cooperationUIInitialized=true;
     $('playStyle').addEventListener('change',()=>{resetAdventure();refreshCoopUI();});
     $('familyPosture').addEventListener('change',()=>{resetAdventure();void sendFamily(familyPosture()==='seated'?'MODE_SENIOR':'MODE_CHILD');refreshCoopUI();});
     $('btnConnectFamily').addEventListener('click',connectFamily);
-    $('btnDisconnectFamily').addEventListener('click',()=>{const device=familyDevice;clearFamily();device?.gatt?.disconnect();});
-    for(const [id,command] of [['btnCalibrateFamily','CALIBRATE'],['btnHoldFamily','LEARN_HOLD'],['btnInvertFamily','INVERT_LR']])$(id).addEventListener('click',async()=>{if(!familyCharacteristic || familyLearning)return;familyLearning=true;resetCoopHolds();await syncCoopDevices();clearTimeout(familySetupTimer);familySetupTimer=setTimeout(()=>{familyLearning=false;resetCoopCommands();void sendFamily('CANCEL_HOLD');void syncCoopDevices();showToast('家人裝置尚未確認設定，請重新嘗試。');},10000);if(!await sendFamily(command)){familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();void syncCoopDevices();showToast('家人裝置設定傳送失敗。');}});
-    $('btnManualFamily').addEventListener('click',()=>{primeFeedbackAudio();if(coopStates)void handleCoopAction('family',coopStates.family.action,'manual');});
+    $('btnDisconnectFamily').addEventListener('click',()=>{if(!familyCharacteristic && !familyDevice?.gatt?.connected){familyNotice('家人裝置尚未連線，請先按「連接家人的裝置」。');return;}const device=familyDevice;clearFamily();device?.gatt?.disconnect();});
+    for(const [id,command] of [['btnCalibrateFamily','CALIBRATE'],['btnHoldFamily','LEARN_HOLD'],['btnInvertFamily','INVERT_LR']])$(id).addEventListener('click',async()=>{if(!familyCharacteristic){familyNotice('請先連接家人的裝置，再設定校正、撐住姿勢或左右方向。');return;}if(familyLearning){familyNotice('家人裝置正在設定，請等待確認或稍後重試。');return;}familyLearning=true;resetCoopHolds();await syncCoopDevices();clearTimeout(familySetupTimer);familySetupTimer=setTimeout(()=>{familyLearning=false;resetCoopCommands();void sendFamily('CANCEL_HOLD');void syncCoopDevices();showToast('家人裝置尚未確認設定，請重新嘗試。');},10000);if(!await sendFamily(command)){familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();void syncCoopDevices();showToast('家人裝置設定傳送失敗。');}});
+    $('btnManualFamily').addEventListener('click',()=>{primeFeedbackAudio();if(!coopStates || !waitingForAction){familyNotice('請先選合作模式、生成故事，再按「手動測試遊玩」，等家人任務出現後再模擬。');return;}if(busy || adventurePaused || controllerLearning || familyLearning || document.hidden || !coopRoleEnabled('family')){familyNotice('目前還沒輪到家人動作，或活動正在暫停／設定；請依畫面提示等待。');return;}void handleCoopAction('family',coopStates.family.action,'manual');});
     $('btnStartPreview').addEventListener('click',()=>startPreview());$('btnTestCoop').addEventListener('click',()=>startPreview(true));$('btnBuildAudio').addEventListener('click',buildStoryAudio);$('btnCancelAudio').addEventListener('click',()=>audioBuildController?.abort());refreshCoopUI();
 }
 
