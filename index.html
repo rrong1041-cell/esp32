@@ -535,6 +535,7 @@ class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 round
 連接故事裝置
 
 </button>
+<div id="familyBLEPanel" class="hidden space-y-2 mt-3 p-3 border border-purple-500 rounded-xl"><p id="familyStatus">家人裝置未連線</p><button id="btnConnectFamily" class="w-full bg-purple-700 rounded-xl p-2">連接家人的裝置</button><button id="btnDisconnectFamily" class="w-full bg-slate-800 rounded-xl p-2">中斷家人連線</button><button id="btnCalibrateFamily" class="w-full bg-slate-800 rounded-xl p-2">家人重新校正</button><button id="btnHoldFamily" class="w-full bg-slate-800 rounded-xl p-2">設定家人撐住姿勢</button><button id="btnInvertFamily" class="w-full bg-slate-800 rounded-xl p-2">反轉家人左右方向</button><button id="btnManualFamily" class="w-full bg-amber-600 rounded-xl p-2">模擬家人目前動作</button></div>
 <button id="btnDisconnect" disabled class="w-full mt-2 bg-slate-800 hover:bg-rose-950 disabled:opacity-40 disabled:cursor-not-allowed border border-rose-400/40 text-rose-200 font-bold py-2 px-3 rounded-xl text-sm">中斷連線</button>
 <button id="btnCalibrate" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">
   🎯 重新校正姿勢
@@ -654,7 +655,8 @@ class="text-sm text-slate-300 mt-2">
 <div id="actionProgressPanel" class="hidden mt-3">
   <div id="actionProgressText" class="text-base font-bold text-amber-300" role="status" aria-live="polite"></div>
   <progress id="actionProgressBar" class="w-full mt-2" max="1" value="0" aria-label="目前動作完成進度"></progress>
-  <div id="actionFeedback" class="text-base font-bold text-emerald-300 mt-2 min-h-6" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="coopProgress" class="hidden border border-purple-500 rounded-xl p-3 my-3"><p id="coopRule"></p><p id="childCoopTask"></p><p id="childCoopProgress" class="text-emerald-300 font-bold" aria-live="polite"></p><p id="familyCoopTask"></p><p id="familyCoopProgress" class="text-cyan-300 font-bold" aria-live="polite"></p></div>
+<div id="actionFeedback" class="text-base font-bold text-emerald-300 mt-2 min-h-6" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="turnDiagnostics" class="hidden mt-2 text-sm text-cyan-200" role="status" aria-live="polite"></div>
   <div id="actionProgressHint" class="text-xs text-slate-400 mt-1"></div>
 </div>
@@ -668,6 +670,7 @@ class="text-sm text-slate-300 mt-2">
 
 <div class="space-y-2">
 
+<div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="solo">單人冒險</option><option value="coop">孩子＋家人合作</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">孩子與家人各戴一個不同裝置，一起玩同一篇故事。</p></div></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -747,6 +750,7 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 <button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
 <p class="text-sm text-slate-300">每天最多新增 2 次，已保存內容可重玩。依目前年齡、主題和難度選取。</p>
 </div>
+<div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
 <div id="seniorStoryControls" class="hidden space-y-2">
 <button id="btnPauseStory" disabled class="w-full bg-emerald-950 border border-emerald-400/50 text-emerald-100 text-lg font-bold px-4 py-3 rounded-xl">⏸ 休息一下</button>
 <p id="pauseStoryHint" class="text-base text-slate-300 leading-relaxed">可以隨時休息，左右轉的已完成次數會保留。</p>
@@ -833,7 +837,7 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
-<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">優先 Cloudflare 固定中文配音</label>
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" class="mr-2">優先 Cloudflare 固定中文配音</label>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
 <p class="text-xs text-slate-400 mb-3">使用先前試聽的中文聲線。未啟用或額度不足時，使用下方裝置聲音。語速與音量可調整；音高與語氣只影響裝置朗讀。</p>
@@ -1014,7 +1018,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 13.9 — 持續動作與跳躍計次
+   FRONTEND 15.0 — 雙裝置合作與保存故事配音
 
    新架構：
 
@@ -1215,6 +1219,7 @@ function showActionFeedback(text,kind){
     playFeedbackTone(kind);
 }
 function stopHold(reason = '') {
+    resetCoopHolds();
     const wasHolding=holdStartedAt!==null;
     if(reason && wasHolding && waitingForAction && !busy && !adventurePaused)showActionFeedback(reason,'interrupted');
     clearInterval(holdTimer);
@@ -1242,7 +1247,8 @@ function renderActionProgress() {
     refreshStoryControls();
     renderActionSequence();
     const holding = actionHoldSeconds > 0;
-    const elapsed = holdStartedAt === null ? 0 :
+    const childState=isCooperation() && coopStates?.child;
+    const elapsed = childState ? (childState.done?childState.seconds:childState.started===null?0:Math.min(childState.seconds,(performance.now()-childState.started)/1000)) : holdStartedAt === null ? 0 :
         Math.min(actionHoldSeconds, (performance.now() - holdStartedAt) / 1000);
     $('actionProgressPanel').classList.toggle('hidden', !currentAction);
     $('actionProgressText').textContent = holding
@@ -1256,7 +1262,7 @@ function renderActionProgress() {
             : '保持指定姿勢；放下或訊號中斷會重新計時。')
         : (currentMode==='senior' ? '每次相符動作累積一次，達標才繼續活動。' : '每次相符動作累積一次，達標才繼續故事。');
     $('btnManualAction').textContent = holding
-        ? (manualHolding ? '⏹ 停止模擬持續動作' : '⏱ 開始模擬持續動作')
+        ? ((childState?childState.manual && childState.started!==null:manualHolding) ? '⏹ 停止模擬持續動作' : '⏱ 開始模擬持續動作')
         : '✨ 模擬一次目前動作';
 }
 
@@ -1314,8 +1320,12 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     if (speakIt) await speak(currentActionNarration);
     await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    if(step.familyAction && speakIt)await speak('家人的任務。'+getActionNarration(step.familyAction));
+    await waitForAdventureResume(version);
+    if(version!==actVersion || stepVersion!==actionStepVersion)return;
     showAction(step);
     busy = false;
+    void syncCoopDevices();
 }
 
 function startHold(source) {
@@ -1518,6 +1528,8 @@ async function startTurnTrial(){
     await showCurrentAct(true);
 }
 function refreshStoryControls(){
+    refreshCoopUI();
+    void syncCoopDevices();
     void syncPhysicalButtonLock();
     $('btnTurnTrial').classList.toggle('hidden',currentMode==='senior');
     $('btnTurnTrial').disabled=!bleCharacteristic || busy || controllerLearning || (acts.length>0 && !storyFinished);
@@ -1836,9 +1848,9 @@ let speechToken = 0;
 let activeSpeechUtterance = null;
 
 let voiceSettings = {
-    fixedVoice:true,
+    fixedVoice:false,
 
-    rate:.94,
+    rate:.96,
 
     pitch:1,
 
@@ -1848,7 +1860,7 @@ let voiceSettings = {
 
     voiceURI:'',
 
-    version:6
+    version:7
 
 };
 
@@ -1896,6 +1908,11 @@ function loadVoiceSettings() {
             ...JSON.parse(saved)
 
         };
+        // Adopt the user's chosen voice once; subsequent manual choices stay saved.
+        if(Number(voiceSettings.version)<7){
+            Object.assign(voiceSettings,{fixedVoice:false,voiceURI:'',rate:.96,pitch:1,emotion:'natural',version:7});
+            saveVoiceSettings();
+        }
         voiceSettings.rate=Math.min(1.35,Math.max(.65,Number(voiceSettings.rate)||.94));
         voiceSettings.pitch=Math.min(1.2,Math.max(.8,Number(voiceSettings.pitch)||1));
         voiceSettings.volume=Number.isFinite(Number(voiceSettings.volume))?Math.min(1,Math.max(0,Number(voiceSettings.volume))):1;
@@ -1962,7 +1979,7 @@ function populateVoiceSelect() {
         '__AUTO__';
 
     auto.textContent =
-        '✨ 自動（優先台灣中文）';
+        '✨ 自動（'+getAutomaticVoiceLabel()+'）';
 
     select.appendChild(auto);
 
@@ -2009,7 +2026,7 @@ function populateVoiceSelect() {
 
             ?
 
-        `已找到 ${availableVoices.length} 個裝置語音。自動優先台灣中文；不同裝置的聲音可能不同。`
+        `已找到 ${availableVoices.length} 個裝置語音。${getAutomaticVoiceLabel()}；仍可手動選擇喜歡的聲音。`
 
             :
 
@@ -2132,11 +2149,36 @@ function updateVoiceSettingUI() {
 }
 
 
+function getVoicePlatform(){
+    const ua=String(navigator.userAgent || '');
+    if(/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && Number(navigator.maxTouchPoints)>1))return 'ios';
+    if(/Android/i.test(ua))return 'android';
+    return 'desktop';
+}
+function getAutomaticVoiceLabel(){
+    const platform=getVoicePlatform();
+    return platform==='ios'?'優先可用的中文 Siri 聲音':platform==='android'?'優先台灣中文自然聲線':'優先 Yating 台灣中文';
+}
 function chooseSpeechVoice(){
     if(typeof speechSynthesis.getVoices==='function')availableVoices=speechSynthesis.getVoices();
     const explicit=availableVoices.find(v=>v.voiceURI===voiceSettings.voiceURI);
     if(explicit)return explicit;
-    const score=v=>/^zh[-_]TW$/i.test(v.lang)?100:/^zh[-_]Hant/i.test(v.lang)?90:/^zh/i.test(v.lang)?50:-100;
+    const platform=getVoicePlatform();
+    const score=v=>{
+        const language=String(v.lang || '').replace(/_/g,'-');
+        if(!/^zh\b/i.test(language))return -100;
+        let value=/^zh-TW$/i.test(language)?100:/^zh-Hant/i.test(language)?90:50;
+        const name=String(v.name || '');
+        if(platform==='ios'){
+            if(/\bSiri\b/i.test(name))value+=70;
+            if(/premium|enhanced|natural|高品質|增強|自然/i.test(name))value+=15;
+        }else if(platform==='android'){
+            // Name labels are hints, not a guarantee of subjective audio quality.
+            if(/premium|enhanced|natural|高品質|增強|自然/i.test(name))value+=20;
+            if(/Google/i.test(name))value+=10;
+        }else if(/^zh-TW$/i.test(language) && /\bYating\b/i.test(name))value+=25;
+        return value;
+    };
     return availableVoices.filter(v=>score(v)>0).sort((a,b)=>score(b)-score(a)+(Number(!!b.default)-Number(!!a.default)))[0] || null;
 }
 function getSentenceEmotion(text){
@@ -2218,7 +2260,7 @@ function savedAudio(operation,key,blob){
     });
 }
 async function playFixedVoice(text,token){
-    if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
+    if((voiceSettings.fixedVoice===false && !adventure?.audioReady) || typeof Audio==='undefined')return null;
     const age=Number(selectedChildAge)||6;
     const pace=currentMode==='senior'?.9:age<=6?.94:1;
     const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
@@ -2237,7 +2279,7 @@ async function playFixedVoice(text,token){
             try{
                 timer=setTimeout(()=>controller.abort(),45000);
                 const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-cloudflare',{
-                    method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate})});
+                    method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true})});
                 if(!response.ok){const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);throw new Error('unavailable');}
                 if(!response.headers.get('Content-Type')?.includes('audio/'))throw new Error('unavailable');
                 const blob=await response.blob();if(!blob.size || blob.size>2000000)throw new Error('empty');
@@ -2383,6 +2425,7 @@ function clearBLEConnection() {
     $('statusIndicator').className='w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
     $('statusText').textContent='已斷線';
     $('statusIcon').className='fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
+    resetCoopHolds();resetCoopCommands();void syncCoopDevices();
     if(holdSource==='ble'){stopHold();renderActionProgress();}
 }
 function disconnectBLE() {
@@ -2404,6 +2447,7 @@ async function connectBLE() {
     try {
         showToast('正在搜尋故事裝置……');
         selectedDevice=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_CONFIG.serviceUuid]});
+        if(selectedDevice===familyDevice || (familyDevice && selectedDevice.id===familyDevice.id))throw new Error('請選另一個裝置，孩子和家人不能使用同一裝置。');
         bleDevice=selectedDevice;
         const disconnect=()=>{
             if(bleDevice!==selectedDevice)return;
@@ -2427,7 +2471,7 @@ async function connectBLE() {
         await sendBLE('INFO');await sendBLE('READY');await syncControllerAction();
         showToast('藍牙連線成功！');
     } catch(e) {
-        if(selectedDevice?.gatt?.connected)selectedDevice.gatt.disconnect();
+        if(selectedDevice!==familyDevice && selectedDevice?.gatt?.connected)selectedDevice.gatt.disconnect();
         clearBLEConnection();console.error(e);
         showToast(e.name==='NotFoundError'?'已取消裝置選擇。':'藍牙連線失敗：'+e.message);
     } finally {connectionPending=false;$('btnConnect').disabled=false;}
@@ -2492,6 +2536,7 @@ async function onBleEvent(event) {
         showToast('左右方向已切換。');await syncControllerAction();return;
     }
     if (value === 'HOLD_END') {
+        if(isCooperation() && coopStates && !coopStates.child.done){coopStates.child.started=null;coopStates.child.last=null;coopStates.child.tick=0;renderCoopProgress();}
         if (holdSource === 'ble') { stopHold('動作中斷，請重新開始計時。'); renderActionProgress(); }
         return;
     }
@@ -2579,6 +2624,7 @@ async function syncPhysicalButtonLock() {
     if(!await sendBLE(locked?'GAME_ACTIVE':'GAME_IDLE') && bleCharacteristic===characteristic && lastPhysicalButtonLock===locked)lastPhysicalButtonLock=null;
 }
 async function syncControllerAction() {
+    if(isCooperation()){resetCoopCommands();await syncCoopDevices();return;}
     await syncPhysicalButtonLock();
     await sendBLE(!adventurePaused && !controllerLearning && waitingForAction && !busy && expectedAction
         ? (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + expectedAction : 'PAUSE');
@@ -2669,6 +2715,7 @@ function renderChildThemes() {
 ===================================================== */
 
 function resetAdventure() {
+    audioBuildController?.abort();storyPreview=false;stopCoop();
     adventurePaused=false;storyFinished=false;releasePauseWaiters();
     if(generationController){generationController.abort();generationController=null;}
     void sendBLE('PAUSE');
@@ -2814,6 +2861,7 @@ async function switchMode(
             '坐在穩固、有椅背的椅子上，雙腳平放地面。選擇難度，跟著語音做輕柔手部活動。';
 
         selectedTheme=modeTopics.senior.theme;
+        initializeCooperationUI();
         renderChildThemes();
 
         $('seniorDifficultyPanel')
@@ -3508,7 +3556,8 @@ function showAction(data) {
     const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'手腕向左傾斜一次，再回到中間。',TILT_RIGHT:'手腕向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
     $('actionSubText').textContent='💡 '+(getActionContext(data)?'做法：'+getActionMovementNarration(data):currentActionPurpose)+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'')+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
 
-    void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
+    if(!isCooperation())void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
+    setupCoop(data);
     refreshStoryControls();
 
 }
@@ -3519,6 +3568,7 @@ function showAction(data) {
 ===================================================== */
 
 function lockAction() {
+    resetCoopHolds();resetCoopCommands();void sendFamily('PAUSE');
     void sendBLE('PAUSE');
     waitingForAction = false;
     stopHold();
@@ -3547,6 +3597,7 @@ function lockAction() {
 ===================================================== */
 
 function showEnding() {
+    stopCoop();void sendFamily('STORY_COMPLETE');
     storyFinished=true;adventurePaused=false;releasePauseWaiters();refreshStoryControls();
     actVersion++;
     clearTimeout(actTimer);
@@ -3631,6 +3682,7 @@ function showEnding() {
 ===================================================== */
 
 async function handleAction(action, source = 'manual') {
+    if(isCooperation() && coopStates){await handleCoopAction('child',action,source);return;}
     if(source==='manual')primeFeedbackAudio();
     if (!waitingForAction || busy || adventurePaused || controllerLearning || document.hidden) return;
     // Match raw device values: normalizeAction's senior fallback must not turn
@@ -3749,7 +3801,7 @@ function rememberStory(story, topic = '') {
 const LOCAL_LIBRARY_KEY='story-library-v1';
 const LOCAL_ATTEMPTS_KEY='story-attempts-v1';
 function readSavedJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch(_){return fallback;}}
-function librarySelection(topic){return JSON.stringify([currentMode,currentMode==='senior'?'':topic,currentMode==='senior'?0:selectedChildAge,selectedDifficulty]);}
+function librarySelection(topic){const key=[currentMode,currentMode==='senior'?'':topic,currentMode==='senior'?0:selectedChildAge,selectedDifficulty];if(isCooperation())key.push('coop',familyPosture());return JSON.stringify(key);}
 function readLocalLibrary(){const rows=readSavedJSON(LOCAL_LIBRARY_KEY,[]);return Array.isArray(rows)?rows.filter(row=>row && Array.isArray(row.story?.acts)):[];}
 function saveFullStory(story,key,id){try{const rows=readLocalLibrary();rows.push({key,id,story});localStorage.setItem(LOCAL_LIBRARY_KEY,JSON.stringify(rows.slice(-30)));}catch(_){showToast('瀏覽器儲存空間不足，這次內容無法保存在此裝置。');}}
 function getStoryClientId(){let id=readSavedJSON('story-client-id',null);if(typeof id!=='string' || !/^[a-zA-Z0-9-]{16,80}$/.test(id)){id=typeof crypto!=='undefined' && crypto.randomUUID?crypto.randomUUID():'browser-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem('story-client-id',JSON.stringify(id));}catch(_){}}return id;}
@@ -3842,7 +3894,7 @@ async function generateStory(preferSaved=false) {
          */
 
         let data;
-        if(localRow){data={story:localRow.story,source:'library',notice:limited?'今天新增次數已用完，改用已保存內容。':'正在播放已保存內容，沒有重新生成。'};}
+        if(localRow){data={story:localRow.story,libraryId:localRow.id,source:'library',notice:limited?'今天新增次數已用完，改用已保存內容。':'正在播放已保存內容，沒有重新生成。'};}
         else {
         try {
         const res =
@@ -3871,7 +3923,7 @@ async function generateStory(preferSaved=false) {
                             selectedDifficulty,
 
                         recentStories: getRecentStories(),
-                        clientId:getStoryClientId(),preferSaved:useSaved,
+                        clientId:getStoryClientId(),preferSaved:useSaved,playerMode:isCooperation()?'coop':'solo',familyPosture:familyPosture(),
                         recentLibraryIds:localRows.map(row=>row.id).filter(Boolean).slice(-5)
 
                     })
@@ -3887,7 +3939,7 @@ async function generateStory(preferSaved=false) {
           if(requestVersion!==adventureVersion)throw error;
           if(!localRows.length)throw error;
           localRow=localRows[Math.floor(Math.random()*localRows.length)];
-          data={story:localRow.story,source:'library',notice:'AI 暫時無法使用，改用已保存內容。'};
+          data={story:localRow.story,libraryId:localRow.id,source:'library',notice:'AI 暫時無法使用，改用已保存內容。'};
         }
         }
 
@@ -3907,6 +3959,7 @@ async function generateStory(preferSaved=false) {
             );
 
 
+        adventure.libraryId=data.libraryId || adventure.libraryId;
         acts =
             adventure.acts;
 
@@ -4032,9 +4085,8 @@ async function generateStory(preferSaved=false) {
          * ⭐ 開始第一幕
          */
 
-        await showCurrentAct(
-            true
-        );
+        storyPreview=true;waitingForAction=false;
+        $('audioBuildStatus').textContent=adventure.audioReady?'這篇已保存完整配音，可直接開始遊玩。':'故事已準備好。可製作配音，或直接用內建聲音開始遊玩。';
 
         if (requestVersion !== adventureVersion) return;
 
@@ -4676,9 +4728,9 @@ document.addEventListener(
 
 
                     voiceSettings = {
-                        fixedVoice:true,
+                        fixedVoice:false,
 
-                        rate:.94,
+                        rate:.96,
 
                         pitch:1,
 
@@ -4688,7 +4740,7 @@ document.addEventListener(
 
                         voiceURI:'',
 
-                        version:6
+                        version:7
 
                     };
 
@@ -4725,7 +4777,7 @@ document.addEventListener(
                 'click',
 
                 async () => {
-
+                    if(storyPreview){await startPreview();return;}
                     if (
                         speechPlaying
                     ) {
@@ -4764,7 +4816,7 @@ document.addEventListener(
                             showAction(step);
                         }
                     } finally {
-                        if (replayVersion === actVersion) replayInProgress = false;
+                        if (replayVersion === actVersion){replayInProgress = false;resetCoopCommands();void syncCoopDevices();}
                     }
 
                 }
@@ -4774,6 +4826,180 @@ document.addEventListener(
     }
 
 );
+
+let familyDevice=null,familyCharacteristic=null,familyQueue=Promise.resolve(),familyConnecting=false,familyLearning=false;
+let coopStates=null,coopTimer=null,storyPreview=false,audioBuildController=null,familySetupTimer=null;
+const coopCommands={child:{},family:{}};
+function resetCoopCommands(){coopCommands.child={};coopCommands.family={};}
+function isCooperation(){return currentMode==='child' && $('playStyle').value==='coop';}
+function familyPosture(){return $('familyPosture').value==='seated'?'seated':'general';}
+function refreshCoopUI(){
+    const active=isCooperation();$('btnConnect').textContent=active?'連接孩子的裝置':'連接故事裝置';$('btnDisconnect').textContent=active?'中斷孩子連線':'中斷連線';$('coopOptions').classList.toggle('hidden',!active);$('familyBLEPanel').classList.toggle('hidden',!active);
+    $('playStylePanel').classList.toggle('hidden',currentMode==='senior');
+    for(const id of ['playStyle','familyPosture'])$(id).disabled=busy || (!!acts.length && !storyFinished);
+    $('coopProgress').classList.toggle('hidden',!active || !coopStates);
+    $('btnStartPreview').disabled=!storyPreview || busy || !!audioBuildController;
+    $('btnTestCoop').disabled=!storyPreview || busy || !!audioBuildController;
+    $('btnBuildAudio').disabled=!storyPreview || busy || !adventure?.libraryId || !!audioBuildController;
+    $('btnCancelAudio').classList.toggle('hidden',!audioBuildController);
+}
+async function sendFamily(command){
+    const characteristic=familyCharacteristic;if(!characteristic)return false;
+    const job=familyQueue.then(async()=>{if(characteristic!==familyCharacteristic)return false;await characteristic.writeValue(new TextEncoder().encode(command));return true;});
+    familyQueue=job.catch(()=>false);try{return await job;}catch(_){return false;}
+}
+function clearFamily(){
+    familyCharacteristic?.removeEventListener?.('characteristicvaluechanged',onFamilyEvent);
+    familyCharacteristic=null;familyQueue=Promise.resolve();familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();
+    $('familyStatus').textContent='家人裝置未連線';
+    resetCoopHolds();if(coopStates){syncCoopDevices();renderCoopProgress();}
+}
+async function connectFamily(){
+    if(familyConnecting || familyCharacteristic)return;
+    if(!navigator.bluetooth){showToast('此瀏覽器無法連接藍牙裝置，請用電腦 Chrome 或 Edge。');return;}
+    familyConnecting=true;$('btnConnectFamily').disabled=true;let device;
+    try{
+        device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_CONFIG.serviceUuid]});
+        if(device.id===bleDevice?.id || device===bleDevice)throw new Error('請選另一個裝置，孩子和家人不能使用同一個裝置。');
+        familyDevice=device;device.addEventListener('gattserverdisconnected',()=>{if(device===familyDevice){clearFamily();showToast('家人裝置已斷線，合作任務等待重新連線。');}});
+        const server=await device.gatt.connect(),service=await server.getPrimaryService(BLE_CONFIG.serviceUuid);
+        const characteristic=await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
+        familyCharacteristic=characteristic;resetCoopCommands();await characteristic.startNotifications();characteristic.addEventListener('characteristicvaluechanged',onFamilyEvent);
+        $('familyStatus').textContent='家人已連線：'+(device.name||device.id);
+        await sendFamily(familyPosture()==='seated'?'MODE_SENIOR':'MODE_CHILD');await sendFamily('READY');await syncCoopDevices();
+    }catch(error){if(device && device!==bleDevice && device.gatt?.connected)device.gatt.disconnect();clearFamily();showToast(error.message||'家人裝置連線失敗。');}
+    finally{familyConnecting=false;$('btnConnectFamily').disabled=false;}
+}
+async function onFamilyEvent(event){
+    if(event.target!==familyCharacteristic)return;
+    const value=new TextDecoder().decode(event.target.value).trim().toUpperCase();
+    if(['CALIBRATED','HOLDPOSE_SAVED','HOLDPOSE_FAILED','LR_INVERTED','LR_DEFAULT','SENSOR_READY'].includes(value)){familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();await syncCoopDevices();$('familyStatus').textContent='家人裝置：'+value;return;}
+    if(value==='HOLDPOSE_WAIT'){$('familyStatus').textContent='家人請維持撐住姿勢，等待儲存。';return;}
+    if(['SENSOR_ERROR','CALIBRATING'].includes(value)){familyLearning=true;resetCoopHolds();await syncCoopDevices();return;}
+    // Physical MODE/START events are deliberately ignored while cooperating.
+    if(value==='HOLD_END'){if(coopStates){coopStates.family.started=null;if(coopStates.rule==='support')coopStates.family.done=false;renderCoopProgress();}return;}
+    await handleCoopAction('family',value,'ble');
+}
+function resetCoopHolds(){
+    if(!coopStates)return;
+    for(const state of [coopStates.child,coopStates.family])if(state.seconds>0){state.started=null;state.last=null;state.done=false;state.tick=0;state.manual=false;}
+}
+function stopCoop(){clearInterval(coopTimer);coopTimer=null;coopStates=null;resetCoopCommands();}
+function setupCoop(step){
+    if(coopStates && coopStates.version===actVersion && coopStates.stepVersion===actionStepVersion && coopStates.child.data===step){renderCoopProgress();void syncCoopDevices();return;}
+    stopCoop();if(!isCooperation() || !step.familyAction){refreshCoopUI();return;}
+    const state=(data)=>({data,action:String(data.action).toUpperCase(),count:0,target:Math.max(1,Math.floor(Number(data.targetCount)||1)),seconds:['JUMP','TILT_LEFT','TILT_RIGHT','TURN_LEFT','TURN_RIGHT'].includes(String(data.action).toUpperCase())?0:Number(data.holdSeconds)||0,started:null,last:null,done:false,tick:0,manual:false});
+    coopStates={child:state(step),family:state(step.familyAction),rule:step.cooperation||'together',version:actVersion,stepVersion:actionStepVersion};
+    coopTimer=setInterval(()=>{
+        if(!coopStates)return;
+        if(coopStates.version!==actVersion || coopStates.stepVersion!==actionStepVersion){stopCoop();return;}
+        if(busy || !waitingForAction || adventurePaused || controllerLearning || familyLearning || document.hidden){resetCoopHolds();renderCoopProgress();return;}
+        const now=performance.now();
+        for(const [role,state] of Object.entries({child:coopStates.child,family:coopStates.family})){
+            if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.tick=0;if(!state.done || coopStates.rule==='support')state.done=false;showActionFeedback((role==='child'?'孩子':'家人')+'的動作中斷，請重新開始。','interrupted');}
+            const second=state.started===null?0:Math.floor((now-state.started)/1000);
+            if(second>state.tick && second<state.seconds){state.tick=second;showActionFeedback((role==='child'?'孩子':'家人')+'已持續 '+second+' 秒。','tick');}
+            if(state.manual && state.started!==null && now-state.started>=state.seconds*1000)state.done=true;
+        }
+        renderCoopProgress();void checkCoopComplete();
+    },100);
+    renderCoopProgress();void syncCoopDevices();
+}
+function coopRoleEnabled(role){
+    if(!coopStates)return false;
+    if(coopStates.rule==='child-first' && role==='family')return coopStates.child.done;
+    if(coopStates.rule==='family-first' && role==='child')return coopStates.family.done;
+    if(coopStates.rule==='support' && role==='child')return coopStates.family.started!==null;
+    return true;
+}
+async function syncCoopDevices(){
+    const active=isCooperation();
+    async function update(role,slot,command){const device=role==='child'?bleCharacteristic:familyCharacteristic,cache=coopCommands[role];if(!device)return;if(cache.device!==device){coopCommands[role]={device};}const latest=coopCommands[role];if(latest[slot]===command)return;latest[slot]=command;if(!await (role==='child'?sendBLE(command):sendFamily(command)) && coopCommands[role]===latest)delete latest[slot];}
+    await update('family','lock',active && !storyFinished && (busy || acts.length)?'GAME_ACTIVE':'GAME_IDLE');
+    if(!active){await update('family','action','PAUSE');return;}
+    const command=role=>{if(!coopStates || busy || !waitingForAction || adventurePaused || controllerLearning || familyLearning || replayInProgress || document.hidden || (!bleCharacteristic || !familyCharacteristic))return 'PAUSE';const state=coopStates[role];return !coopRoleEnabled(role) || (state.done && !(role==='family' && coopStates.rule==='support'))?'PAUSE':(state.seconds>0?'TIMED:':'EXPECT:')+state.action;};
+    await update('child','action',command('child'));await update('family','action',command('family'));
+}
+function renderCoopProgress(){
+    refreshCoopUI();if(!coopStates)return;
+    if(waitingForAction && !busy)renderActionProgress();
+    const family=coopStates.family;$('btnManualFamily').textContent=family.seconds?(family.manual && family.started!==null?'停止模擬家人持續動作':'開始模擬家人持續動作'):'模擬一次家人目前動作';
+    const names={child:'孩子',family:'家人'};
+    $('coopRule').textContent=({together:'一起完成：雙方各自達標後繼續。','child-first':'孩子先做，完成後換家人。','family-first':'家人先做，完成後換孩子。',support:'家人持續撐住，孩子再完成自己的動作；中斷後要重新撐住。'})[coopStates.rule];
+    for(const role of ['child','family']){
+        const state=coopStates[role],elapsed=state.started===null?0:Math.min(state.seconds,(performance.now()-state.started)/1000);
+        $(role+'CoopTask').textContent=names[role]+'：'+getActionNarration(state.data);
+        $(role+'CoopProgress').textContent=state.done?'✓ 已達標':!coopRoleEnabled(role)?'等待另一位先完成':state.seconds?elapsed.toFixed(1)+' / '+state.seconds+' 秒':state.count+' / '+state.target+' 次';
+    }
+}
+async function handleCoopAction(role,action,source){
+    if(!coopStates || coopStates.completing || !waitingForAction || busy || adventurePaused || controllerLearning || familyLearning || replayInProgress || document.hidden || !coopRoleEnabled(role))return;
+    if(source==='ble' && (!bleCharacteristic || !familyCharacteristic))return;
+    const state=coopStates[role],received=String(action).toUpperCase();
+    if(received!==state.action){if(state.seconds && state.started!==null){state.started=null;state.tick=0;if(coopStates.rule==='support')state.done=false;}renderCoopProgress();return;}
+    if(state.done && !(role==='family' && coopStates.rule==='support'))return;
+    const now=performance.now();
+    if(state.seconds){
+        if(source==='manual' && state.manual && state.started!==null){state.started=null;state.done=false;state.manual=false;renderCoopProgress();return;}
+        if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.done=false;}
+        state.last=now;
+        if(state.started===null){state.started=now;state.tick=0;state.manual=source==='manual';showActionFeedback((role==='child'?'孩子':'家人')+'開始計時。','start');void syncCoopDevices();}
+        if(now-state.started>=state.seconds*1000)state.done=true;
+    }else{state.count=Math.min(state.target,state.count+1);state.done=state.count>=state.target;showActionFeedback((role==='child'?'孩子':'家人')+'成功 '+state.count+'/'+state.target+' 次。',state.done?'complete':'tick');void (role==='child'?sendBLE('ACTION_TICK'):sendFamily('ACTION_TICK'));}
+    actionCount=coopStates.child.count;renderActionProgress();renderCoopProgress();await checkCoopComplete();await syncCoopDevices();
+}
+async function checkCoopComplete(){
+    if(!coopStates || coopStates.completing || !coopStates.child.done || !coopStates.family.done || busy || !waitingForAction || adventurePaused || controllerLearning || familyLearning || document.hidden)return;
+    const family=coopStates.family;
+    if(coopStates.rule==='support' && (family.started===null || (!family.manual && performance.now()-family.last>HOLD_SIGNAL_TIMEOUT_MS)))return;
+    const states=coopStates;states.completing=true;
+    actionCount=actionTargetCount;const received=expectedAction;
+    // Claim completion synchronously before any BLE writes so duplicate events cannot advance twice.
+    void sendFamily('PAUSE');void sendFamily('ACTION_OK');await completeAction(received);
+}
+function collectStoryAudio(){
+    if(!adventure)return [];
+    const texts=[adventure.opening,adventure.ending];
+    for(const act of adventure.acts||[]){texts.push(act.story);for(const step of getActActions(act)){texts.push(step.storyBefore,getActionNarration(step),step.storyAfter);if(step.familyAction)texts.push('家人的任務。'+getActionNarration(step.familyAction));}}
+    return [...new Set(texts.filter(Boolean).flatMap(splitSpeechText))];
+}
+async function startPreview(manual=false){
+    if(!storyPreview || busy || audioBuildController)return;
+    if(manual!==true && isCooperation() && (!bleCharacteristic || !familyCharacteristic)){showToast('請先連接孩子和家人兩個不同的裝置，或按手動測試遊玩。');return;}
+    storyPreview=false;busy=true;primeSpeech();refreshCoopUI();const version=adventureVersion;
+    try{await showCurrentAct(true);}finally{if(version===adventureVersion){busy=false;refreshStoryControls();}}
+}
+async function storyAudioRequest(controller,body){
+    const timer=setTimeout(()=>controller.abort(),90000);
+    try{
+        const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/story-audio',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const data=await response.json();if(!response.ok || data.ok!==true)throw new Error(data.error||'配音製作或保存失敗');return data;
+    }finally{clearTimeout(timer);}
+}
+async function buildStoryAudio(){
+    if(!storyPreview || busy || audioBuildController || !adventure?.libraryId)return;
+    const controller=new AbortController();audioBuildController=controller;const version=adventureVersion,story=adventure,clips=collectStoryAudio();refreshCoopUI();
+    try{
+        for(let i=0;i<clips.length;i++){
+            $('audioBuildStatus').textContent='正在製作並保存配音 '+(i+1)+'/'+clips.length+'，完成後再開始遊玩。';
+            await storyAudioRequest(controller,{libraryId:story.libraryId,text:clips[i]});
+            if(version!==adventureVersion)return;
+        }
+        await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
+        if(version!==adventureVersion)return;story.audioReady=true;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
+    }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
+    finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
+}
+function initializeCooperationUI(){
+    $('playStyle').addEventListener('change',()=>{resetAdventure();refreshCoopUI();});
+    $('familyPosture').addEventListener('change',()=>{resetAdventure();void sendFamily(familyPosture()==='seated'?'MODE_SENIOR':'MODE_CHILD');refreshCoopUI();});
+    $('btnConnectFamily').addEventListener('click',connectFamily);
+    $('btnDisconnectFamily').addEventListener('click',()=>{const device=familyDevice;clearFamily();device?.gatt?.disconnect();});
+    for(const [id,command] of [['btnCalibrateFamily','CALIBRATE'],['btnHoldFamily','LEARN_HOLD'],['btnInvertFamily','INVERT_LR']])$(id).addEventListener('click',async()=>{if(!familyCharacteristic || familyLearning)return;familyLearning=true;resetCoopHolds();await syncCoopDevices();clearTimeout(familySetupTimer);familySetupTimer=setTimeout(()=>{familyLearning=false;resetCoopCommands();void sendFamily('CANCEL_HOLD');void syncCoopDevices();showToast('家人裝置尚未確認設定，請重新嘗試。');},10000);if(!await sendFamily(command)){familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();void syncCoopDevices();showToast('家人裝置設定傳送失敗。');}});
+    $('btnManualFamily').addEventListener('click',()=>{primeFeedbackAudio();if(coopStates)void handleCoopAction('family',coopStates.family.action,'manual');});
+    $('btnStartPreview').addEventListener('click',()=>startPreview());$('btnTestCoop').addEventListener('click',()=>startPreview(true));$('btnBuildAudio').addEventListener('click',buildStoryAudio);$('btnCancelAudio').addEventListener('click',()=>audioBuildController?.abort());refreshCoopUI();
+}
 
 </script>
 
