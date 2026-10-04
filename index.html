@@ -647,6 +647,7 @@ class="text-sm text-slate-300 mt-2">
 <div id="actionProgressPanel" class="hidden mt-3">
   <div id="actionProgressText" class="text-base font-bold text-amber-300" role="status" aria-live="polite"></div>
   <progress id="actionProgressBar" class="w-full mt-2" max="1" value="0" aria-label="目前動作完成進度"></progress>
+  <div id="actionFeedback" class="text-base font-bold text-emerald-300 mt-2 min-h-6" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="actionProgressHint" class="text-xs text-slate-400 mt-1"></div>
 </div>
 
@@ -997,7 +998,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 12.8 — 持續動作與跳躍計次
+   FRONTEND 12.9 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1143,7 +1144,41 @@ let replayCancelRequested = false;
 // 韌體需持續回報相符動作（建議每 100–500ms），停止回報或別的動作即中斷。
 const HOLD_SIGNAL_TIMEOUT_MS = 1200;
 
-function stopHold() {
+let feedbackAudio = null;
+function primeFeedbackAudio(){
+    try {
+        const AudioClass=window.AudioContext || window.webkitAudioContext;
+        if(!AudioClass)return;
+        if(!feedbackAudio)feedbackAudio=new AudioClass();
+        if(feedbackAudio.state==='suspended')void feedbackAudio.resume().catch(()=>{});
+    } catch(_) { /* 聲音不可用時仍顯示成功文字。 */ }
+}
+function playFeedbackTone(kind){
+    try {
+        if(!feedbackAudio || feedbackAudio.state!=='running')return;
+        const volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
+        if(!volume)return;
+        const notes=kind==='complete'?[660,880]:kind==='interrupted'?[330]:kind==='start'?[520]:[780];
+        notes.forEach((frequency,index)=>{
+            const at=feedbackAudio.currentTime+index*0.11;
+            const oscillator=feedbackAudio.createOscillator(),gain=feedbackAudio.createGain();
+            oscillator.type='sine';oscillator.frequency.value=frequency;
+            gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(0.1*volume,at+0.008);
+            gain.gain.exponentialRampToValueAtTime(0.001,at+0.085);
+            oscillator.connect(gain);gain.connect(feedbackAudio.destination);
+            oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+            oscillator.start(at);oscillator.stop(at+0.1);
+        });
+    } catch(_) { /* 不阻擋動作流程。 */ }
+}
+function showActionFeedback(text,kind){
+    $('actionFeedback').textContent=text;
+    $('actionFeedback').className='text-base font-bold mt-2 min-h-6 '+(kind==='interrupted'?'text-amber-300':'text-emerald-300');
+    playFeedbackTone(kind);
+}
+function stopHold(reason = '') {
+    const wasHolding=holdStartedAt!==null;
+    if(reason && wasHolding && waitingForAction && !busy && !adventurePaused)showActionFeedback(reason,'interrupted');
     clearInterval(holdTimer);
     holdTimer = null;
     holdStartedAt = null;
@@ -1154,6 +1189,7 @@ function stopHold() {
 
 function resetActionProgress(data = {}) {
     stopHold();
+    $('actionFeedback').textContent='';
     actionCount = 0;
     const count = Number(data.targetCount);
     const seconds = Number(data.holdSeconds);
@@ -1247,12 +1283,13 @@ function startHold(source) {
     const now = performance.now();
     if (holdStartedAt !== null && holdSource !== source) return;
     if (holdStartedAt !== null && source === 'ble' &&
-        now - holdLastSignalAt > HOLD_SIGNAL_TIMEOUT_MS) stopHold();
+        now - holdLastSignalAt > HOLD_SIGNAL_TIMEOUT_MS) stopHold('動作訊號中斷，請重新開始計時。');
     holdLastSignalAt = now;
     if (holdStartedAt !== null) return;
     holdStartedAt = now;
     holdSource = source;
     manualHolding = source === 'manual';
+    showActionFeedback('✓ 已偵測到動作，開始計時。','start');
     const version = actVersion;
     const stepVersion = actionStepVersion;
     holdTimer = setInterval(() => {
@@ -1262,7 +1299,7 @@ function startHold(source) {
             return;
         }
         if (holdSource === 'ble' && performance.now() - holdLastSignalAt > HOLD_SIGNAL_TIMEOUT_MS) {
-            stopHold();
+            stopHold('動作訊號中斷，請重新開始計時。');
             renderActionProgress();
             return;
         }
@@ -1425,6 +1462,7 @@ function refreshChildAgeUI(){
     });
 }
 async function startTurnTrial(){
+    primeFeedbackAudio();
     if(currentMode!=='child' || !bleCharacteristic || busy || controllerLearning || (acts.length && !storyFinished)){showToast('請先連接裝置，並在沒有進行中故事時測試。');return;}
     resetAdventure();
     acts=[{index:1,title:'左右轉身測試',practiceTurn:true,story:'先停穩，將戴裝置的手放在胸前。手臂跟著身體慢慢轉，腳可小步跟著轉；請留意周圍空間。不舒服就停止。',actions:[
@@ -2379,7 +2417,7 @@ async function onBleEvent(event) {
         showToast('左右方向已切換。');await syncControllerAction();return;
     }
     if (value === 'HOLD_END') {
-        if (holdSource === 'ble') { stopHold(); renderActionProgress(); }
+        if (holdSource === 'ble') { stopHold('動作中斷，請重新開始計時。'); renderActionProgress(); }
         return;
     }
     if (value === 'SENSOR_ERROR') {
@@ -3506,20 +3544,21 @@ function showEnding() {
 ===================================================== */
 
 async function handleAction(action, source = 'manual') {
+    if(source==='manual')primeFeedbackAudio();
     if (!waitingForAction || busy || adventurePaused || controllerLearning || document.hidden) return;
     // Match raw device values: normalizeAction's senior fallback must not turn
     // an unrelated or unknown hardware signal into a successful ARM_UP.
     const received = String(action || '').trim().toUpperCase();
     if (received !== expectedAction) {
         if (source === 'ble' && holdSource === 'ble') {
-            stopHold();
+            stopHold('偵測到其他動作，請重新開始計時。');
             renderActionProgress();
         }
         return;
     }
     if (actionHoldSeconds > 0) {
         if (source === 'manual' && manualHolding) {
-            stopHold();
+            stopHold('已停止模擬，請重新開始計時。');
             renderActionProgress();
             return;
         }
@@ -3531,6 +3570,7 @@ async function handleAction(action, source = 'manual') {
         return;
     }
     actionCount = Math.min(actionTargetCount, actionCount + 1);
+    if(actionCount<actionTargetCount)showActionFeedback(`✓ 第 ${actionCount} 次成功，還差 ${actionTargetCount-actionCount} 次。`,'tick');
     renderActionProgress();
     if (actionCount >= actionTargetCount) await completeAction(received);
     else if (source === 'ble') void sendBLE('ACTION_TICK');
@@ -3541,6 +3581,7 @@ async function completeAction(received) {
     const version = actVersion;
     const stepVersion = actionStepVersion;
     const completedStep = actionSteps[currentActionStepIndex] || {};
+    showActionFeedback(actionHoldSeconds>0?'✓ 持續時間達標，動作完成！':`✓ 第 ${actionCount} 次成功，${actionTargetCount} 次全部完成！`,'complete');
     waitingForAction = false;
     refreshStoryControls();
     expectedAction = '';
@@ -3946,6 +3987,7 @@ async function generateStory() {
 ===================================================== */
 
 function primeSpeech() {
+    primeFeedbackAudio();
 
     if (
         'speechSynthesis' in window
