@@ -535,12 +535,13 @@ class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 round
 連接故事裝置
 
 </button>
+<button id="btnDisconnect" disabled class="w-full mt-2 bg-slate-800 hover:bg-rose-950 disabled:opacity-40 disabled:cursor-not-allowed border border-rose-400/40 text-rose-200 font-bold py-2 px-3 rounded-xl text-sm">中斷連線</button>
 <button id="btnCalibrate" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">
   🎯 重新校正姿勢
 </button>
 <button id="btnLearnHold" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">🙌 設定撐住姿勢</button>
 <button id="btnInvertDirections" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">↔️ 反轉左右方向</button>
-<button id="btnTurnTrial" disabled class="w-full mt-2 bg-purple-950 hover:bg-purple-900 disabled:opacity-40 border border-purple-400/40 text-purple-200 font-bold py-2 px-3 rounded-xl text-sm">↶↷ 測試左右轉身（需裝置 3.6）</button>
+<button id="btnTurnTrial" disabled class="w-full mt-2 bg-purple-950 hover:bg-purple-900 disabled:opacity-40 border border-purple-400/40 text-purple-200 font-bold py-2 px-3 rounded-xl text-sm">↶↷ 測試左右轉身（需裝置 3.7）</button>
 <p id="controllerHint" class="text-xs text-slate-400 mt-2 leading-relaxed">固定好腕部裝置，以舒適中立姿勢保持不動 2 秒，再開始體感故事。</p>
 
 
@@ -648,6 +649,7 @@ class="text-sm text-slate-300 mt-2">
   <div id="actionProgressText" class="text-base font-bold text-amber-300" role="status" aria-live="polite"></div>
   <progress id="actionProgressBar" class="w-full mt-2" max="1" value="0" aria-label="目前動作完成進度"></progress>
   <div id="actionFeedback" class="text-base font-bold text-emerald-300 mt-2 min-h-6" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="turnDiagnostics" class="hidden mt-2 text-sm text-cyan-200" role="status" aria-live="polite"></div>
   <div id="actionProgressHint" class="text-xs text-slate-400 mt-1"></div>
 </div>
 
@@ -998,7 +1000,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 12.9 — 持續動作與跳躍計次
+   FRONTEND 13.1 — 持續動作與跳躍計次
 
    新架構：
 
@@ -2326,11 +2328,21 @@ async function speak(text) {
 function clearBLEConnection() {
     if(bleCharacteristic)bleCharacteristic.removeEventListener?.('characteristicvaluechanged',onBleEvent);
     bleCharacteristic=null;bleWriteQueue=Promise.resolve();stopControllerSetup();
-    for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections','btnTurnTrial'])$(id).disabled=true;
+    for(const id of ['btnDisconnect','btnCalibrate','btnLearnHold','btnInvertDirections','btnTurnTrial'])$(id).disabled=true;
     $('statusIndicator').className='w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
     $('statusText').textContent='已斷線';
     $('statusIcon').className='fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
     if(holdSource==='ble'){stopHold();renderActionProgress();}
+}
+function disconnectBLE() {
+    const device=bleDevice;
+    // Clear timers and notification listener immediately, even if the device
+    // does not deliver its disconnection notification until later.
+    clearBLEConnection();
+    if(device?.gatt?.connected) {
+        try {device.gatt.disconnect();}
+        catch(e) {console.error(e);showToast('中斷連線失敗，請再試一次。');}
+    }
 }
 async function connectBLE() {
     if(connectionPending)return;
@@ -2354,13 +2366,14 @@ async function connectBLE() {
         bleCharacteristic=characteristic;bleWriteQueue=Promise.resolve();
         await characteristic.startNotifications();
         characteristic.addEventListener('characteristicvaluechanged',onBleEvent);
+        $('btnDisconnect').disabled=false;
         $('statusIndicator').className='w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
         $('statusText').textContent='已連線';
         $('statusIcon').className='fa-solid fa-plug-circle-check text-emerald-400 text-xl';
         for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections'])$(id).disabled=false;
         refreshStoryControls();
         await sendBLE(currentMode==='senior'?'MODE_SENIOR':'MODE_CHILD');
-        await sendBLE('READY');await syncControllerAction();
+        await sendBLE('INFO');await sendBLE('READY');await syncControllerAction();
         showToast('藍牙連線成功！');
     } catch(e) {
         if(selectedDevice?.gatt?.connected)selectedDevice.gatt.disconnect();
@@ -2386,6 +2399,17 @@ async function onBleEvent(event) {
     );
 
 
+    // Diagnostic packets never count as actions or interrupt hold progress.
+    if(value.startsWith('FW:')) return;
+    if(value.startsWith('TURN:')) {
+        if(waitingForAction && !adventurePaused && ['TURN_LEFT','TURN_RIGHT'].includes(expectedAction)) {
+            const [,state,degrees]=value.split(':');
+            const angle=Number(degrees);
+            const hints={WAIT:'先把戴裝置的手放胸前，停穩一下。',READY:'已準備好，手臂跟著身體慢慢轉。',MOVE:'正在轉動',STOP:'角度已足夠，請停穩一下。',WRONG:'收到相反方向，回到起點停穩再試；若反覆出現，按「反轉左右方向」。',BLOCK:'手腕晃動較多，手放胸前，跟著身體平穩轉動。',FAST:'轉得太快，請停穩後慢慢轉。',RETRY:'這次轉動時間較長，停穩後再試。'};
+            $('turnDiagnostics').textContent=(hints[state] || '正在讀取轉身訊號。')+(['MOVE','STOP'].includes(state)&&Number.isFinite(angle)?' 已累積約 '+Math.max(0,angle)+' 度。':'');
+        }
+        return;
+    }
     // 狀態通知不是運動；不讓 READY / START 打斷正在撐住的計時。
     if (value === 'READY') {stopControllerSetup();await syncControllerAction();return;}
     if (value === 'CALIBRATING') {
@@ -3345,6 +3369,9 @@ async function showCurrentAct(
 
 function showAction(data) {
     renderActionProgress();
+    const isTurn=['TURN_LEFT','TURN_RIGHT'].includes(normalizeAction(data?.action));
+    $('turnDiagnostics').classList.toggle('hidden',!isTurn);
+    $('turnDiagnostics').textContent=isTurn?'等待裝置轉身訊號。若一直沒有新提示，請確認已燒錄裝置 3.7，並重新連線。':'';
 
     let action =
         normalizeAction(
@@ -4065,6 +4092,7 @@ document.addEventListener(
                 connectBLE
             );
 
+        $('btnDisconnect').addEventListener('click',disconnectBLE);
         $('btnLearnHold').addEventListener('click', async () => {
             if (!bleCharacteristic || controllerLearning) return;
             startControllerSetup('舉起手臂並改變腕部傾角，保持不動一秒。',10000);
