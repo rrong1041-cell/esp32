@@ -829,6 +829,8 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">優先固定台灣中文聲線</label>
+<p class="text-xs text-slate-400 mb-3">需要先設定語音服務；未啟用或額度不足時，使用下方裝置聲音。固定聲線使用語速和音量，音高與語氣選项只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -936,7 +938,7 @@ value="1">
 <span>🎭 故事語氣</span>
 
 <span class="text-slate-500">
-自動搭配劇情
+裝置朗讀語氣
 </span>
 
 </div>
@@ -994,7 +996,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 <p class="text-[11px] text-slate-500 mt-4 leading-relaxed">
 
-💡 語音來源是目前瀏覽器與裝置提供的語音。
+💡 固定聲線需先設定語音服務；裝置聲線依手機、電腦及瀏覽器而不同。
 
 </p>
 
@@ -1006,7 +1008,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 13.3 — 持續動作與跳躍計次
+   FRONTEND 13.4 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1786,6 +1788,7 @@ let speechToken = 0;
 let activeSpeechUtterance = null;
 
 let voiceSettings = {
+    fixedVoice:true,
 
     rate:.94,
 
@@ -2033,6 +2036,7 @@ function restoreSelectedVoice() {
 
 
 function updateVoiceSettingUI() {
+    $('fixedVoiceToggle').checked=voiceSettings.fixedVoice!==false;
 
     $('rateRange').value =
         voiceSettings.rate;
@@ -2130,6 +2134,64 @@ function waitForSpeechRecovery(reason){
         $('btnContinueText').onclick=()=>finish('text');
     });
 }
+let cloudSpeechCooldownUntil=0;
+let cloudSpeechController=null;
+let activeCloudAudio=null;
+const cloudAudioCache=new Map();
+async function playFixedVoice(text,token){
+    if(voiceSettings.fixedVoice===false || Date.now()<cloudSpeechCooldownUntil || typeof Audio==='undefined')return null;
+    const age=Number(selectedChildAge)||6;
+    const pace=currentMode==='senior'?.9:age<=6?.94:1;
+    const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
+    const key=JSON.stringify([text,rate]);
+    let bytes=cloudAudioCache.get(key);
+    if(!bytes){
+        const controller=new AbortController();cloudSpeechController=controller;
+        let timer;
+        const cancelled=new Promise(resolve=>{
+            const finish=()=>{controller.abort();resolve('cancelled');};finishSpeech=finish;
+        });
+        const download=(async()=>{
+            try{
+                timer=setTimeout(()=>controller.abort(),18000);
+                const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts',{
+                    method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate})});
+                if(!response.ok || !response.headers.get('Content-Type')?.includes('audio/'))throw new Error('unavailable');
+                const blob=await response.blob();if(!blob.size || blob.size>2000000)throw new Error('empty');
+                return blob;
+            }catch(_){return null;}finally{clearTimeout(timer);}
+        })();
+        const result=await Promise.race([download,cancelled]);
+        if(cloudSpeechController===controller){cloudSpeechController=null;finishSpeech=null;}
+        if(result==='cancelled' || token!==speechToken)return 'cancelled';
+        if(!result){cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus('固定聲線未設定、額度不足或暫時無法使用，已改用裝置朗讀。');return null;}
+        bytes=result;cloudAudioCache.set(key,bytes);
+        while(cloudAudioCache.size>50)cloudAudioCache.delete(cloudAudioCache.keys().next().value);
+    }
+    if(token!==speechToken)return 'cancelled';
+    return new Promise(resolve=>{
+        const url=URL.createObjectURL(bytes),audio=new Audio(url);activeCloudAudio=audio;
+        audio.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
+        let ended=false,timer;
+        const finish=(outcome='cancelled')=>{
+            if(ended)return;ended=true;clearTimeout(timer);audio.onended=audio.onerror=audio.onplaying=audio.ontimeupdate=null;
+            audio.pause();audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);
+            if(activeCloudAudio===audio)activeCloudAudio=null;if(finishSpeech===finish)finishSpeech=null;resolve(outcome);
+        };
+        const watch=()=>{clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),30000);};
+        finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
+        audio.onplaying=audio.ontimeupdate=watch;watch();
+        updateVoiceStatus('正在使用固定台灣中文聲線。重聽會重用本頁已取得的音檔。');
+        try{const played=audio.play();played?.catch(()=>finish('error'));}catch(_){finish('error');}
+    });
+}
+async function playNarrationChunk(text,token){
+    const fixed=await playFixedVoice(text,token);
+    if(fixed!==null)return fixed;
+    if(token!==speechToken)return 'cancelled';
+    return 'speechSynthesis' in window?speakChunk(text,token):'unsupported';
+}
+
 function speakChunk(text,token){
     return new Promise(resolve=>{
         const utterance=new SpeechSynthesisUtterance(text);activeSpeechUtterance=utterance;
@@ -2194,8 +2256,8 @@ async function speak(text){
             if(sceneVersion!==actVersion || token!==speechToken)return;
             const supported='speechSynthesis' in window;
             // Volume zero is an explicit user's choice to read silently.
-            if(supported && Number(voiceSettings.volume)===0){updateVoiceStatus('已靜音，使用文字模式。');return;}
-            const outcome=supported?await speakChunk(chunks[index],token):'unsupported';
+            if(Number(voiceSettings.volume)===0){updateVoiceStatus('已靜音，使用文字模式。');return;}
+            const outcome=await playNarrationChunk(chunks[index],token);
             if(sceneVersion!==actVersion)return;
             if(adventurePaused){
                 await waitForAdventureResume(sceneVersion);
@@ -4234,6 +4296,7 @@ document.addEventListener(
          * 選擇聲音
          */
 
+        $('fixedVoiceToggle').addEventListener('change',()=>{voiceSettings.fixedVoice=$('fixedVoiceToggle').checked;cloudSpeechCooldownUntil=0;saveVoiceSettings();});
         $('voiceSelect')
             .addEventListener(
 
@@ -4483,6 +4546,7 @@ document.addEventListener(
 
 
                     voiceSettings = {
+                        fixedVoice:true,
 
                         rate:.94,
 
