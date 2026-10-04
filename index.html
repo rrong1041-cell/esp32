@@ -746,11 +746,11 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 
 </div>
 
-<div id="legacyPreparationControls" hidden inert aria-hidden="true" style="display:none">
 <div class="space-y-2 mb-3">
 <button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
-<p class="text-sm text-slate-300">已取消每個瀏覽器每天 2 次的限制。新增仍受全站總額度限制；重玩請按「播放已保存內容」。</p>
+<p class="text-sm text-slate-300">新故事會自動保存。可依目前的年齡、主題、難度及合作設定，播放已保存內容。</p>
 </div>
+<div id="legacyPreparationControls" hidden inert aria-hidden="true" style="display:none">
 <div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
 </div>
 <p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
@@ -1021,7 +1021,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 15.5 — 直接遊玩與合作模式，預設 Worker 配音
+   FRONTEND 15.6 — 直接遊玩與合作模式，預設 Worker 配音
 
    新架構：
 
@@ -3811,7 +3811,7 @@ const LOCAL_LIBRARY_KEY='story-library-v1';
 function readSavedJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch(_){return fallback;}}
 function librarySelection(topic){const key=[currentMode,currentMode==='senior'?'':topic,currentMode==='senior'?0:selectedChildAge,selectedDifficulty];if(isCooperation())key.push('coop',familyPosture());return JSON.stringify(key);}
 function readLocalLibrary(){const rows=readSavedJSON(LOCAL_LIBRARY_KEY,[]);return Array.isArray(rows)?rows.filter(row=>row && Array.isArray(row.story?.acts)):[];}
-function saveFullStory(story,key,id){try{const rows=readLocalLibrary();rows.push({key,id,story});localStorage.setItem(LOCAL_LIBRARY_KEY,JSON.stringify(rows.slice(-30)));}catch(_){showToast('瀏覽器儲存空間不足，這次內容無法保存在此裝置。');}}
+function saveFullStory(story,key,id){try{const rows=readLocalLibrary().filter(row=>!(id && row.id===id && row.key===key));rows.push({key,id,story});localStorage.setItem(LOCAL_LIBRARY_KEY,JSON.stringify(rows.slice(-30)));}catch(_){showToast('瀏覽器儲存空間不足，這次內容無法保存在此裝置。');}}
 function getStoryClientId(){let id=readSavedJSON('story-client-id',null);if(typeof id!=='string' || !/^[a-zA-Z0-9-]{16,80}$/.test(id)){id=typeof crypto!=='undefined' && crypto.randomUUID?crypto.randomUUID():'browser-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem('story-client-id',JSON.stringify(id));}catch(_){}}return id;}
 $('btnReplaySaved').addEventListener('click',()=>generateStory(true));
 
@@ -3852,7 +3852,7 @@ async function generateStory(preferSaved=false) {
 
     const requestVersion = adventureVersion;
     const requestController=new AbortController();generationController=requestController;
-    const requestTimer=setTimeout(()=>requestController.abort(),90000);
+    const requestTimer=setTimeout(()=>requestController.abort(),150000);
     primeSpeech();
 
     busy =
@@ -4134,7 +4134,7 @@ async function generateStory(preferSaved=false) {
     catch(e) {
 
         if (requestVersion !== adventureVersion) return;
-        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+e.message+(preferSaved?'':'。本次沒有自動載入舊故事，請稍後再試。');
+        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+e.message+(preferSaved?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
         console.error(
             e
         );
