@@ -1012,7 +1012,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 13.5 — 持續動作與跳躍計次
+   FRONTEND 13.6 — 持續動作與跳躍計次
 
    新架構：
 
@@ -3716,6 +3716,8 @@ function reserveLocalStory(){
 $('btnReplaySaved').addEventListener('click',()=>generateStory(true));
 
 async function generateStory(preferSaved=false) {
+    // DOM click events are objects, not a request to replay saved content.
+    preferSaved = preferSaved === true;
 
     if (busy)
         return;
@@ -4174,7 +4176,7 @@ document.addEventListener(
         $('btnGenerate')
             .addEventListener(
                 'click',
-                generateStory
+                () => generateStory()
             );
 
 
