@@ -748,7 +748,7 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 
 <div class="space-y-2 mb-3">
 <button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
-<p class="text-sm text-slate-300">每天最多嘗試新增 2 次（失敗也計入），台灣時間早上 8 點重置。重玩請按「播放已保存內容」。</p><p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
+<p class="text-sm text-slate-300">已取消每個瀏覽器每天 2 次的限制。新增仍受全站總額度限制；重玩請按「播放已保存內容」。</p><p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
 </div>
 <div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
 <div id="seniorStoryControls" class="hidden space-y-2">
@@ -1018,7 +1018,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 15.2 — 明確區分新增、載入與開始遊玩
+   FRONTEND 15.3 — 移除每個瀏覽器每日兩次限制
 
    新架構：
 
@@ -3799,19 +3799,11 @@ function rememberStory(story, topic = '') {
 }
 
 const LOCAL_LIBRARY_KEY='story-library-v1';
-const LOCAL_ATTEMPTS_KEY='story-attempts-v1';
 function readSavedJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch(_){return fallback;}}
 function librarySelection(topic){const key=[currentMode,currentMode==='senior'?'':topic,currentMode==='senior'?0:selectedChildAge,selectedDifficulty];if(isCooperation())key.push('coop',familyPosture());return JSON.stringify(key);}
 function readLocalLibrary(){const rows=readSavedJSON(LOCAL_LIBRARY_KEY,[]);return Array.isArray(rows)?rows.filter(row=>row && Array.isArray(row.story?.acts)):[];}
 function saveFullStory(story,key,id){try{const rows=readLocalLibrary();rows.push({key,id,story});localStorage.setItem(LOCAL_LIBRARY_KEY,JSON.stringify(rows.slice(-30)));}catch(_){showToast('瀏覽器儲存空間不足，這次內容無法保存在此裝置。');}}
 function getStoryClientId(){let id=readSavedJSON('story-client-id',null);if(typeof id!=='string' || !/^[a-zA-Z0-9-]{16,80}$/.test(id)){id=typeof crypto!=='undefined' && crypto.randomUUID?crypto.randomUUID():'browser-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem('story-client-id',JSON.stringify(id));}catch(_){}}return id;}
-function reserveLocalStory(){
- const day=new Date().toISOString().slice(0,10),saved=readSavedJSON(LOCAL_ATTEMPTS_KEY,{});
- const count=saved.day===day?Math.max(0,Number(saved.count)||0):0;
- if(count>=2)return false;
- try{localStorage.setItem(LOCAL_ATTEMPTS_KEY,JSON.stringify({day,count:count+1}));}catch(_){}
- return true;
-}
 $('btnReplaySaved').addEventListener('click',()=>generateStory(true));
 
 async function generateStory(preferSaved=false) {
@@ -3844,8 +3836,6 @@ async function generateStory(preferSaved=false) {
 
     const selection=librarySelection(topic);
     const localRows=readLocalLibrary().filter(row=>row.key===selection);
-    const limited=!preferSaved && !reserveLocalStory();
-    if(limited){const message='今天已用完 2 次新增嘗試，本次沒有生成新內容。台灣時間早上 8 點重置；重玩請按「播放已保存內容」。';$('generationStatus').textContent=message;showToast(message);return;}
     const useSaved=preferSaved;
     let localRow=useSaved && localRows.length?localRows[Math.floor(Math.random()*localRows.length)]:null;
     resetAdventure();
@@ -3896,7 +3886,7 @@ async function generateStory(preferSaved=false) {
          */
 
         let data;
-        if(localRow){data={story:localRow.story,libraryId:localRow.id,source:'library',notice:limited?'今天新增次數已用完，改用已保存內容。':'正在播放已保存內容，沒有重新生成。'};}
+        if(localRow){data={story:localRow.story,libraryId:localRow.id,source:'library',notice:'正在播放已保存內容，沒有重新生成。'};}
         else {
         try {
         const res =
