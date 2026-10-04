@@ -540,6 +540,7 @@ class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 round
 </button>
 <button id="btnLearnHold" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">🙌 設定撐住姿勢</button>
 <button id="btnInvertDirections" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">↔️ 反轉左右方向</button>
+<button id="btnTurnTrial" disabled class="w-full mt-2 bg-purple-950 hover:bg-purple-900 disabled:opacity-40 border border-purple-400/40 text-purple-200 font-bold py-2 px-3 rounded-xl text-sm">↶↷ 測試左右轉身（需裝置 3.6）</button>
 <p id="controllerHint" class="text-xs text-slate-400 mt-2 leading-relaxed">固定好腕部裝置，以舒適中立姿勢保持不動 2 秒，再開始體感故事。</p>
 
 
@@ -657,6 +658,17 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-4">
 
 <div class="space-y-2">
+
+<div id="childAgePanel" class="space-y-2 mb-3">
+<div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
+<div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
+<button type="button" data-child-age="5" aria-pressed="false" class="age-btn bg-slate-800 border border-slate-700 text-slate-300 py-3 rounded-xl font-bold">5 歲</button>
+<button type="button" data-child-age="6" aria-pressed="true" class="age-btn bg-purple-700 border border-purple-400 text-white py-3 rounded-xl font-bold">6 歲</button>
+<button type="button" data-child-age="7" aria-pressed="false" class="age-btn bg-slate-800 border border-slate-700 text-slate-300 py-3 rounded-xl font-bold">7 歲</button>
+<button type="button" data-child-age="8" aria-pressed="false" class="age-btn bg-slate-800 border border-slate-700 text-slate-300 py-3 rounded-xl font-bold">8 歲</button>
+</div>
+<p id="childAgeHint" class="text-sm text-slate-300 leading-relaxed" aria-live="polite"></p>
+</div>
 
 <div id="childThemeHeader" class="flex items-center justify-between">
 
@@ -985,7 +997,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 12.6 — 持續動作與跳躍計次
+   FRONTEND 12.8 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1038,6 +1050,7 @@ let selectedTheme =
     '勇敢的小騎士與巨龍';
 
 let selectedDifficulty = 'easy';
+let selectedChildAge = 6;
 
 let currentStory = '';
 
@@ -1145,7 +1158,7 @@ function resetActionProgress(data = {}) {
     const count = Number(data.targetCount);
     const seconds = Number(data.holdSeconds);
     actionTargetCount = Number.isFinite(count) && count >= 1 ? Math.floor(count) : 1;
-    actionHoldSeconds = !['JUMP', 'TILT_LEFT', 'TILT_RIGHT'].includes(String(data.action || currentAction).trim().toUpperCase()) &&
+    actionHoldSeconds = !['JUMP', 'TILT_LEFT', 'TILT_RIGHT', 'TURN_LEFT', 'TURN_RIGHT'].includes(String(data.action || currentAction).trim().toUpperCase()) &&
         Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
     renderActionProgress();
 }
@@ -1401,7 +1414,30 @@ const SENIOR_THEME =
    動作
 ===================================================== */
 
+function refreshChildAgeUI(){
+    $('childAgePanel').classList.toggle('hidden',currentMode==='senior');
+    const hints={5:'短句、清楚提示，一位夥伴陪孩子完成單一任務。',6:'簡單對話和小驚喜，事情前後清楚好理解。',7:'加入觀察與一個簡單線索，重要發現會說明。',8:'情節稍豐富，可有簡單線索與小轉折。'};
+    $('childAgeHint').textContent=hints[selectedChildAge]+' 年齡設定用於下一篇故事，動作時間與次數維持原設定。';
+    document.querySelectorAll('[data-child-age]').forEach(button=>{
+        const active=Number(button.dataset.childAge)===selectedChildAge;
+        button.setAttribute('aria-pressed',String(active));
+        button.className='age-btn border py-3 rounded-xl font-bold '+(active?'bg-purple-700 border-purple-400 text-white':'bg-slate-800 border-slate-700 text-slate-300');
+    });
+}
+async function startTurnTrial(){
+    if(currentMode!=='child' || !bleCharacteristic || busy || controllerLearning || (acts.length && !storyFinished)){showToast('請先連接裝置，並在沒有進行中故事時測試。');return;}
+    resetAdventure();
+    acts=[{index:1,title:'左右轉身測試',practiceTurn:true,story:'先停穩，將戴裝置的手放在胸前。手臂跟著身體慢慢轉，腳可小步跟著轉；請留意周圍空間。不舒服就停止。',actions:[
+      {action:'TURN_LEFT',targetCount:1,holdSeconds:0,actionPurpose:'左轉測試',storyBefore:'先保持不動片刻，再慢慢向左轉約45度，然後停穩。',storyAfter:'左轉完成。慢慢回到舒服的正面姿勢。'},
+      {action:'TURN_RIGHT',targetCount:1,holdSeconds:0,actionPurpose:'右轉測試',storyBefore:'先回到正面並停穩，再慢慢向右轉約45度，然後停穩。',storyAfter:'右轉完成。慢慢回到舒服的姿勢。'}]}];
+    currentActIndex=0;busy=true;
+    $('welcomeMessage').classList.add('hidden');$('storyDisplay').classList.remove('hidden');
+    await showCurrentAct(true);
+}
 function refreshStoryControls(){
+    $('btnTurnTrial').classList.toggle('hidden',currentMode==='senior');
+    $('btnTurnTrial').disabled=!bleCharacteristic || busy || controllerLearning || (acts.length>0 && !storyFinished);
+    refreshChildAgeUI();
     $('manualActionHint').textContent=currentMode==='senior'?'裝置會辨識目前動作。達成指定次數或持續秒數後，進入下一段活動。':'裝置實體動作會觸發故事。達成指定次數或持續秒數後，故事會進入下一幕。';
     $('seniorStoryControls').classList.toggle('hidden',currentMode!=='senior');
     $('btnPauseStory').disabled=!acts.length || storyFinished;
@@ -1527,7 +1563,7 @@ function getActionNarration(data) {
     // 顯示與語音使用實際玩法數值，不讓 AI 自由文字的「次／秒」蓋過完成條件。
     const count = Number(data?.targetCount);
     const seconds = Number(data?.holdSeconds);
-    const isCountAction = ['JUMP', 'TILT_LEFT', 'TILT_RIGHT'].includes(action);
+    const isCountAction = ['JUMP', 'TILT_LEFT', 'TILT_RIGHT', 'TURN_LEFT', 'TURN_RIGHT'].includes(action);
     const hasCount = Number.isFinite(count) && count >= 1;
     const isTimed = !isCountAction && Number.isFinite(seconds) && seconds > 0;
     const movements = {
@@ -1535,6 +1571,7 @@ function getActionNarration(data) {
         SHAKE:'輕輕來回搖動', RUN:'安全原地踏步',
         ARM_UP:'抬高手臂並保持', ARM_DOWN:'手腕向下傾斜並保持',
         HOLD_UP:'保持已設定的撐住姿勢',
+        TURN_LEFT:'手放胸前，身體慢慢向左轉約 45 度，再停穩', TURN_RIGHT:'手放胸前，身體慢慢向右轉約 45 度，再停穩',
         JUMP:'小幅度跳躍', TILT_LEFT:'手腕向左傾斜', TILT_RIGHT:'手腕向右傾斜'
     };
     if (movements[action] && (isTimed || hasCount)) {
@@ -1604,6 +1641,7 @@ function getActionIcon(action) {
         TILT_LEFT:'↩️',
 
         TILT_RIGHT:'↪️',
+        TURN_LEFT:'↶',TURN_RIGHT:'↷',
 
         HOLD_UP:'✋'
 
@@ -2250,7 +2288,7 @@ async function speak(text) {
 function clearBLEConnection() {
     if(bleCharacteristic)bleCharacteristic.removeEventListener?.('characteristicvaluechanged',onBleEvent);
     bleCharacteristic=null;bleWriteQueue=Promise.resolve();stopControllerSetup();
-    for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections'])$(id).disabled=true;
+    for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections','btnTurnTrial'])$(id).disabled=true;
     $('statusIndicator').className='w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
     $('statusText').textContent='已斷線';
     $('statusIcon').className='fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
@@ -2282,6 +2320,7 @@ async function connectBLE() {
         $('statusText').textContent='已連線';
         $('statusIcon').className='fa-solid fa-plug-circle-check text-emerald-400 text-xl';
         for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections'])$(id).disabled=false;
+        refreshStoryControls();
         await sendBLE(currentMode==='senior'?'MODE_SENIOR':'MODE_CHILD');
         await sendBLE('READY');await syncControllerAction();
         showToast('藍牙連線成功！');
@@ -3342,7 +3381,7 @@ function showAction(data) {
 
 
     const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'手腕向左傾斜一次，再回到中間。',TILT_RIGHT:'手腕向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
-    $('actionSubText').textContent='💡 '+currentActionPurpose+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
+    $('actionSubText').textContent='💡 '+currentActionPurpose+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'')+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
 
     void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
     refreshStoryControls();
@@ -3444,6 +3483,7 @@ function showEnding() {
     }
 
 
+    if(acts.length===1 && acts[0]?.practiceTurn){$('promptText').textContent='✓ 左右轉身測試完成';$('actionSubText').textContent='若左右相反，請反轉左右方向後再測試。腕部判定仍可能誤認手臂旋轉。';}
     showToast(
 
         currentMode === 'senior'
@@ -3668,7 +3708,7 @@ async function generateStory() {
                         mode:
                             currentMode,
 
-                        ...(currentMode==='child' ? {topic} : {}),
+                        ...(currentMode==='child' ? {topic,age:selectedChildAge} : {}),
 
                         difficulty:
                             selectedDifficulty,
@@ -3938,6 +3978,11 @@ document.addEventListener(
         renderChildThemes();
         refreshStoryControls();
         $('btnPauseStory').addEventListener('click',toggleAdventurePause);
+        $('btnTurnTrial').addEventListener('click',startTurnTrial);
+        document.querySelectorAll('[data-child-age]').forEach(button=>button.addEventListener('click',()=>{
+            selectedChildAge=Number(button.dataset.childAge);
+            refreshChildAgeUI();
+        }));
         updateSelectedTopicLabel();
         $('customTopicInput').addEventListener('input',updateSelectedTopicLabel);
 
