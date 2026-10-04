@@ -985,7 +985,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 12.3 — 持續動作與跳躍計次
+   FRONTEND 12.4 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1520,6 +1520,23 @@ function getActionNarration(data) {
         normalizeAction(
             data?.action
         );
+
+    // 顯示與語音使用實際玩法數值，不讓 AI 自由文字的「次／秒」蓋過完成條件。
+    const count = Number(data?.targetCount);
+    const seconds = Number(data?.holdSeconds);
+    const isCountAction = ['JUMP', 'TILT_LEFT', 'TILT_RIGHT'].includes(action);
+    const hasCount = Number.isFinite(count) && count >= 1;
+    const isTimed = !isCountAction && Number.isFinite(seconds) && seconds > 0;
+    const movements = {
+        SWIPE_LEFT:'反覆向左揮動', SWIPE_RIGHT:'反覆向右揮動',
+        SHAKE:'輕輕來回搖動', RUN:'安全原地踏步',
+        ARM_UP:'抬高手臂並保持', ARM_DOWN:'手腕向下傾斜並保持',
+        HOLD_UP:'保持已設定的撐住姿勢',
+        JUMP:'小幅度跳躍', TILT_LEFT:'手腕向左傾斜', TILT_RIGHT:'手腕向右傾斜'
+    };
+    if (movements[action] && (isTimed || hasCount)) {
+        return `${movements[action]} ${isTimed ? seconds + ' 秒' : Math.floor(count) + ' 次'}`;
+    }
 
     /*
      * 新 Worker 使用 actionText
