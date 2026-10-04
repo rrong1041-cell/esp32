@@ -746,11 +746,14 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 
 </div>
 
+<div id="legacyPreparationControls" hidden inert aria-hidden="true" style="display:none">
 <div class="space-y-2 mb-3">
 <button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
-<p class="text-sm text-slate-300">已取消每個瀏覽器每天 2 次的限制。新增仍受全站總額度限制；重玩請按「播放已保存內容」。</p><p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
+<p class="text-sm text-slate-300">已取消每個瀏覽器每天 2 次的限制。新增仍受全站總額度限制；重玩請按「播放已保存內容」。</p>
 </div>
 <div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
+</div>
+<p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
 <div id="seniorStoryControls" class="hidden space-y-2">
 <button id="btnPauseStory" disabled class="w-full bg-emerald-950 border border-emerald-400/50 text-emerald-100 text-lg font-bold px-4 py-3 rounded-xl">⏸ 休息一下</button>
 <p id="pauseStoryHint" class="text-base text-slate-300 leading-relaxed">可以隨時休息，左右轉的已完成次數會保留。</p>
@@ -767,7 +770,7 @@ class="fa-solid fa-wand-magic-sparkles">
 </i>
 
 <span id="btnText">
-生成新故事
+開始精彩故事冒險
 </span>
 
 </button>
@@ -837,7 +840,7 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
-<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" class="mr-2">優先 Cloudflare 固定中文配音</label>
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">使用 Worker 中文配音（無法取得音檔時改用內建朗讀）</label>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
 <p class="text-xs text-slate-400 mb-3">使用先前試聽的中文聲線。未啟用或額度不足時，使用下方裝置聲音。語速與音量可調整；音高與語氣只影響裝置朗讀。</p>
@@ -1018,7 +1021,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 15.3 — 移除每個瀏覽器每日兩次限制
+   FRONTEND 15.5 — 直接遊玩與合作模式，預設 Worker 配音
 
    新架構：
 
@@ -1848,7 +1851,7 @@ let speechToken = 0;
 let activeSpeechUtterance = null;
 
 let voiceSettings = {
-    fixedVoice:false,
+    fixedVoice:true,
 
     rate:.96,
 
@@ -1860,7 +1863,7 @@ let voiceSettings = {
 
     voiceURI:'',
 
-    version:7
+    version:8
 
 };
 
@@ -1912,6 +1915,12 @@ function loadVoiceSettings() {
         if(Number(voiceSettings.version)<7){
             Object.assign(voiceSettings,{fixedVoice:false,voiceURI:'',rate:.96,pitch:1,emotion:'natural',version:7});
             saveVoiceSettings();
+        }
+        // Switch existing installs to Worker narration once without changing
+        // volume, speed or the voice kept for a service-error fallback.
+        if(Number(JSON.parse(saved)?.version || 0)<8){
+            voiceSettings.fixedVoice=true;voiceSettings.version=8;
+            cloudSpeechCooldownUntil=0;saveVoiceSettings();
         }
         voiceSettings.rate=Math.min(1.35,Math.max(.65,Number(voiceSettings.rate)||.94));
         voiceSettings.pitch=Math.min(1.2,Math.max(.8,Number(voiceSettings.pitch)||1));
@@ -2734,7 +2743,7 @@ function resetAdventure() {
     replayCancelRequested = false;
     busy = false;
     $('btnGenerate').disabled = false;
-    $('btnText').textContent = currentMode === 'senior' ? '生成新健康操' : '生成新故事';
+    $('btnText').textContent = currentMode === 'senior' ? '開始坐姿健康操' : '開始精彩故事冒險';
     $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
     clearTimeout(actTimer);
     resetActionProgress();
@@ -2869,7 +2878,7 @@ async function switchMode(
             .remove('hidden');
 
         $('btnText').textContent =
-            '生成新健康操';
+            '開始坐姿健康操';
 
         $('customTopicInput').placeholder =
             '也可以輸入想聽的故事主題，例如：老朋友的茶館';
@@ -2926,7 +2935,7 @@ async function switchMode(
             .add('hidden');
 
         $('btnText').textContent =
-            '生成新故事';
+            '開始精彩故事冒險';
 
         $('customTopicInput').placeholder =
             '或者輸入你想聽的故事，例如：會飛的橘色章魚';
@@ -3938,11 +3947,11 @@ async function generateStory(preferSaved=false) {
         if(!preferSaved && data.source==='library'){
             if(requestVersion!==adventureVersion)return;
             const reason=String(data.notice || '服務目前無法新增內容。').replace(/，改用已保存內容[。.]?/g,'。');
-            const message=reason+' 本次沒有生成新內容。重玩請按「播放已保存內容」。';
+            const message=reason+' 本次沒有生成新內容，請稍後再試。';
             $('generationStatus').textContent=message;showToast(message);return;
         }
         if(requestVersion!==adventureVersion)return;
-        $('generationStatus').textContent=data.source==='library'?'已載入保存內容，這次沒有重新生成。請按「開始遊玩」。':'新內容已生成並保存。可先製作配音，或直接按「開始遊玩」。';
+        $('generationStatus').textContent='';
         clearTimeout(requestTimer);
         if(generationController===requestController)generationController=null;
 
@@ -4072,7 +4081,7 @@ async function generateStory(preferSaved=false) {
                 adventure.title,
 
                 adventure.opening || adventure.summary || adventure.acts?.[0]?.story ||
-                '內容已準備好，請按下方「開始遊玩」。'
+                '故事冒險即將開始……'
 
             );
 
@@ -4083,8 +4092,8 @@ async function generateStory(preferSaved=false) {
          * ⭐ 開始第一幕
          */
 
-        storyPreview=true;waitingForAction=false;
-        $('audioBuildStatus').textContent=adventure.audioReady?'這篇已保存完整配音，可直接開始遊玩。':'故事已準備好。可製作配音，或直接用內建聲音開始遊玩。';
+        storyPreview=false;
+        await showCurrentAct(true);
 
         if (requestVersion !== adventureVersion) return;
 
@@ -4116,7 +4125,7 @@ async function generateStory(preferSaved=false) {
 
         if (requestVersion !== adventureVersion) return;
         showToast(
-            data.source==='library'?'📚 已載入保存內容，可以開始遊玩。':(currentMode==='senior'?'🌿 健康操已建立並保存。':`✨ 完整冒險建立完成！共 ${acts.length} 幕`)
+            currentMode==='senior'?'🌿 健康操已開始。':`✨ 冒險開始！共 ${acts.length} 幕`
         );
 
 
@@ -4125,7 +4134,7 @@ async function generateStory(preferSaved=false) {
     catch(e) {
 
         if (requestVersion !== adventureVersion) return;
-        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+e.message+(preferSaved?'':'。本次沒有自動載入舊故事；可按「播放已保存內容」重玩。');
+        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+e.message+(preferSaved?'':'。本次沒有自動載入舊故事，請稍後再試。');
         console.error(
             e
         );
@@ -4149,7 +4158,7 @@ async function generateStory(preferSaved=false) {
 
         if (requestVersion === adventureVersion) {
             $('btnText').textContent = currentMode === 'senior'
-                ? '生成新健康操' : '生成新故事';
+                ? '開始坐姿健康操' : '開始精彩故事冒險';
             $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
             btn.disabled = false;
             busy = false;
@@ -4728,7 +4737,7 @@ document.addEventListener(
 
 
                     voiceSettings = {
-                        fixedVoice:false,
+                        fixedVoice:true,
 
                         rate:.96,
 
@@ -4740,7 +4749,7 @@ document.addEventListener(
 
                         voiceURI:'',
 
-                        version:7
+                        version:8
 
                     };
 
@@ -5001,7 +5010,7 @@ function initializeCooperationUI(){
     $('btnConnectFamily').addEventListener('click',connectFamily);
     $('btnDisconnectFamily').addEventListener('click',()=>{if(!familyCharacteristic && !familyDevice?.gatt?.connected){familyNotice('家人裝置尚未連線，請先按「連接家人的裝置」。');return;}const device=familyDevice;clearFamily();device?.gatt?.disconnect();});
     for(const [id,command] of [['btnCalibrateFamily','CALIBRATE'],['btnHoldFamily','LEARN_HOLD'],['btnInvertFamily','INVERT_LR']])$(id).addEventListener('click',async()=>{if(!familyCharacteristic){familyNotice('請先連接家人的裝置，再設定校正、撐住姿勢或左右方向。');return;}if(familyLearning){familyNotice('家人裝置正在設定，請等待確認或稍後重試。');return;}familyLearning=true;resetCoopHolds();await syncCoopDevices();clearTimeout(familySetupTimer);familySetupTimer=setTimeout(()=>{familyLearning=false;resetCoopCommands();void sendFamily('CANCEL_HOLD');void syncCoopDevices();showToast('家人裝置尚未確認設定，請重新嘗試。');},10000);if(!await sendFamily(command)){familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();void syncCoopDevices();showToast('家人裝置設定傳送失敗。');}});
-    $('btnManualFamily').addEventListener('click',()=>{primeFeedbackAudio();if(!coopStates || !waitingForAction){familyNotice('請先選合作模式、生成故事，再按「手動測試遊玩」，等家人任務出現後再模擬。');return;}if(busy || adventurePaused || controllerLearning || familyLearning || document.hidden || !coopRoleEnabled('family')){familyNotice('目前還沒輪到家人動作，或活動正在暫停／設定；請依畫面提示等待。');return;}void handleCoopAction('family',coopStates.family.action,'manual');});
+    $('btnManualFamily').addEventListener('click',()=>{primeFeedbackAudio();if(!coopStates || !waitingForAction){familyNotice('請先選合作模式並生成故事，等家人任務出現後再模擬。');return;}if(busy || adventurePaused || controllerLearning || familyLearning || document.hidden || !coopRoleEnabled('family')){familyNotice('目前還沒輪到家人動作，或活動正在暫停／設定；請依畫面提示等待。');return;}void handleCoopAction('family',coopStates.family.action,'manual');});
     $('btnStartPreview').addEventListener('click',()=>startPreview());$('btnTestCoop').addEventListener('click',()=>startPreview(true));$('btnBuildAudio').addEventListener('click',buildStoryAudio);$('btnCancelAudio').addEventListener('click',()=>audioBuildController?.abort());refreshCoopUI();
 }
 
