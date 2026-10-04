@@ -840,10 +840,11 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
-<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">使用 Worker 中文配音（失敗時自動切換備用聲音）</label>
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Worker 中文配音（額度用完時暫停，失敗時使用備用聲音）</label>
+<p id="workerVoicePolicyStatus" class="text-xs text-slate-300 mb-3" role="status">自動優先使用 Worker 配音。</p>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
-<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。取消勾選可直接使用裝置朗讀；不同裝置的聲線可能不同。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
+<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。額度用完時會自動改用裝置朗讀，重置後再恢復 Worker；不同裝置的聲線可能不同。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -1021,7 +1022,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.4 — 合作與保存故事，預設系統中文聲音
+   FRONTEND 16.5 — 合作與保存故事，預設系統中文聲音
 
    新架構：
 
@@ -1863,7 +1864,7 @@ let voiceSettings = {
 
     voiceURI:getDefaultDeviceVoiceURI(),
 
-    version:11
+    version:12
 
 };
 
@@ -1935,6 +1936,8 @@ function loadVoiceSettings() {
         console.warn(e);
 
     }
+
+    finally { syncWorkerVoicePreference(); }
 
 }
 
@@ -2117,7 +2120,7 @@ function restoreSelectedVoice() {
 
 
 function updateVoiceSettingUI() {
-    $('fixedVoiceToggle').checked=voiceSettings.fixedVoice!==false;
+    syncWorkerVoicePreference();
 
     $('rateRange').value =
         voiceSettings.rate;
@@ -2262,6 +2265,31 @@ function waitForSpeechRecovery(reason){
         $('btnContinueText').onclick=()=>finish('text');
     });
 }
+let workerVoiceQuotaUntil=0;
+let workerVoiceQuotaTimer=null;
+function workerVoiceQuotaKey(){return 'worker-voice-quota-until-v1:'+WORKER_URL;}
+function syncWorkerVoicePreference(){
+    try{workerVoiceQuotaUntil=Math.max(workerVoiceQuotaUntil,Number(localStorage.getItem(workerVoiceQuotaKey()))||0);}catch(_){}
+    const paused=workerVoiceQuotaUntil>Date.now();
+    if(!paused){
+        if(workerVoiceQuotaUntil)cloudSpeechCooldownUntil=0;
+        workerVoiceQuotaUntil=0;
+        try{localStorage.removeItem(workerVoiceQuotaKey());}catch(_){}
+    }
+    voiceSettings.fixedVoice=!paused;
+    const toggle=$('fixedVoiceToggle');
+    if(toggle){toggle.checked=!paused;toggle.disabled=true;}
+    const status=$('workerVoicePolicyStatus');
+    if(status)status.textContent=paused?'今日配音額度已用完，暫時使用裝置聲音；台灣時間早上 8 點後自動恢復。':'自動優先使用 Worker 配音；一般播放失敗會使用備用聲音，勾選狀態不變。';
+    if(workerVoiceQuotaTimer){clearTimeout(workerVoiceQuotaTimer);workerVoiceQuotaTimer=null;}
+    if(paused)workerVoiceQuotaTimer=setTimeout(()=>{workerVoiceQuotaTimer=null;syncWorkerVoicePreference();},Math.min(2147483647,workerVoiceQuotaUntil-Date.now()+50));
+}
+function pauseWorkerVoiceForQuota(){
+    // This Worker's daily voice counter uses UTC dates (08:00 in Taiwan).
+    workerVoiceQuotaUntil=(Math.floor(Date.now()/86400000)+1)*86400000;
+    try{localStorage.setItem(workerVoiceQuotaKey(),String(workerVoiceQuotaUntil));}catch(_){}
+    syncWorkerVoicePreference();
+}
 let cloudSpeechCooldownUntil=0;
 let cloudSpeechController=null;
 let activeCloudAudio=null;
@@ -2299,6 +2327,7 @@ function savedAudio(operation,key,blob){
     });
 }
 async function playFixedVoice(text,token){
+    syncWorkerVoicePreference();
     if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
     const age=Number(selectedChildAge)||6;
     const pace=currentMode==='senior'?.9:age<=6?.94:1;
@@ -2325,6 +2354,7 @@ async function playFixedVoice(text,token){
                             method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true})});
                         if(!response.ok){
                             const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
+                            if(response.status===429)pauseWorkerVoiceForQuota();
                             retryable=[500,502,504].includes(response.status) || (response.status===503 && failureReason.includes('暫時'));
                         }else{
                             if(!response.headers.get('Content-Type')?.includes('audio/'))return null;
@@ -4552,7 +4582,7 @@ document.addEventListener(
          * 選擇聲音
          */
 
-        $('fixedVoiceToggle').addEventListener('change',()=>{voiceSettings.fixedVoice=$('fixedVoiceToggle').checked;cloudSpeechCooldownUntil=0;saveVoiceSettings();});
+        $('fixedVoiceToggle').addEventListener('change',()=>{syncWorkerVoicePreference();saveVoiceSettings();});
         $('btnTestFeedback').addEventListener('click',async()=>{
             primeFeedbackAudio();
             if(Number(voiceSettings.volume)===0){showToast('目前音量是 0，請先調高下方音量。');return;}
@@ -4827,7 +4857,7 @@ document.addEventListener(
 
                         voiceURI:getDefaultDeviceVoiceURI(),
 
-                        version:11
+                        version:12
 
                     };
 
