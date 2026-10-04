@@ -1021,7 +1021,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 15.8 — 直接遊玩與合作模式，預設 Worker 配音
+   FRONTEND 15.9 — 直接遊玩與合作模式，預設 Worker 配音
 
    新架構：
 
@@ -2160,7 +2160,7 @@ function updateVoiceSettingUI() {
 
 function getVoicePlatform(){
     const ua=String(navigator.userAgent || '');
-    if(/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && Number(navigator.maxTouchPoints)>1))return 'ios';
+    if(/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && (Number(navigator.maxTouchPoints)>1 || 'ontouchend' in document)))return 'ios';
     if(/Android/i.test(ua))return 'android';
     return 'desktop';
 }
@@ -2169,27 +2169,44 @@ function getAutomaticVoiceLabel(){
     return platform==='ios'?'優先可用的中文 Siri 聲音':platform==='android'?'優先 Google 中文（台灣中文優先）':'優先 Yating 台灣中文';
 }
 function chooseSpeechVoice(){
-    if(typeof speechSynthesis.getVoices==='function')availableVoices=speechSynthesis.getVoices();
+    if(typeof speechSynthesis.getVoices==='function'){
+        const voices=speechSynthesis.getVoices();
+        // Some mobile browsers temporarily return an empty list after loading it.
+        if(voices.length)availableVoices=voices;
+    }
     const explicit=availableVoices.find(v=>v.voiceURI===voiceSettings.voiceURI);
     if(explicit)return explicit;
     const platform=getVoicePlatform();
+    const language=v=>String(v.lang || '').replace(/_/g,'-');
+    const label=v=>String(v.name || '')+' '+String(v.voiceURI || '');
+    const chinese=availableVoices.filter(v=>{
+        const lang=language(v);
+        return /^(?:zh|cmn)(?:-|$)/i.test(lang) || /^zh(?:TW|CN|HK)$/i.test(lang) ||
+            (!lang && /Chinese|中文|國語|普通話|華語/i.test(label(v)));
+    });
+    const apple=platform==='ios' || (platform==='desktop' && /Macintosh/i.test(String(navigator.userAgent || '')));
+    // Choose the requested provider first, then dialect and quality within it.
+    // This prevents an unfamiliar Mandarin language tag from hiding Siri.
+    let candidates=chinese;
+    if(apple){
+        const siri=chinese.filter(v=>/Siri/i.test(label(v)));
+        if(siri.length)candidates=siri;
+    }else if(platform==='android'){
+        const google=chinese.filter(v=>/Google/i.test(label(v)));
+        if(google.length)candidates=google;
+    }else{
+        const yating=chinese.filter(v=>/Yating/i.test(label(v)) && /TW/i.test(language(v)));
+        if(yating.length)candidates=yating;
+    }
     const score=v=>{
-        const language=String(v.lang || '').replace(/_/g,'-');
-        if(!/^zh\b/i.test(language))return -100;
-        let value=/^zh-TW$/i.test(language)?100:/^zh-Hant/i.test(language)?90:50;
-        const name=String(v.name || '')+' '+String(v.voiceURI || '');
-        if(platform==='ios'){
-            if(/Siri/i.test(name))value+=70;
-            if(/premium|enhanced|natural|高品質|增強|自然/i.test(name))value+=15;
-        }else if(platform==='android'){
-            // Name labels are hints, not a guarantee of subjective audio quality.
-            if(/premium|enhanced|natural|高品質|增強|自然/i.test(name))value+=20;
-            if(/Google/i.test(name))value+=70;
-        }else if(/^zh-TW$/i.test(language) && /\bYating\b/i.test(name))value+=25;
+        const lang=language(v),name=label(v);
+        let value=/(?:-|^)TW$/i.test(lang) || /^zhTW$/i.test(lang)?100:/Hant/i.test(lang)?90:50;
+        if(/premium|enhanced|natural|高品質|增強|自然/i.test(name))value+=15;
         return value;
     };
-    return availableVoices.filter(v=>score(v)>0).sort((a,b)=>score(b)-score(a)+(Number(!!b.default)-Number(!!a.default)))[0] || null;
+    return candidates.slice().sort((a,b)=>score(b)-score(a)+(Number(!!b.default)-Number(!!a.default)))[0] || null;
 }
+
 function getSentenceEmotion(text){
     const profile=EMOTION_PROFILES[voiceSettings.emotion] || EMOTION_PROFILES.natural;
     const age=Number(selectedChildAge)||6;
