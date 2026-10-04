@@ -840,10 +840,10 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
-<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked class="mr-2">使用 Worker 中文配音（失敗時自動切換備用聲音）</label>
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" class="mr-2">使用 Worker 中文配音（失敗時自動切換備用聲音）</label>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
-<p class="text-xs text-slate-400 mb-3">平常使用 Worker 配音；失敗時，自動選擇 iPhone 的中文 Siri、Android 的 Google 中文或電腦的 Yating（需裝置有提供）。下方可選「自動」、指定聲音，或「系統預設中文（舊版方式）」讓系統決定聲音。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
+<p class="text-xs text-slate-400 mb-3">預設使用已確認的舊版方式：系統預設中文，不指定美佳或其他聲音。不同裝置的實際聲線可能不同。需要時可勾選 Worker 配音，或在下方選擇其他裝置聲音。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -1021,7 +1021,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.0 — 直接遊玩與合作模式，預設 Worker 配音
+   FRONTEND 16.1 — 合作與保存故事，預設系統中文聲音
 
    新架構：
 
@@ -1851,7 +1851,7 @@ let speechToken = 0;
 let activeSpeechUtterance = null;
 
 let voiceSettings = {
-    fixedVoice:true,
+    fixedVoice:false,
 
     rate:.96,
 
@@ -1861,9 +1861,9 @@ let voiceSettings = {
 
     emotion:'natural',
 
-    voiceURI:'',
+    voiceURI:'__SYSTEM_TW__',
 
-    version:8
+    version:9
 
 };
 
@@ -1911,15 +1911,11 @@ function loadVoiceSettings() {
             ...JSON.parse(saved)
 
         };
-        // Adopt the user's chosen voice once; subsequent manual choices stay saved.
-        if(Number(voiceSettings.version)<7){
-            Object.assign(voiceSettings,{fixedVoice:false,voiceURI:'',rate:.96,pitch:1,emotion:'natural',version:7});
-            saveVoiceSettings();
-        }
-        // Switch existing installs to Worker narration once without changing
-        // volume, speed or the voice kept for a service-error fallback.
-        if(Number(JSON.parse(saved)?.version || 0)<8){
-            voiceSettings.fixedVoice=true;voiceSettings.version=8;
+        // Apply the voice confirmed by the user once. Later choices stay saved.
+        if(Number(JSON.parse(saved)?.version || 0)<9){
+            voiceSettings.fixedVoice=false;
+            voiceSettings.voiceURI='__SYSTEM_TW__';
+            voiceSettings.version=9;
             cloudSpeechCooldownUntil=0;saveVoiceSettings();
         }
         voiceSettings.rate=Math.min(1.35,Math.max(.65,Number(voiceSettings.rate)||.94));
@@ -2293,7 +2289,7 @@ function savedAudio(operation,key,blob){
     });
 }
 async function playFixedVoice(text,token){
-    if((voiceSettings.fixedVoice===false && !adventure?.audioReady) || typeof Audio==='undefined')return null;
+    if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
     const age=Number(selectedChildAge)||6;
     const pace=currentMode==='senior'?.9:age<=6?.94:1;
     const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
@@ -4809,7 +4805,7 @@ document.addEventListener(
 
 
                     voiceSettings = {
-                        fixedVoice:true,
+                        fixedVoice:false,
 
                         rate:.96,
 
@@ -4819,9 +4815,9 @@ document.addEventListener(
 
                         emotion:'natural',
 
-                        voiceURI:'',
+                        voiceURI:'__SYSTEM_TW__',
 
-                        version:8
+                        version:9
 
                     };
 
