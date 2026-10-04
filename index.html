@@ -985,7 +985,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 12.2 — 持續動作與跳躍計次
+   FRONTEND 12.3 — 持續動作與跳躍計次
 
    新架構：
 
@@ -1446,10 +1446,10 @@ const ACTION_INSTRUCTIONS = {
         '現在把手放下！',
 
     TILT_LEFT:
-        '現在向左傾斜！',
+        '現在把手腕向左傾斜！',
 
     TILT_RIGHT:
-        '現在向右傾斜！',
+        '現在把手腕向右傾斜！',
 
     HOLD_UP:
         '現在把手抬起並保持住！'
@@ -3320,7 +3320,7 @@ function showAction(data) {
         currentActionNarration;
 
 
-    const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'向左傾斜一次，再回到中間。',TILT_RIGHT:'向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
+    const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'手腕向左傾斜一次，再回到中間。',TILT_RIGHT:'手腕向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
     $('actionSubText').textContent='💡 '+currentActionPurpose+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
 
     void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
