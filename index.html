@@ -623,6 +623,10 @@ class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
 
 </div>
 
+<div id="speechPreparation" class="hidden mt-3 p-3 rounded-xl bg-slate-900 border border-cyan-400/40">
+<p class="text-cyan-100" role="status">正在準備故事聲音，最多等待 8 秒；逾時會自動使用裝置朗讀。</p>
+<button id="btnUseDeviceSpeechNow" type="button" class="mt-2 bg-cyan-700 text-white font-bold rounded-xl px-4 py-2">立即用裝置朗讀</button>
+</div>
 <div id="speechRecovery" class="hidden mt-3 p-4 rounded-xl border border-amber-400/50 bg-slate-900">
 <p id="speechRecoveryText" class="text-amber-200" role="status" aria-live="polite"></p>
 <div class="flex flex-wrap gap-2 mt-3">
@@ -1022,7 +1026,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.5 — 合作與保存故事，預設系統中文聲音
+   FRONTEND 16.6 — 合作與保存故事，預設系統中文聲音
 
    新架構：
 
@@ -2343,9 +2347,14 @@ async function playFixedVoice(text,token){
         const cancelled=new Promise(resolve=>{
             const finish=()=>{controller.abort();resolve('cancelled');};finishSpeech=finish;
         });
+        const boundedWait=new Promise(resolve=>{
+            const fallback=reason=>{failureReason=reason;controller.abort();resolve(null);};
+            timer=setTimeout(()=>fallback('配音準備超過 8 秒'),8000);
+            $('speechPreparation').classList.remove('hidden');
+            $('btnUseDeviceSpeechNow').onclick=()=>{primeSpeech();fallback('已選擇立即使用裝置朗讀');};
+        });
         const download=(async()=>{
             try{
-                timer=setTimeout(()=>controller.abort(),45000);
                 for(let attempt=0;attempt<2;attempt++){
                     if(controller.signal.aborted || token!==speechToken)return null;
                     let retryable=false;
@@ -2372,8 +2381,9 @@ async function playFixedVoice(text,token){
                 return null;
             }catch(_){return null;}finally{clearTimeout(timer);}
         })();
-        const result=await Promise.race([download,cancelled]);
-        if(cloudSpeechController===controller){cloudSpeechController=null;finishSpeech=null;}
+        const result=await Promise.race([download,cancelled,boundedWait]);
+        if(cloudSpeechController===controller){cloudSpeechController=null;finishSpeech=null;$('speechPreparation').classList.add('hidden');$('btnUseDeviceSpeechNow').onclick=null;}
+        clearTimeout(timer);
         if(result==='cancelled' || token!==speechToken)return 'cancelled';
         if(!result){cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus(failureReason+'，已改用裝置朗讀。');showToast(failureReason+'；將使用裝置聲音。');return null;}
         bytes=result;cloudAudioCache.set(key,bytes);
@@ -2394,7 +2404,7 @@ async function playFixedVoice(text,token){
         };
         const watch=()=>{clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),30000);};
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
-        audio.onplaying=audio.ontimeupdate=watch;watch();
+        audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),5000);
         updateVoiceStatus('正在使用 Cloudflare 固定中文配音。已取得的音檔會保存供重聽。');
         try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
     });
@@ -2453,7 +2463,7 @@ function speakChunk(text,token){
         utterance.onerror=()=>finish('error');
         utterance.onstart=()=>watch(Math.max(20000,text.length*700/emotion.rate));
         utterance.onboundary=()=>watch(Math.max(20000,text.length*700/emotion.rate));
-        watch(Math.max(12000,text.length*700/emotion.rate));
+        watch(6000);
         try{if(speechSynthesis.paused)speechSynthesis.resume();speechSynthesis.speak(utterance);}
         catch(_){finish('error');}
     });
@@ -4285,6 +4295,14 @@ function primeSpeech() {
         try {
 
             speechSynthesis.getVoices();
+            // Warm up the device reader while the user's tap is still active.
+            // Do not interfere with narration already in progress.
+            if(!speechPlaying && !speechSynthesis.speaking && typeof SpeechSynthesisUtterance!=='undefined'){
+                const warmup=new SpeechSynthesisUtterance('。');
+                warmup.lang='zh-TW';warmup.volume=0;
+                if(speechSynthesis.paused)speechSynthesis.resume();
+                speechSynthesis.speak(warmup);
+            }
 
         }
 
