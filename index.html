@@ -1026,7 +1026,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.6 — 合作與保存故事，預設系統中文聲音
+   FRONTEND 16.7 — 主題冒險、完整保存與單次開場
 
    新架構：
 
@@ -1315,7 +1315,7 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     currentAction = step.action;
     currentActionNarration = getActionNarration(step);
     currentActionPurpose = step.actionPurpose || (currentMode==='senior'?'以舒適幅度完成這個操作。':'完成這個動作，故事就會繼續。');
-    currentStepStory = String(step.storyBefore || '').trim();
+    currentStepStory = distinctNarrative(step.storyBefore, currentStory);
     resetActionProgress(step);
     lockAction();
     $('promptText').textContent = `📖 本幕第 ${currentActionStepIndex + 1} 個動作正在準備……`;
@@ -3144,114 +3144,31 @@ async function parseAIResponse(res) {
 ===================================================== */
 
 function extractAdventure(data) {
-
-    let story =
-        data?.story;
-
-
-    /*
-     * 正常情況：
-     *
-     * data.story
-     * {
-     *   title,
-     *   summary,
-     *   acts:[]
-     * }
-     */
-
-
-    if (
-        typeof story ===
-        'string'
-    ) {
-
-        try {
-
-            story =
-                JSON.parse(
-                    story
-                );
-
-        }
-
-        catch(e) {
-
-            console.warn(
-                'story 是字串，但無法 JSON.parse'
-            );
-
-        }
-
+    let story = data?.story;
+    if (typeof story === 'string') {
+        try { story = JSON.parse(story); }
+        catch (_) { throw new Error('Worker 回傳的故事不是有效 JSON。'); }
     }
+    const source = story && typeof story === 'object' && !Array.isArray(story)
+        ? story : data?.adventure && typeof data.adventure === 'object' ? data.adventure : data;
+    const foundActs = Array.isArray(source?.acts) ? source.acts
+        : Array.isArray(data?.acts) ? data.acts : null;
+    if (!foundActs?.length) throw new Error('Worker 回傳格式不正確：找不到故事 acts。');
+    // Preserve the complete story: playback/cache metadata and topic/plot information
+    // must survive local saving and replay, rather than only keeping title/summary/acts.
+    return {...source, title: source?.title || data?.title || '聲動奇境',
+        summary: source?.summary || data?.summary || '', acts: foundActs};
+}
 
-
-    let foundActs = null;
-
-
-    if (
-        Array.isArray(
-            story?.acts
-        )
-    ) {
-
-        foundActs =
-            story.acts;
-
-    }
-
-    else if (
-        Array.isArray(
-            data?.acts
-        )
-    ) {
-
-        foundActs =
-            data.acts;
-
-    }
-
-    else if (
-        Array.isArray(
-            data?.adventure?.acts
-        )
-    ) {
-
-        foundActs =
-            data.adventure.acts;
-
-    }
-
-
-    if (
-        !foundActs ||
-        !foundActs.length
-    ) {
-
-        throw new Error(
-            'Worker 回傳格式不正確：找不到故事 acts。'
-        );
-
-    }
-
-
-    return {
-
-        title:
-            story?.title ||
-            data?.title ||
-            '聲動奇境',
-
-        summary:
-            story?.summary ||
-            data?.summary ||
-            '',
-
-        acts:
-            foundActs
-
-    };
-
+function narrativeKey(text) {
+    return String(text || '').normalize('NFKC').replace(/[\p{P}\p{Z}\s]/gu, '');
+}
+function distinctNarrative(text, previous) {
+    const value = String(text || '').trim(), key = narrativeKey(value);
+    return key && !narrativeKey(previous).includes(key) ? value : '';
+}
+function storyOpening(story) {
+    return distinctNarrative(story?.opening, story?.acts?.[0]?.story);
 }
 
 
@@ -3368,9 +3285,7 @@ function appendStory(
     p.textContent =
         text;
 
-    box.appendChild(
-        p
-    );
+    if (String(text || '').trim()) box.appendChild(p);
 
     display.appendChild(
         box
@@ -4191,8 +4106,7 @@ async function generateStory(preferSaved=false) {
                 '✨ ' +
                 adventure.title,
 
-                adventure.opening || adventure.summary || adventure.acts?.[0]?.story ||
-                '故事冒險即將開始……'
+                storyOpening(adventure)
 
             );
 
@@ -4204,6 +4118,9 @@ async function generateStory(preferSaved=false) {
          */
 
         storyPreview=false;
+        const opening = storyOpening(adventure);
+        if (opening) await speak(opening);
+        if (requestVersion !== adventureVersion) return;
         await showCurrentAct(true);
 
         if (requestVersion !== adventureVersion) return;
@@ -4297,7 +4214,9 @@ function primeSpeech() {
             speechSynthesis.getVoices();
             // Warm up the device reader while the user's tap is still active.
             // Do not interfere with narration already in progress.
-            if(!speechPlaying && !speechSynthesis.speaking && typeof SpeechSynthesisUtterance!=='undefined'){
+            // speechPlaying also covers Worker preparation and recovery waits.
+            // In those states a real tap must still be able to prime the device reader.
+            if(!activeSpeechUtterance && !activeCloudAudio && !speechSynthesis.speaking && typeof SpeechSynthesisUtterance!=='undefined'){
                 const warmup=new SpeechSynthesisUtterance('。');
                 warmup.lang='zh-TW';warmup.volume=0;
                 if(speechSynthesis.paused)speechSynthesis.resume();
