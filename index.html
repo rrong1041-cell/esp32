@@ -1,1 +1,5067 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>聲動奇境 ✨ 智慧互動繪本</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+rel="stylesheet">
+
+<script>
+
+tailwind.config = {
+
+    theme: {
+
+        extend: {
+
+            colors: {
+
+                magic: {
+                    dark: '#0f172a',
+                    card: '#1e1b4b',
+                    purple: '#8b5cf6',
+                    pink: '#ec4899',
+                    cyan: '#06b6d4'
+                },
+
+                senior: {
+                    dark: '#064e3b',
+                    card: '#022c22',
+                    green: '#10b981',
+                    amber: '#f59e0b'
+                }
+
+            },
+
+            fontFamily: {
+
+                fredoka: [
+                    'Fredoka',
+                    'Noto Sans TC',
+                    'sans-serif'
+                ]
+
+            }
+
+        }
+
+    }
+
+};
+
+</script>
+
+<style>
+
+body {
+
+    font-family:
+        'Fredoka',
+        'Noto Sans TC',
+        sans-serif;
+
+    background:
+        radial-gradient(
+            circle at top,
+            #2e1065 0%,
+            #0f172a 100%
+        );
+
+    min-height:100vh;
+
+    transition:
+        background .5s ease;
+
+}
+
+body.mode-senior {
+
+    background:
+        radial-gradient(
+            circle at top,
+            #064e3b 0%,
+            #022c22 100%
+        );
+
+}
+
+body.mode-senior .theme-btn, body.mode-senior .difficulty-btn {font-size:1.1rem;min-height:58px;}
+body.mode-senior #customTopicInput {font-size:1.1rem;min-height:54px;}
+body.mode-senior #promptText, body.mode-senior #actionProgressText {font-size:1.45rem;line-height:1.7;}
+body.mode-senior #actionSubText, body.mode-senior #actionProgressHint,
+body.mode-senior #controllerHint,body.mode-senior #selectedTopicLabel {font-size:1rem;line-height:1.8;}
+body.mode-senior #btnCalibrate,body.mode-senior #btnLearnHold,body.mode-senior #btnInvertDirections {font-size:1rem;min-height:52px;}
+body.mode-senior #btnManualAction {font-size:1.1rem;min-height:58px;}
+body.mode-senior #storyDisplay p {font-size:1.35rem;line-height:1.95;}
+body.mode-senior .action-big {animation:none;}
+
+.glow-button {
+
+    box-shadow:
+        0 4px 20px
+        rgba(236,72,153,.5);
+
+    transition:
+        all .3s ease;
+
+}
+
+body.mode-senior .glow-button {
+
+    box-shadow:
+        0 4px 20px
+        rgba(16,185,129,.5);
+
+    background:
+        linear-gradient(
+            to right,
+            #059669,
+            #10b981,
+            #34d399
+        ) !important;
+
+}
+
+.action-big {
+
+    animation:
+        pulseGlow 1.6s infinite;
+
+}
+
+@keyframes pulseGlow {
+
+    0%,100% {
+
+        box-shadow:
+            0 0 0
+            rgba(236,72,153,.1);
+
+    }
+
+    50% {
+
+        box-shadow:
+            0 0 24px
+            rgba(236,72,153,.35);
+
+    }
+
+}
+
+.action-locked {
+
+    opacity:.65;
+
+}
+
+.action-ready {
+
+    opacity:1;
+
+}
+
+.difficulty-btn {
+
+    transition:all .2s ease;
+
+}
+
+.difficulty-btn.active {
+
+    background:
+        rgba(5,150,105,.5);
+
+    border-color:#10b981;
+
+    color:#d1fae5;
+
+}
+
+.theme-btn {
+
+    transition:all .2s ease;
+
+}
+
+.theme-btn:hover {
+
+    transform:
+        translateY(-1px);
+
+}
+
+.theme-btn.active {
+
+    transform:
+        translateY(-1px);
+
+}
+
+.voice-modal {
+
+    position:fixed;
+
+    inset:0;
+
+    background:
+        rgba(2,6,23,.78);
+
+    backdrop-filter:
+        blur(8px);
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    padding:20px;
+
+    z-index:100;
+
+}
+
+.voice-modal.hidden {
+
+    display:none;
+
+}
+
+.voice-panel {
+
+    width:100%;
+
+    max-width:520px;
+
+    max-height:90vh;
+
+    overflow-y:auto;
+
+    background:
+        linear-gradient(
+            145deg,
+            #1e1b4b,
+            #0f172a
+        );
+
+    border:
+        1px solid
+        rgba(139,92,246,.45);
+
+    border-radius:28px;
+
+    box-shadow:
+        0 25px 80px
+        rgba(0,0,0,.55);
+
+    padding:24px;
+
+}
+
+.voice-row {
+
+    margin-top:18px;
+
+}
+
+.voice-label {
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:8px;
+
+    font-size:13px;
+
+    font-weight:700;
+
+    color:#c4b5fd;
+
+}
+
+.voice-select {
+
+    width:100%;
+
+    background:#020617;
+
+    border:
+        1px solid
+        #475569;
+
+    color:#e2e8f0;
+
+    border-radius:14px;
+
+    padding:12px;
+
+    outline:none;
+
+}
+
+.voice-range {
+
+    width:100%;
+
+    accent-color:#8b5cf6;
+
+    cursor:pointer;
+
+}
+
+.voice-emotions {
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(2,1fr);
+
+    gap:8px;
+
+}
+
+.voice-emotion {
+
+    padding:10px;
+
+    border:
+        1px solid
+        #334155;
+
+    background:#0f172a;
+
+    color:#cbd5e1;
+
+    border-radius:14px;
+
+    font-weight:700;
+
+    font-size:13px;
+
+}
+
+.voice-emotion.active {
+
+    background:
+        rgba(124,58,237,.35);
+
+    border-color:#a78bfa;
+
+    color:#ede9fe;
+
+}
+
+.voice-status {
+
+    margin-top:10px;
+
+    padding:10px 12px;
+
+    border-radius:12px;
+
+    background:
+        rgba(15,23,42,.8);
+
+    color:#94a3b8;
+
+    font-size:12px;
+
+    line-height:1.5;
+
+}
+
+.voice-badge {
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:6px;
+
+    padding:4px 8px;
+
+    border-radius:999px;
+
+    background:
+        rgba(16,185,129,.12);
+
+    border:
+        1px solid
+        rgba(16,185,129,.25);
+
+    color:#6ee7b7;
+
+    font-size:11px;
+
+}
+
+</style>
+
+</head>
+
+<body
+class="text-slate-100 p-4 md:p-8 flex flex-col items-center min-h-screen justify-between"
+id="appBody">
+
+<header class="w-full max-w-4xl text-center my-4">
+
+<div class="flex justify-center items-center gap-4 mb-4">
+
+<div class="inline-flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 shadow-xl">
+
+<button
+id="modeChildBtn"
+onclick="switchMode('child')"
+class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md">
+
+<i class="fa-solid fa-child"></i>
+
+兒童冒險模式
+
+</button>
+
+<button
+id="modeSeniorBtn"
+onclick="switchMode('senior')"
+class="px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white">
+
+<i class="fa-solid fa-person-cane"></i>
+
+長輩模式
+（請坐在有椅背的椅子上）
+
+</button>
+
+</div>
+
+</div>
+
+<div
+class="inline-flex items-center gap-3 bg-indigo-950/80 px-6 py-2 rounded-full border border-indigo-500/30 mb-3 shadow-lg">
+
+<i class="fa-solid fa-headphones-simple text-amber-400"></i>
+
+<span
+class="text-amber-300 font-semibold text-sm"
+id="badgeText">
+
+沈浸式互動繪本・故事會隨你的行動改變
+
+</span>
+
+</div>
+
+<h1
+class="text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300"
+id="mainTitle">
+
+聲動奇境 ✨ 智慧互動繪本
+
+</h1>
+
+</header>
+
+<main
+class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+
+<section
+class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
+
+<div>
+
+<h2
+class="text-xl font-bold text-cyan-300 mb-4 flex items-center gap-2">
+
+<i class="fa-brands fa-bluetooth-b text-cyan-400"></i>
+
+藍牙連線
+
+</h2>
+
+<div
+class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700/50 mb-4 flex items-center justify-between">
+
+<div class="flex items-center gap-3">
+
+<span
+id="statusIndicator"
+class="w-4 h-4 rounded-full bg-slate-500 inline-block shadow">
+</span>
+
+<div>
+
+<div class="text-xs text-slate-400">
+狀態
+</div>
+
+<div
+id="statusText"
+class="font-bold text-slate-200 text-sm">
+
+尚未連線
+
+</div>
+
+</div>
+
+</div>
+
+<i
+id="statusIcon"
+class="fa-solid fa-plug-circle-xmark text-slate-500 text-xl">
+</i>
+
+</div>
+
+<button
+id="btnConnect"
+class="w-full bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition text-sm">
+
+連接故事裝置
+
+</button>
+<div id="familyBLEPanel" class="hidden space-y-2 mt-3 p-3 border border-purple-500 rounded-xl"><p id="familyStatus">家人裝置未連線</p><button id="btnConnectFamily" class="w-full bg-purple-700 rounded-xl p-2">連接家人的裝置</button><button id="btnDisconnectFamily" class="w-full bg-slate-800 rounded-xl p-2">中斷家人連線</button><button id="btnCalibrateFamily" class="w-full bg-slate-800 rounded-xl p-2">家人重新校正</button><button id="btnHoldFamily" class="w-full bg-slate-800 rounded-xl p-2">設定家人撐住姿勢</button><button id="btnInvertFamily" class="w-full bg-slate-800 rounded-xl p-2">反轉家人左右方向</button><button id="btnManualFamily" class="w-full bg-amber-600 rounded-xl p-2">模擬家人目前動作</button></div>
+<button id="btnDisconnect" disabled class="w-full mt-2 bg-slate-800 hover:bg-rose-950 disabled:opacity-40 disabled:cursor-not-allowed border border-rose-400/40 text-rose-200 font-bold py-2 px-3 rounded-xl text-sm">中斷連線</button>
+<button id="btnCalibrate" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">
+  🎯 重新校正姿勢
+</button>
+<button id="btnLearnHold" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">🙌 設定撐住姿勢</button>
+<button id="btnInvertDirections" disabled class="w-full mt-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 border border-cyan-500/30 text-cyan-200 font-bold py-2 px-3 rounded-xl text-sm">↔️ 反轉左右方向</button>
+<button id="btnTurnTrial" disabled class="w-full mt-2 bg-purple-950 hover:bg-purple-900 disabled:opacity-40 border border-purple-400/40 text-purple-200 font-bold py-2 px-3 rounded-xl text-sm">↶↷ 測試左右轉身（需裝置 3.7）</button>
+<p id="controllerHint" class="text-xs text-slate-400 mt-2 leading-relaxed">固定好腕部裝置，以舒適中立姿勢保持不動 2 秒，再開始體感故事。</p>
+
+
+</div>
+
+<div
+class="bg-indigo-950/40 p-4 rounded-2xl border border-indigo-800/40">
+
+<h3 class="text-sm font-bold text-purple-300 mb-2">
+手動測試互動
+</h3>
+
+<button
+id="btnManualAction"
+class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-3 rounded-xl shadow-md text-sm transition">
+
+✨ 模擬一次目前動作
+
+</button>
+
+<p id="manualActionHint"
+class="text-xs text-slate-400 mt-3 leading-relaxed">
+
+裝置實體動作會觸發故事。<br>
+達成指定次數或持續秒數後，故事會進入下一幕。
+
+</p>
+
+</div>
+
+</section>
+
+<section
+class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25 shadow-2xl flex flex-col justify-between gap-6">
+
+<div
+class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
+
+<div
+class="overflow-y-auto max-h-[420px] pr-2 space-y-4"
+id="storyScroll">
+
+<div
+id="welcomeMessage"
+class="text-center py-10">
+
+<div
+class="text-5xl mb-3"
+id="welcomeIcon">
+
+📖✨
+
+</div>
+
+<h3
+class="text-lg font-bold text-purple-300"
+id="welcomeTitle">
+
+準備好開始冒險了嗎？
+
+</h3>
+
+<p
+class="text-sm text-slate-400 mt-1"
+id="welcomeDesc">
+
+適合 5～8 歲：選擇喜歡的主題，
+跟著簡單的小故事動一動。
+
+</p>
+
+</div>
+
+<div
+id="storyDisplay"
+class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
+</div>
+
+</div>
+
+<div id="speechPreparation" class="hidden mt-3 p-3 rounded-xl bg-slate-900 border border-cyan-400/40">
+<p class="text-cyan-100" role="status">正在準備故事聲音，最多等待 8 秒；逾時會自動使用裝置朗讀。</p>
+<button id="btnUseDeviceSpeechNow" type="button" class="mt-2 bg-cyan-700 text-white font-bold rounded-xl px-4 py-2">立即用裝置朗讀</button>
+</div>
+<div id="speechRecovery" class="hidden mt-3 p-4 rounded-xl border border-amber-400/50 bg-slate-900">
+<p id="speechRecoveryText" class="text-amber-200" role="status" aria-live="polite"></p>
+<div class="flex flex-wrap gap-2 mt-3">
+<button id="btnRetrySpeech" type="button" class="bg-cyan-600 text-white font-bold rounded-xl px-4 py-3">重試朗讀</button>
+<button id="btnContinueText" type="button" class="bg-slate-700 text-white font-bold rounded-xl px-4 py-3">這段看文字繼續</button>
+</div></div>
+<div
+id="actionPrompt"
+class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl border border-pink-500/30 action-big">
+
+<div
+class="flex items-center gap-2 text-pink-300 font-bold">
+
+<i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+
+<span id="promptText">
+故事正在準備……
+</span>
+
+</div>
+
+<div
+id="actionSubText"
+class="text-sm text-slate-300 mt-2">
+</div>
+<div id="actionSequencePanel" class="hidden mt-3">
+  <div id="actionSequenceText" class="text-sm font-bold text-purple-300"></div>
+  <ol id="actionSequenceList" class="flex flex-wrap gap-2 mt-2 text-xs" aria-label="本幕動作順序"></ol>
+</div>
+<div id="actionProgressPanel" class="hidden mt-3">
+  <div id="actionProgressText" class="text-base font-bold text-amber-300" role="status" aria-live="polite"></div>
+  <progress id="actionProgressBar" class="w-full mt-2" max="1" value="0" aria-label="目前動作完成進度"></progress>
+  <div id="coopProgress" class="hidden border border-purple-500 rounded-xl p-3 my-3"><p id="coopRule"></p><p id="childCoopTask"></p><p id="childCoopProgress" class="text-emerald-300 font-bold" aria-live="polite"></p><p id="familyCoopTask"></p><p id="familyCoopProgress" class="text-cyan-300 font-bold" aria-live="polite"></p></div>
+<div id="actionFeedback" class="text-base font-bold text-emerald-300 mt-2 min-h-6" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="turnDiagnostics" class="hidden mt-2 text-sm text-cyan-200" role="status" aria-live="polite"></div>
+  <div id="actionProgressHint" class="text-xs text-slate-400 mt-1"></div>
+</div>
+
+
+</div>
+
+</div>
+
+<div class="space-y-4">
+
+<div class="space-y-2">
+
+<div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="solo">單人冒險</option><option value="coop">孩子＋家人合作</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">孩子與家人各戴一個不同裝置，一起玩同一篇故事。</p></div></div>
+<div id="childAgePanel" class="space-y-2 mb-3">
+<div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
+<div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
+<button type="button" data-child-age="5" aria-pressed="false" class="age-btn bg-slate-800 border border-slate-700 text-slate-300 py-3 rounded-xl font-bold">5 歲</button>
+<button type="button" data-child-age="6" aria-pressed="true" class="age-btn bg-purple-700 border border-purple-400 text-white py-3 rounded-xl font-bold">6 歲</button>
+<button type="button" data-child-age="7" aria-pressed="false" class="age-btn bg-slate-800 border border-slate-700 text-slate-300 py-3 rounded-xl font-bold">7 歲</button>
+<button type="button" data-child-age="8" aria-pressed="false" class="age-btn bg-slate-800 border border-slate-700 text-slate-300 py-3 rounded-xl font-bold">8 歲</button>
+</div>
+<p id="childAgeHint" class="text-sm text-slate-300 leading-relaxed" aria-live="polite"></p>
+</div>
+
+<div id="childThemeHeader" class="flex items-center justify-between">
+
+<div class="text-xs text-purple-300 font-bold">
+📚 選擇故事主題
+</div>
+
+<div id="themeCount" class="text-xs text-slate-500">
+18 個冒險世界
+</div>
+
+</div>
+
+<div
+class="grid grid-cols-2 md:grid-cols-3 gap-2"
+id="themeButtonsContainer">
+</div>
+
+<div
+id="seniorDifficultyPanel"
+class="hidden mt-3">
+
+<div class="text-xs text-emerald-300 font-bold mb-2">
+健康活動難度
+</div>
+
+<div class="grid grid-cols-3 gap-2">
+
+<button
+data-difficulty="easy"
+class="difficulty-btn active bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
+🟢 簡單
+</button>
+
+<button
+data-difficulty="normal"
+class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
+🟡 普通
+</button>
+
+<button
+data-difficulty="challenge"
+class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold">
+🔴 挑戰
+</button>
+
+</div>
+
+<p id="seniorDifficultyHint" class="text-base text-emerald-200 mt-3 leading-relaxed"></p>
+</div>
+
+<div id="customTopicPanel" class="flex gap-2 mt-3">
+
+<input
+type="text"
+id="customTopicInput"
+maxlength="200"
+placeholder="或者輸入你想聽的故事，例如：會飛的橘色章魚"
+class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
+
+</div>
+<p id="selectedTopicLabel" class="text-xs text-purple-300 mt-2 break-words" aria-live="polite"></p>
+
+</div>
+
+<div class="space-y-2 mb-3">
+<button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
+<p class="text-sm text-slate-300">新故事會自動保存。可依目前的年齡、主題、難度及合作設定，播放已保存內容。</p>
+</div>
+<div id="legacyPreparationControls" hidden inert aria-hidden="true" style="display:none">
+<div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
+</div>
+<p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
+<div id="seniorStoryControls" class="hidden space-y-2">
+<button id="btnPauseStory" disabled class="w-full bg-emerald-950 border border-emerald-400/50 text-emerald-100 text-lg font-bold px-4 py-3 rounded-xl">⏸ 休息一下</button>
+<p id="pauseStoryHint" class="text-base text-slate-300 leading-relaxed">可以隨時休息，左右轉的已完成次數會保留。</p>
+</div>
+<div class="flex gap-3">
+
+<button
+id="btnGenerate"
+class="flex-1 glow-button bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-600 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-3">
+
+<i
+id="btnIcon"
+class="fa-solid fa-wand-magic-sparkles">
+</i>
+
+<span id="btnText">
+開始精彩故事冒險
+</span>
+
+</button>
+
+<button
+id="btnSpeak"
+aria-label="重聽目前故事"
+title="重聽目前故事"
+disabled
+class="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition">
+
+<i class="fa-solid fa-play"></i>
+
+</button>
+
+<button
+id="btnVoiceSettings"
+aria-label="聲音設定"
+title="聲音設定"
+class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-5 rounded-2xl border border-slate-700 text-xl transition"
+title="聲音設定">
+
+<i class="fa-solid fa-sliders"></i>
+
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+</main>
+
+<div
+id="toast"
+class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-purple-500/50 text-slate-100 px-6 py-3 rounded-2xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none z-50 text-sm font-semibold">
+</div>
+
+<div
+id="voiceModal"
+class="voice-modal hidden">
+
+<div class="voice-panel">
+
+<div class="flex items-center justify-between gap-3">
+
+<div>
+
+<h2 class="text-xl font-black text-purple-200">
+🎙️ 聲音設定
+</h2>
+
+<p class="text-xs text-slate-400 mt-1">
+調整故事朗讀的聲音與語氣
+</p>
+
+</div>
+
+<button
+id="btnCloseVoiceSettings"
+class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
+
+<i class="fa-solid fa-xmark"></i>
+
+</button>
+
+</div>
+
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Worker 中文配音（額度用完時暫停，失敗時使用備用聲音）</label>
+<p id="workerVoicePolicyStatus" class="text-xs text-slate-300 mb-3" role="status">自動優先使用 Worker 配音。</p>
+<button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
+<p class="text-xs text-slate-400 mb-3">動作成功會響一聲，持續動作每累積一秒響一聲，完成時響兩聲。提示音使用下方音量，且不消耗 AI 額度。</p>
+<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。額度用完時會自動改用裝置朗讀，重置後再恢復 Worker；不同裝置的聲線可能不同。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
+<div
+id="voiceStatus"
+class="voice-status">
+
+正在讀取裝置可用語音……
+
+</div>
+
+<div class="voice-row">
+
+<div class="voice-label">
+
+<span>🗣️ 朗讀聲音</span>
+
+<span class="voice-badge">
+
+<i class="fa-solid fa-mobile-screen"></i>
+
+裝置語音
+
+</span>
+
+</div>
+
+<select
+id="voiceSelect"
+class="voice-select">
+
+<option value="">
+載入中……
+
+</option>
+
+</select>
+
+</div>
+
+<div class="voice-row">
+
+<div class="voice-label">
+
+<span>⚡ 語速</span>
+
+<span id="rateValue">1.00</span>
+
+</div>
+
+<input
+id="rateRange"
+class="voice-range"
+type="range"
+min="0.75"
+max="1.20"
+step="0.01"
+value="1.00">
+
+</div>
+
+<div class="voice-row">
+
+<div class="voice-label">
+
+<span>🎵 音調</span>
+
+<span id="pitchValue">1.00</span>
+
+</div>
+
+<input
+id="pitchRange"
+class="voice-range"
+type="range"
+min="0.75"
+max="1.25"
+step="0.01"
+value="1.00">
+
+</div>
+
+<div class="voice-row">
+
+<div class="voice-label">
+
+<span>🔊 音量</span>
+
+<span id="volumeValue">1.00</span>
+
+</div>
+
+<input
+id="volumeRange"
+class="voice-range"
+type="range"
+min="0.2"
+max="1"
+step="0.05"
+value="1">
+
+</div>
+
+<div class="voice-row">
+
+<div class="voice-label">
+
+<span>🎭 故事語氣</span>
+
+<span class="text-slate-500">
+裝置朗讀語氣
+</span>
+
+</div>
+
+<div class="voice-emotions">
+
+<button
+class="voice-emotion active"
+data-emotion="natural">
+🙂 自然
+</button>
+
+<button
+class="voice-emotion"
+data-emotion="lively">
+😆 活潑
+</button>
+
+<button
+class="voice-emotion"
+data-emotion="tense">
+😱 緊張
+</button>
+
+<button
+class="voice-emotion"
+data-emotion="gentle">
+🌿 溫柔
+</button>
+
+</div>
+
+</div>
+
+<div class="grid grid-cols-2 gap-3 mt-6">
+
+<button
+id="btnVoiceTest"
+class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl">
+
+<i class="fa-solid fa-volume-high mr-2"></i>
+測試聲音
+
+</button>
+
+<button
+id="btnVoiceReset"
+class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold py-3 rounded-xl">
+
+恢復預設
+
+</button>
+
+</div>
+
+<p class="text-[11px] text-slate-500 mt-4 leading-relaxed">
+
+💡 固定聲線需先設定語音服務；裝置聲線依手機、電腦及瀏覽器而不同。
+
+</p>
+
+</div>
+
+</div>
+
+<script>
+
+/* =====================================================
+   聲動奇境 ✨ 智慧互動繪本
+   FRONTEND 16.7 — 主題冒險、完整保存與單次開場
+
+   新架構：
+
+   HTML
+      ↓
+   POST /generate
+      ↓
+   Worker
+      ↓
+   AI
+      ↓
+   完整 11 幕故事
+      ↓
+   HTML 本地推進
+      ↓
+   ESP32 BLE
+===================================================== */
+
+
+/* =====================================================
+   BLE
+===================================================== */
+
+const BLE_CONFIG = {
+
+    serviceUuid:
+        '4fa8691a-136d-4560-84ed-01354051b785',
+
+    characteristicUuid:
+        'beb5483e-36e1-4688-b7f5-ea07361b26a8'
+
+};
+
+const WORKER_URL =
+    'https://lucky-waterfall-f8a2.shopcom2009.workers.dev';
+
+
+let bleDevice = null;
+let bleCharacteristic = null;
+let bleWriteQueue = Promise.resolve();
+let lastPhysicalButtonLock = null;
+
+
+/* =====================================================
+   基本狀態
+===================================================== */
+
+let currentMode = 'child';
+
+let selectedTheme =
+    '勇敢的小騎士與巨龍';
+
+let selectedDifficulty = 'easy';
+let selectedChildAge = 6;
+
+let currentStory = '';
+
+let currentAction = '';
+
+let currentActionNarration = '';
+
+let currentActionPurpose = '';
+
+
+/* =====================================================
+   ⭐ 新的完整冒險資料
+===================================================== */
+
+let adventure = null;
+
+let acts = [];
+
+let currentActIndex = 0;
+
+let currentRound = 0;
+
+let maxRound = 11;
+
+
+/* =====================================================
+   舊狀態保留
+===================================================== */
+
+let storyMemory = null;
+
+let adventureSeed = '';
+
+let sceneId = '';
+
+let sceneSeed = '';
+
+let history = [];
+
+
+/* =====================================================
+   動作狀態
+===================================================== */
+
+let waitingForAction = false;
+
+let expectedAction = '';
+
+let busy = false;
+
+// 每次 BLE 通知代表一次離散動作；不以時間 debounce 丟棄連續次數。
+let actionCount = 0;
+let actionTargetCount = 1;
+let actionHoldSeconds = 0;
+let holdStartedAt = null;
+let holdLastSignalAt = null;
+let holdTimer = null;
+let holdSource = '';
+let manualHolding = false;
+let controllerLearning = false;
+let adventurePaused=false,storyFinished=false;
+let pauseWaiters=[];
+let controllerSetupTimer = null;
+let connectionPending = false;
+let generationController = null;
+let finishSpeech = null;
+const modeTopics = {child:{theme:'勇敢的小騎士與巨龍',custom:''},senior:{theme:'坐姿健康操',custom:''}};
+function stopControllerSetup() {
+    controllerLearning=false;clearTimeout(controllerSetupTimer);controllerSetupTimer=null;
+}
+function startControllerSetup(message, timeoutMs = 0) {
+    stopControllerSetup();controllerLearning=true;stopHold();renderActionProgress();
+    $('controllerHint').textContent=message;
+    if(timeoutMs)controllerSetupTimer=setTimeout(async()=>{
+        if(!controllerLearning)return;
+        stopControllerSetup();await sendBLE('CANCEL_HOLD');
+        $('controllerHint').textContent='設定未收到完成回覆，請確認裝置程式已更新，再重新設定姿勢。';
+        showToast($('controllerHint').textContent);await syncControllerAction();
+    },timeoutMs);
+}
+let actTimer = null;
+let adventureVersion = 0;
+let actVersion = 0;
+let actionStepVersion = 0;
+let actionSteps = [];
+let currentActionStepIndex = 0;
+let currentStepStory = '';
+let replayInProgress = false;
+let replayCancelRequested = false;
+// 韌體需持續回報相符動作（建議每 100–500ms），停止回報或別的動作即中斷。
+const HOLD_SIGNAL_TIMEOUT_MS = 1200;
+
+let feedbackAudio = null;
+let feedbackAudioWarningShown = false;
+let holdLastFeedbackSecond = 0;
+function primeFeedbackAudio(){
+    try {
+        const AudioClass=window.AudioContext || window.webkitAudioContext;
+        if(!AudioClass)return;
+        if(!feedbackAudio || feedbackAudio.state==='closed')feedbackAudio=new AudioClass();
+        if(feedbackAudio.state!=='running')void feedbackAudio.resume().catch(()=>{});
+    } catch(_) { /* 聲音不可用時仍顯示成功文字。 */ }
+}
+async function playFeedbackTone(kind){
+    try {
+        const volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
+        if(!volume)return false;
+        primeFeedbackAudio();
+        const version=actVersion,stepVersion=actionStepVersion,context=feedbackAudio;
+        if(context && context.state!=='running'){
+            let resumeTimer;
+            try{await Promise.race([context.resume(),new Promise(resolve=>{resumeTimer=setTimeout(resolve,500);})]);}
+            finally{clearTimeout(resumeTimer);}
+        }
+        if(version!==actVersion || stepVersion!==actionStepVersion || document.hidden)return false;
+        if(!context || context.state!=='running'){
+            if(!feedbackAudioWarningShown){feedbackAudioWarningShown=true;showToast('提示音尚未啟用，請在聲音設定按「測試動作提示音」。');}
+            return false;
+        }
+        feedbackAudioWarningShown=false;
+        const notes=kind==='complete'?[660,880]:kind==='interrupted'?[330]:kind==='start'?[520]:[780];
+        notes.forEach((frequency,index)=>{
+            const at=context.currentTime+index*0.17;
+            const oscillator=context.createOscillator(),gain=context.createGain();
+            oscillator.type='sine';oscillator.frequency.value=frequency;
+            gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(0.22*volume,at+0.012);
+            gain.gain.exponentialRampToValueAtTime(0.001,at+0.135);
+            oscillator.connect(gain);gain.connect(context.destination);
+            oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+            oscillator.start(at);oscillator.stop(at+0.15);
+        });
+        return true;
+    } catch(_) {
+        if(!feedbackAudioWarningShown){feedbackAudioWarningShown=true;showToast('提示音播放受阻，請在聲音設定按「測試動作提示音」。');}
+        return false;
+    }
+}
+// Unlock early during a real touch/click, before any AI or BLE awaits.
+document.addEventListener('pointerdown',primeFeedbackAudio,{capture:true});
+document.addEventListener('keydown',event=>{if(event.key==='Enter' || event.key===' ')primeFeedbackAudio();},{capture:true});
+function showActionFeedback(text,kind){
+    $('actionFeedback').textContent=text;
+    $('actionFeedback').className='text-base font-bold mt-2 min-h-6 '+(kind==='interrupted'?'text-amber-300':'text-emerald-300');
+    playFeedbackTone(kind);
+}
+function stopHold(reason = '') {
+    resetCoopHolds();
+    const wasHolding=holdStartedAt!==null;
+    if(reason && wasHolding && waitingForAction && !busy && !adventurePaused)showActionFeedback(reason,'interrupted');
+    clearInterval(holdTimer);
+    holdTimer = null;
+    holdStartedAt = null;
+    holdLastSignalAt = null;
+    holdSource = '';
+    holdLastFeedbackSecond = 0;
+    manualHolding = false;
+}
+
+function resetActionProgress(data = {}) {
+    stopHold();
+    $('actionFeedback').textContent='';
+    actionCount = 0;
+    const count = Number(data.targetCount);
+    const seconds = Number(data.holdSeconds);
+    actionTargetCount = Number.isFinite(count) && count >= 1 ? Math.floor(count) : 1;
+    actionHoldSeconds = !['JUMP', 'TILT_LEFT', 'TILT_RIGHT', 'TURN_LEFT', 'TURN_RIGHT'].includes(String(data.action || currentAction).trim().toUpperCase()) &&
+        Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    renderActionProgress();
+}
+
+function renderActionProgress() {
+    refreshStoryControls();
+    renderActionSequence();
+    const holding = actionHoldSeconds > 0;
+    const childState=isCooperation() && coopStates?.child;
+    const elapsed = childState ? (childState.done?childState.seconds:childState.started===null?0:Math.min(childState.seconds,(performance.now()-childState.started)/1000)) : holdStartedAt === null ? 0 :
+        Math.min(actionHoldSeconds, (performance.now() - holdStartedAt) / 1000);
+    $('actionProgressPanel').classList.toggle('hidden', !currentAction);
+    $('actionProgressText').textContent = holding
+        ? `持續 ${elapsed.toFixed(1)} / ${actionHoldSeconds} 秒・剩餘 ${Math.max(0, Math.ceil(actionHoldSeconds - elapsed))} 秒`
+        : `動作進度 ${actionCount}/${actionTargetCount}`;
+    $('actionProgressBar').max = holding ? actionHoldSeconds : actionTargetCount;
+    $('actionProgressBar').value = holding ? elapsed : actionCount;
+    $('actionProgressHint').textContent = holding
+        ? (['RUN', 'SHAKE', 'SWIPE_LEFT', 'SWIPE_RIGHT'].includes(currentAction)
+            ? '持續反覆做動作；停止或訊號中斷會重新計時。'
+            : '保持指定姿勢；放下或訊號中斷會重新計時。')
+        : (currentMode==='senior' ? '每次相符動作累積一次，達標才繼續活動。' : '每次相符動作累積一次，達標才繼續故事。');
+    $('btnManualAction').textContent = holding
+        ? ((childState?childState.manual && childState.started!==null:manualHolding) ? '⏹ 停止模擬持續動作' : '⏱ 開始模擬持續動作')
+        : '✨ 模擬一次目前動作';
+}
+
+// 新故事使用 actions[]；舊故事的一個 action 會當成單一步驟。
+function getActActions(act) {
+    const candidates = Array.isArray(act.actions) && act.actions.length
+        ? act.actions : (act.action ? [act] : []);
+    return candidates.filter(step => step && String(step.action || '').trim() &&
+        !['NONE', 'NULL'].includes(String(step.action).trim().toUpperCase()))
+        .map(step => ({ ...step, action: normalizeAction(step.action) }));
+}
+
+function renderActionSequence(completed = false) {
+    const panel = $('actionSequencePanel');
+    panel.classList.toggle('hidden', actionSteps.length < 2);
+    $('actionSequenceText').textContent = completed
+        ? `本幕動作全部完成 ${actionSteps.length}/${actionSteps.length}`
+        : `本幕動作 ${Math.min(currentActionStepIndex + 1, actionSteps.length)}/${actionSteps.length}・已完成 ${currentActionStepIndex} 個`;
+    const list = $('actionSequenceList');
+    list.replaceChildren();
+    actionSteps.forEach((step, index) => {
+        const item = document.createElement('li');
+        const done = completed || index < currentActionStepIndex;
+        const active = !completed && index === currentActionStepIndex;
+        item.className = 'px-2 py-1 rounded-lg border ' + (done
+            ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+            : active ? 'bg-pink-950/60 border-pink-500/50 text-pink-200'
+            : 'bg-slate-800/60 border-slate-700 text-slate-400');
+        item.textContent = `${done ? '✓' : index + 1} ${getActionIcon(step.action)} ${getActionMovementNarration(step)}`;
+        if (active) item.setAttribute('aria-current', 'step');
+        list.appendChild(item);
+    });
+}
+
+async function prepareCurrentAction(speakIt = true, version = actVersion) {
+    const step = actionSteps[currentActionStepIndex];
+    if (!step || version !== actVersion) return;
+    const stepVersion = ++actionStepVersion;
+    busy = true;
+    waitingForAction = false;
+    expectedAction = '';
+    currentAction = step.action;
+    currentActionNarration = getActionNarration(step);
+    currentActionPurpose = step.actionPurpose || (currentMode==='senior'?'以舒適幅度完成這個操作。':'完成這個動作，故事就會繼續。');
+    currentStepStory = distinctNarrative(step.storyBefore, currentStory);
+    resetActionProgress(step);
+    lockAction();
+    $('promptText').textContent = `📖 本幕第 ${currentActionStepIndex + 1} 個動作正在準備……`;
+    if (currentStepStory) {
+        appendStory(currentMode==='senior' ? `🌿 第 ${currentRound} 個活動・動作 ${currentActionStepIndex + 1}/${actionSteps.length}` : `🎭 第 ${currentRound} 幕・動作 ${currentActionStepIndex + 1}/${actionSteps.length}`, currentStepStory);
+        if (speakIt) await speak(currentStepStory);
+    }
+    await waitForAdventureResume(version);
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    if (speakIt) await speak(currentActionNarration);
+    await waitForAdventureResume(version);
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    if(step.familyAction && speakIt)await speak('家人的任務。'+getActionNarration(step.familyAction));
+    await waitForAdventureResume(version);
+    if(version!==actVersion || stepVersion!==actionStepVersion)return;
+    showAction(step);
+    busy = false;
+    void syncCoopDevices();
+}
+
+function startHold(source) {
+    const now = performance.now();
+    if (holdStartedAt !== null && holdSource !== source) return;
+    if (holdStartedAt !== null && source === 'ble' &&
+        now - holdLastSignalAt > HOLD_SIGNAL_TIMEOUT_MS) stopHold('動作訊號中斷，請重新開始計時。');
+    holdLastSignalAt = now;
+    if (holdStartedAt !== null) return;
+    holdStartedAt = now;
+    holdLastFeedbackSecond = 0;
+    holdSource = source;
+    manualHolding = source === 'manual';
+    showActionFeedback('✓ 已偵測到動作，開始計時。','start');
+    const version = actVersion;
+    const stepVersion = actionStepVersion;
+    holdTimer = setInterval(() => {
+        if (version !== actVersion || stepVersion !== actionStepVersion || !waitingForAction || busy || adventurePaused || controllerLearning || document.hidden) {
+            stopHold();
+            renderActionProgress();
+            return;
+        }
+        if (holdSource === 'ble' && performance.now() - holdLastSignalAt > HOLD_SIGNAL_TIMEOUT_MS) {
+            stopHold('動作訊號中斷，請重新開始計時。');
+            renderActionProgress();
+            return;
+        }
+        renderActionProgress();
+        const elapsedSeconds=Math.floor((performance.now()-holdStartedAt)/1000);
+        if(elapsedSeconds>holdLastFeedbackSecond && elapsedSeconds<actionHoldSeconds){
+            holdLastFeedbackSecond=elapsedSeconds;
+            showActionFeedback(`✓ 已持續 ${elapsedSeconds} 秒，繼續保持。`,'tick');
+        }
+        // BLE 完成由相符通知確認，避免最後一個封包後仍靠計時器自行成功。
+        if (holdSource === 'manual' && performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
+            void completeAction(expectedAction);
+        }
+    }, 100);
+    renderActionProgress();
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { stopHold(); renderActionProgress(); }
+});
+
+
+/* =====================================================
+   語音狀態
+===================================================== */
+
+let speechPlaying = false;
+
+const $ =
+    id => document.getElementById(id);
+
+
+/* =====================================================
+   主題
+===================================================== */
+
+const CHILD_THEMES = [
+
+    {
+        name:'勇敢的小騎士與巨龍',
+        icon:'⚔️',
+        short:'騎士巨龍'
+    },
+
+    {
+        name:'神奇魔法森林的密道',
+        icon:'🌲',
+        short:'魔法森林'
+    },
+
+    {
+        name:'海底王國的寶藏探險',
+        icon:'🐬',
+        short:'海底王國'
+    },
+
+    {
+        name:'星際太空救援任務',
+        icon:'🚀',
+        short:'星際救援'
+    },
+
+    {
+        name:'神秘海圖與海盜寶藏',
+        icon:'🏴‍☠️',
+        short:'海盜寶藏'
+    },
+
+    {
+        name:'恐龍世界大冒險',
+        icon:'🦖',
+        short:'恐龍世界'
+    },
+
+    {
+        name:'魔法學院的失控魔法',
+        icon:'🧙',
+        short:'魔法學院'
+    },
+
+    {
+        name:'機器人城市大危機',
+        icon:'🤖',
+        short:'機器城市'
+    },
+
+    {
+        name:'神秘偵探事件',
+        icon:'🕵️',
+        short:'神秘偵探'
+    },
+
+    {
+        name:'城堡幽靈之謎',
+        icon:'👻',
+        short:'幽靈城堡'
+    },
+
+    {
+        name:'貓咪的宇宙旅行',
+        icon:'🐱',
+        short:'貓咪宇宙'
+    },
+
+    {
+        name:'火山島求生大冒險',
+        icon:'🌋',
+        short:'火山島'
+    },
+
+    {
+        name:'冰雪王國的冬日危機',
+        icon:'❄️',
+        short:'冰雪王國'
+    },
+
+    {
+        name:'神獸山脈的秘密',
+        icon:'🐉',
+        short:'神獸山脈'
+    },
+
+    {
+        name:'神奇時光列車',
+        icon:'🚂',
+        short:'時光列車'
+    },
+
+    {
+        name:'星空夢境大冒險',
+        icon:'🌌',
+        short:'星空夢境'
+    },
+
+    {
+        name:'沙漠失落城市',
+        icon:'🏜️',
+        short:'失落城市'
+    },
+
+    {
+        name:'海洋救援隊',
+        icon:'🌊',
+        short:'海洋救援'
+    }
+
+];
+
+const SENIOR_THEME =
+    '坐姿健康操';
+
+
+/* =====================================================
+   動作
+===================================================== */
+
+function refreshChildAgeUI(){
+    $('childAgePanel').classList.toggle('hidden',currentMode==='senior');
+    const hints={5:'短句、清楚提示，一位夥伴陪孩子完成單一任務。',6:'簡單對話和小驚喜，事情前後清楚好理解。',7:'加入觀察與一個簡單線索，重要發現會說明。',8:'情節稍豐富，可有簡單線索與小轉折。'};
+    $('childAgeHint').textContent=hints[selectedChildAge]+' 年齡設定用於下一篇故事，動作時間與次數維持原設定。';
+    document.querySelectorAll('[data-child-age]').forEach(button=>{
+        const active=Number(button.dataset.childAge)===selectedChildAge;
+        button.setAttribute('aria-pressed',String(active));
+        button.className='age-btn border py-3 rounded-xl font-bold '+(active?'bg-purple-700 border-purple-400 text-white':'bg-slate-800 border-slate-700 text-slate-300');
+    });
+}
+async function startTurnTrial(){
+    primeFeedbackAudio();
+    if(currentMode!=='child' || !bleCharacteristic || busy || controllerLearning || (acts.length && !storyFinished)){showToast('請先連接裝置，並在沒有進行中故事時測試。');return;}
+    resetAdventure();
+    acts=[{index:1,title:'左右轉身測試',practiceTurn:true,story:'先停穩，將戴裝置的手放在胸前。手臂跟著身體慢慢轉，腳可小步跟著轉；請留意周圍空間。不舒服就停止。',actions:[
+      {action:'TURN_LEFT',targetCount:1,holdSeconds:0,actionPurpose:'左轉測試',storyBefore:'先保持不動片刻，再慢慢向左轉約45度，然後停穩。',storyAfter:'左轉完成。慢慢回到舒服的正面姿勢。'},
+      {action:'TURN_RIGHT',targetCount:1,holdSeconds:0,actionPurpose:'右轉測試',storyBefore:'先回到正面並停穩，再慢慢向右轉約45度，然後停穩。',storyAfter:'右轉完成。慢慢回到舒服的姿勢。'}]}];
+    currentActIndex=0;busy=true;
+    $('welcomeMessage').classList.add('hidden');$('storyDisplay').classList.remove('hidden');
+    await showCurrentAct(true);
+}
+function refreshStoryControls(){
+    refreshCoopUI();
+    void syncCoopDevices();
+    void syncPhysicalButtonLock();
+    $('btnTurnTrial').classList.toggle('hidden',currentMode==='senior');
+    $('btnTurnTrial').disabled=!bleCharacteristic || busy || controllerLearning || (acts.length>0 && !storyFinished);
+    refreshChildAgeUI();
+    $('manualActionHint').textContent=currentMode==='senior'?'裝置會辨識目前動作。達成指定次數或持續秒數後，進入下一段活動。':'裝置實體動作會觸發故事。達成指定次數或持續秒數後，故事會進入下一幕。';
+    $('seniorStoryControls').classList.toggle('hidden',currentMode!=='senior');
+    $('btnPauseStory').disabled=!acts.length || storyFinished;
+    $('seniorDifficultyHint').textContent=({easy:'簡單：持續動作 2～3 秒，左右轉 1 次。',normal:'普通：持續動作 2～4 秒，左右轉最多 2 次。',challenge:'挑戰：持續動作 2～6 秒，左右轉最多 3 次。'})[selectedDifficulty] || '';
+    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+    $('btnSpeak').setAttribute('aria-label',currentMode==='senior'?'重聽目前活動說明':'重聽目前故事');
+    $('btnSpeak').setAttribute('title',currentMode==='senior'?'重聽目前活動說明':'重聽目前故事');
+    $('btnPauseStory').textContent=adventurePaused?'▶ 我休息好了，繼續活動':'⏸ 休息一下';
+    $('btnManualAction').disabled=adventurePaused || controllerLearning || !waitingForAction;
+}
+function releasePauseWaiters(){const waiting=pauseWaiters;pauseWaiters=[];waiting.forEach(resolve=>resolve());}
+function waitForAdventureResume(version){
+    return adventurePaused && version===actVersion ? new Promise(resolve=>pauseWaiters.push(resolve)) : Promise.resolve();
+}
+function toggleAdventurePause(){
+    if(!acts.length || storyFinished)return;
+    adventurePaused=!adventurePaused;
+    if(adventurePaused){stopHold();stopSpeech();void sendBLE('PAUSE');}
+    else {releasePauseWaiters();void syncControllerAction();}
+    renderActionProgress();refreshStoryControls();
+    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+}
+
+const ACTION_INSTRUCTIONS = {
+
+    SWIPE_LEFT:
+        '現在向左閃避！',
+
+    SWIPE_RIGHT:
+        '現在向右閃避！',
+
+    JUMP:
+        '現在跳起來！',
+
+    SHAKE:
+        '現在搖一搖，把它甩開！',
+
+    RUN:
+        '現在快跑，追上去！',
+
+    ARM_UP:
+        '現在把手抬高！',
+
+    ARM_DOWN:
+        '現在把手放下！',
+
+    TILT_LEFT:
+        '現在把手腕向左傾斜！',
+
+    TILT_RIGHT:
+        '現在把手腕向右傾斜！',
+
+    HOLD_UP:
+        '現在把手抬起並保持住！'
+
+};
+
+
+/* =====================================================
+   ⭐ 長輩模式安全動作
+===================================================== */
+
+const SENIOR_SAFE_ACTIONS = [
+
+    'ARM_UP',
+
+    'ARM_DOWN',
+
+    'TILT_LEFT',
+
+    'TILT_RIGHT',
+
+    'HOLD_UP',
+
+    'SWIPE_LEFT',
+
+    'SWIPE_RIGHT',
+
+    'SHAKE'
+
+];
+
+
+function normalizeAction(action) {
+
+    const a =
+        String(action || '')
+        .trim()
+        .toUpperCase();
+
+    if (!a) return '';
+
+    if (
+        currentMode === 'senior' &&
+        !SENIOR_SAFE_ACTIONS.includes(a)
+    ) {
+
+        console.warn(
+            '長輩模式收到不安全動作，改為 ARM_UP：',
+            a
+        );
+
+        return 'ARM_UP';
+
+    }
+
+    return a;
+
+}
+
+
+/* =====================================================
+   ⭐ 取得動作文字
+===================================================== */
+
+function getActionContext(data) {
+    if(currentMode==='senior')return '';
+    const purpose=typeof data?.actionPurpose==='string'?data.actionPurpose.trim().replace(/[。！？!?:：，,\s]+$/g,''):'';
+    if(!purpose || purpose.length>100 || /^(完成故事目前的操作|完成目前操作|完成眼前操作|完成這個動作|以舒適幅度完成這個操作)$/.test(purpose))return '';
+    // Never repeat a conflicting direction from a free-form story field.
+    const action=normalizeAction(data?.action);
+    if(action.endsWith('_LEFT') && purpose.includes('右') && !purpose.includes('左'))return '';
+    if(action.endsWith('_RIGHT') && purpose.includes('左') && !purpose.includes('右'))return '';
+    return purpose;
+}
+function getActionNarration(data) {
+    const context=getActionContext(data),movement=getActionMovementNarration(data);
+    return context?`${context}。請${movement}。`:movement;
+}
+function getActionMovementNarration(data) {
+
+    const action =
+        normalizeAction(
+            data?.action
+        );
+
+    // 顯示與語音使用實際玩法數值，不讓 AI 自由文字的「次／秒」蓋過完成條件。
+    const count = Number(data?.targetCount);
+    const seconds = Number(data?.holdSeconds);
+    const isCountAction = ['JUMP', 'TILT_LEFT', 'TILT_RIGHT', 'TURN_LEFT', 'TURN_RIGHT'].includes(action);
+    const hasCount = Number.isFinite(count) && count >= 1;
+    const isTimed = !isCountAction && Number.isFinite(seconds) && seconds > 0;
+    const movements = {
+        SWIPE_LEFT:'反覆向左揮動', SWIPE_RIGHT:'反覆向右揮動',
+        SHAKE:'輕輕來回搖動', RUN:'安全原地踏步',
+        ARM_UP:'抬高手臂並保持', ARM_DOWN:'手腕向下傾斜並保持',
+        HOLD_UP:'保持已設定的撐住姿勢',
+        TURN_LEFT:'手放胸前，身體慢慢向左轉約 45 度，再停穩', TURN_RIGHT:'手放胸前，身體慢慢向右轉約 45 度，再停穩',
+        JUMP:'小幅度跳躍', TILT_LEFT:'手腕向左傾斜', TILT_RIGHT:'手腕向右傾斜'
+    };
+    if (movements[action] && (isTimed || hasCount)) {
+        return `${movements[action]} ${isTimed ? seconds + ' 秒' : Math.floor(count) + ' 次'}`;
+    }
+
+    /*
+     * 新 Worker 使用 actionText
+     */
+
+    if (
+        data?.actionText &&
+        typeof data.actionText === 'string'
+    ) {
+
+        return data.actionText.trim();
+
+    }
+
+    /*
+     * 保留舊格式相容性
+     */
+
+    if (
+        data?.actionNarration &&
+        typeof data.actionNarration === 'string'
+    ) {
+
+        return data.actionNarration.trim();
+
+    }
+
+    if (
+        data?.actionPurpose &&
+        typeof data.actionPurpose === 'string'
+    ) {
+
+        return data.actionPurpose.trim();
+
+    }
+
+    return ACTION_INSTRUCTIONS[action]
+        ||
+        '現在做出你的動作！';
+
+}
+
+
+function getActionIcon(action) {
+
+    const icons = {
+
+        SWIPE_LEFT:'⬅️',
+
+        SWIPE_RIGHT:'➡️',
+
+        JUMP:'⬆️',
+
+        SHAKE:'📳',
+
+        RUN:'🏃',
+
+        ARM_UP:'🙋',
+
+        ARM_DOWN:'🙆',
+
+        TILT_LEFT:'↩️',
+
+        TILT_RIGHT:'↪️',
+        TURN_LEFT:'↶',TURN_RIGHT:'↷',
+
+        HOLD_UP:'✋'
+
+    };
+
+    return icons[
+        normalizeAction(action)
+    ] || '✨';
+
+}
+
+
+/* =====================================================
+   Toast
+===================================================== */
+
+function showToast(msg) {
+
+    const t =
+        $('toast');
+
+    t.textContent =
+        msg;
+
+    t.classList.remove(
+        'opacity-0',
+        'pointer-events-none'
+    );
+
+    t.classList.add(
+        'opacity-100'
+    );
+
+    setTimeout(() => {
+
+        t.classList.remove(
+            'opacity-100'
+        );
+
+        t.classList.add(
+            'opacity-0',
+            'pointer-events-none'
+        );
+
+    },3000);
+
+}
+
+
+/* =====================================================
+   Emoji
+===================================================== */
+
+function removeEmoji(text) {
+
+    if (!text) return '';
+
+    try {
+
+        return text
+            .replace(
+                /[\p{Extended_Pictographic}\uFE0F]/gu,
+                ''
+            )
+            .replace(
+                /\s{2,}/g,
+                ' '
+            )
+            .trim();
+
+    }
+
+    catch {
+
+        return text.trim();
+
+    }
+
+}
+
+
+/* =====================================================
+   語音
+===================================================== */
+
+const VOICE_STORAGE_KEY =
+    'soundAdventureVoiceSettings';
+
+let availableVoices = [];
+
+let selectedVoice = null;
+
+let speechToken = 0;
+let activeSpeechUtterance = null;
+
+let voiceSettings = {
+    fixedVoice:true,
+
+    rate:.96,
+
+    pitch:1,
+
+    volume:1,
+
+    emotion:'natural',
+
+    voiceURI:getDefaultDeviceVoiceURI(),
+
+    version:12
+
+};
+
+
+const EMOTION_PROFILES = {
+
+    natural:{
+        rate:1,
+        pitch:1
+    },
+
+    lively:{
+        rate:1.05,
+        pitch:1.08
+    },
+
+    tense:{
+        rate:1.02,
+        pitch:1.12
+    },
+
+    gentle:{
+        rate:.88,
+        pitch:.94
+    }
+
+};
+
+
+function loadVoiceSettings() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                VOICE_STORAGE_KEY
+            );
+
+        if (!saved) return;
+
+        voiceSettings = {
+
+            ...voiceSettings,
+
+            ...JSON.parse(saved)
+
+        };
+        // Apply the voice confirmed by the user once. Later choices stay saved.
+        if(Number(JSON.parse(saved)?.version || 0)<10){
+            voiceSettings.fixedVoice=true;
+            voiceSettings.voiceURI='__SYSTEM_TW__';
+            voiceSettings.version=10;
+            cloudSpeechCooldownUntil=0;saveVoiceSettings();
+        }
+        // Correct earlier phone-only defaults on computers, without changing
+        // a named voice or the user's choice to enable/disable Worker audio.
+        if(Number(voiceSettings.version || 0)<11){
+            if(getVoicePlatform()==='desktop' && voiceSettings.voiceURI==='__SYSTEM_TW__')voiceSettings.voiceURI='';
+            voiceSettings.version=11;saveVoiceSettings();
+        }
+        voiceSettings.rate=Math.min(1.35,Math.max(.65,Number(voiceSettings.rate)||.94));
+        voiceSettings.pitch=Math.min(1.2,Math.max(.8,Number(voiceSettings.pitch)||1));
+        voiceSettings.volume=Number.isFinite(Number(voiceSettings.volume))?Math.min(1,Math.max(0,Number(voiceSettings.volume))):1;
+
+    }
+
+    catch(e) {
+
+        console.warn(e);
+
+    }
+
+    finally { syncWorkerVoicePreference(); }
+
+}
+
+
+function saveVoiceSettings() {
+
+    try {
+
+        localStorage.setItem(
+            VOICE_STORAGE_KEY,
+            JSON.stringify(
+                voiceSettings
+            )
+        );
+
+    }
+
+    catch(e) {}
+
+}
+
+
+function updateVoiceStatus(message) {
+
+    const el =
+        $('voiceStatus');
+
+    if (el) {
+
+        el.textContent =
+            message;
+
+    }
+
+}
+
+
+function populateVoiceSelect() {
+
+    const select =
+        $('voiceSelect');
+
+    if (!select) return;
+
+    select.innerHTML = '';
+
+    const auto =
+        document.createElement(
+            'option'
+        );
+
+    auto.value =
+        '__AUTO__';
+
+    auto.textContent =
+        '✨ 自動（'+getAutomaticVoiceLabel()+'）';
+
+    select.appendChild(auto);
+    const systemDefault=document.createElement('option');
+    systemDefault.value='__SYSTEM_TW__';
+    systemDefault.textContent=getDeviceVoiceLabel();
+    select.appendChild(systemDefault);
+
+    const chinese =
+        availableVoices.filter(
+            v =>
+                /^zh/i.test(v.lang) ||
+                /Chinese|中文|Taiwan|台灣/i.test(v.name)
+        );
+
+    const others =
+        availableVoices.filter(
+            v =>
+                !chinese.includes(v)
+        );
+
+    [
+        ...chinese,
+        ...others
+    ].forEach(voice => {
+
+        const option =
+            document.createElement(
+                'option'
+            );
+
+        option.value =
+            voice.voiceURI;
+
+        option.textContent =
+            `${voice.name} (${voice.lang})`;
+
+        select.appendChild(
+            option
+        );
+
+    });
+
+    restoreSelectedVoice();
+
+    updateVoiceStatus(
+
+        availableVoices.length
+
+            ?
+
+        `已找到 ${availableVoices.length} 個裝置語音。${getAutomaticVoiceLabel()}；仍可手動選擇喜歡的聲音。`
+
+            :
+
+        '尚未取得裝置語音。'
+
+    );
+
+}
+
+
+function loadVoices() {
+
+    if (
+        !('speechSynthesis' in window)
+    ) {
+
+        updateVoiceStatus(
+            '此瀏覽器不支援語音朗讀。'
+        );
+
+        return;
+
+    }
+
+    availableVoices =
+        speechSynthesis.getVoices();
+
+    populateVoiceSelect();
+    selectedVoice=chooseSpeechVoice();
+
+}
+
+
+function restoreSelectedVoice() {
+
+    selectedVoice = null;
+
+    if (
+        voiceSettings.voiceURI
+    ) {
+
+        selectedVoice =
+            availableVoices.find(
+                v =>
+                    v.voiceURI ===
+                    voiceSettings.voiceURI
+            )
+            ||
+            null;
+
+    }
+
+    const select =
+        $('voiceSelect');
+
+    if(voiceSettings.voiceURI==='__SYSTEM_TW__'){if(select)select.value='__SYSTEM_TW__';return;}
+    if (select) {
+
+        select.value =
+            selectedVoice
+
+                ?
+
+            selectedVoice.voiceURI
+
+                :
+
+            '__AUTO__';
+
+    }
+
+}
+
+
+function updateVoiceSettingUI() {
+    syncWorkerVoicePreference();
+
+    $('rateRange').value =
+        voiceSettings.rate;
+
+    $('pitchRange').value =
+        voiceSettings.pitch;
+
+    $('volumeRange').value =
+        voiceSettings.volume;
+
+    $('rateValue').textContent =
+        Number(
+            voiceSettings.rate
+        ).toFixed(2);
+
+    $('pitchValue').textContent =
+        Number(
+            voiceSettings.pitch
+        ).toFixed(2);
+
+    $('volumeValue').textContent =
+        Number(
+            voiceSettings.volume
+        ).toFixed(2);
+
+    document
+        .querySelectorAll(
+            '.voice-emotion'
+        )
+        .forEach(button => {
+
+            button.classList.toggle(
+
+                'active',
+
+                button.dataset.emotion ===
+                voiceSettings.emotion
+
+            );
+
+        });
+
+    restoreSelectedVoice();
+
+}
+
+
+function getVoicePlatform(){
+    const ua=String(navigator.userAgent || '');
+    if(/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && (Number(navigator.maxTouchPoints)>1 || 'ontouchend' in document)))return 'ios';
+    if(/Android/i.test(ua))return 'android';
+    return 'desktop';
+}
+function getDeviceVoiceLabel(){return getVoicePlatform()==='desktop'?'跟隨電腦':'跟隨手機';}
+function getDefaultDeviceVoiceURI(){return getVoicePlatform()==='ios'?'__SYSTEM_TW__':'';}
+function getAutomaticVoiceLabel(){
+    const platform=getVoicePlatform();
+    return platform==='ios'?'跟隨手機':platform==='android'?'優先 Google 中文（台灣中文優先）':'優先 Yating 台灣中文';
+}
+function chooseSpeechVoice(){
+    if(voiceSettings.voiceURI==='__SYSTEM_TW__')return null;
+    if(typeof speechSynthesis.getVoices==='function'){
+        const voices=speechSynthesis.getVoices();
+        // Some mobile browsers temporarily return an empty list after loading it.
+        if(voices.length)availableVoices=voices;
+    }
+    const explicit=availableVoices.find(v=>v.voiceURI===voiceSettings.voiceURI);
+    if(explicit)return explicit;
+    const platform=getVoicePlatform();
+    // On iPhone, automatic must use the same system-selected voice the user confirmed.
+    if(platform==='ios')return null;
+    const language=v=>String(v.lang || '').replace(/_/g,'-');
+    const label=v=>String(v.name || '')+' '+String(v.voiceURI || '');
+    const chinese=availableVoices.filter(v=>{
+        const lang=language(v);
+        return /^(?:zh|cmn)(?:-|$)/i.test(lang) || /^zh(?:TW|CN|HK)$/i.test(lang) ||
+            (!lang && /Chinese|中文|國語|普通話|華語/i.test(label(v)));
+    });
+    const apple=platform==='ios' || (platform==='desktop' && /Macintosh/i.test(String(navigator.userAgent || '')));
+    // Choose the requested provider first, then dialect and quality within it.
+    // This prevents an unfamiliar Mandarin language tag from hiding Siri.
+    let candidates=chinese;
+    if(apple){
+        const siri=chinese.filter(v=>/Siri/i.test(label(v)));
+        if(siri.length)candidates=siri;
+    }else if(platform==='android'){
+        const google=chinese.filter(v=>/Google/i.test(label(v)));
+        if(google.length)candidates=google;
+    }else{
+        const yating=chinese.filter(v=>/Yating/i.test(label(v)) && /TW/i.test(language(v)));
+        if(yating.length)candidates=yating;
+    }
+    const score=v=>{
+        const lang=language(v),name=label(v);
+        let value=/(?:-|^)TW$/i.test(lang) || /^zhTW$/i.test(lang)?100:/Hant/i.test(lang)?90:50;
+        if(/premium|enhanced|natural|高品質|增強|自然/i.test(name))value+=15;
+        return value;
+    };
+    return candidates.slice().sort((a,b)=>score(b)-score(a)+(Number(!!b.default)-Number(!!a.default)))[0] || null;
+}
+
+function getSentenceEmotion(text){
+    const profile=EMOTION_PROFILES[voiceSettings.emotion] || EMOTION_PROFILES.natural;
+    const age=Number(selectedChildAge)||6;
+    const pace=currentMode==='senior'?.9:age<=6?.94:1;
+    return {rate:Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*profile.rate*pace)),
+        pitch:Math.max(.9,Math.min(1.12,(Number(voiceSettings.pitch)||1)*profile.pitch))};
+}
+function splitSpeechText(text){
+    const clean=removeEmoji(String(text)).replace(/\s+/g,' ').trim();
+    const sentences=clean.match(/[^。！？!?；;]+[。！？!?；;]*|[。！？!?；;]+/g)||[];
+    const result=[];
+    for(const sentence of sentences){
+        let part=sentence;
+        while(Array.from(part).length>65){
+            const chars=Array.from(part),head=chars.slice(0,65).join('');
+            const comma=Math.max(head.lastIndexOf('，'),head.lastIndexOf('、'),head.lastIndexOf(','));
+            const cut=comma>=20?Array.from(head.slice(0,comma+1)).length:65;
+            result.push(chars.slice(0,cut).join(''));part=chars.slice(cut).join('');
+        }
+        if(part.trim())result.push(part.trim());
+    }
+    return result;
+}
+function speechDelay(ms){
+    return new Promise(resolve=>{
+        let timer;
+        const finish=()=>{clearTimeout(timer);if(finishSpeech===finish)finishSpeech=null;resolve();};
+        finishSpeech=finish;timer=setTimeout(finish,ms);
+    });
+}
+function waitForSpeechRecovery(reason){
+    return new Promise(resolve=>{
+        const panel=$('speechRecovery');panel.classList.remove('hidden');
+        $('speechRecoveryText').textContent=reason+' 目前這段尚未讀完，請重試，或選擇看文字繼續。';
+        const finish=(choice='cancelled')=>{
+            panel.classList.add('hidden');$('btnRetrySpeech').onclick=null;$('btnContinueText').onclick=null;
+            if(finishSpeech===finish)finishSpeech=null;resolve(choice);
+        };
+        finishSpeech=finish;
+        $('btnRetrySpeech').onclick=()=>{primeSpeech();finish('retry');};
+        $('btnContinueText').onclick=()=>finish('text');
+    });
+}
+let workerVoiceQuotaUntil=0;
+let workerVoiceQuotaTimer=null;
+function workerVoiceQuotaKey(){return 'worker-voice-quota-until-v1:'+WORKER_URL;}
+function syncWorkerVoicePreference(){
+    try{workerVoiceQuotaUntil=Math.max(workerVoiceQuotaUntil,Number(localStorage.getItem(workerVoiceQuotaKey()))||0);}catch(_){}
+    const paused=workerVoiceQuotaUntil>Date.now();
+    if(!paused){
+        if(workerVoiceQuotaUntil)cloudSpeechCooldownUntil=0;
+        workerVoiceQuotaUntil=0;
+        try{localStorage.removeItem(workerVoiceQuotaKey());}catch(_){}
+    }
+    voiceSettings.fixedVoice=!paused;
+    const toggle=$('fixedVoiceToggle');
+    if(toggle){toggle.checked=!paused;toggle.disabled=true;}
+    const status=$('workerVoicePolicyStatus');
+    if(status)status.textContent=paused?'今日配音額度已用完，暫時使用裝置聲音；台灣時間早上 8 點後自動恢復。':'自動優先使用 Worker 配音；一般播放失敗會使用備用聲音，勾選狀態不變。';
+    if(workerVoiceQuotaTimer){clearTimeout(workerVoiceQuotaTimer);workerVoiceQuotaTimer=null;}
+    if(paused)workerVoiceQuotaTimer=setTimeout(()=>{workerVoiceQuotaTimer=null;syncWorkerVoicePreference();},Math.min(2147483647,workerVoiceQuotaUntil-Date.now()+50));
+}
+function pauseWorkerVoiceForQuota(){
+    // This Worker's daily voice counter uses UTC dates (08:00 in Taiwan).
+    workerVoiceQuotaUntil=(Math.floor(Date.now()/86400000)+1)*86400000;
+    try{localStorage.setItem(workerVoiceQuotaKey(),String(workerVoiceQuotaUntil));}catch(_){}
+    syncWorkerVoicePreference();
+}
+let cloudSpeechCooldownUntil=0;
+let cloudSpeechController=null;
+let activeCloudAudio=null;
+const cloudAudioCache=new Map();
+// Save up to 20 audio clips across page visits. Storage failure falls back to memory.
+function savedAudio(operation,key,blob){
+    if(typeof indexedDB==='undefined')return Promise.resolve(null);
+    return new Promise(resolve=>{
+        let db,done=false;
+        const finish=value=>{if(done)return;done=true;clearTimeout(timer);db?.close();resolve(value);};
+        const timer=setTimeout(()=>finish(null),1200);
+        try{
+            const opening=indexedDB.open('story-narration-v1',1);
+            opening.onupgradeneeded=()=>opening.result.createObjectStore('audio',{keyPath:'key'});
+            opening.onerror=()=>finish(null);
+            opening.onsuccess=()=>{
+                db=opening.result;if(done){db.close();return;}
+                try{
+                    const transaction=db.transaction('audio',operation==='get'?'readonly':'readwrite');
+                    const store=transaction.objectStore('audio');let result=null;
+                    transaction.oncomplete=()=>finish(result);
+                    transaction.onerror=transaction.onabort=()=>finish(null);
+                    if(operation==='get')store.get(key).onsuccess=event=>{result=event.target.result?.blob||null;};
+                    else if(operation==='delete')store.delete(key);
+                    else{
+                        store.put({key,blob,time:Date.now()});
+                        store.getAll().onsuccess=event=>{
+                            const rows=event.target.result.sort((a,b)=>b.time-a.time);
+                            rows.slice(20).forEach(row=>store.delete(row.key));
+                        };
+                    }
+                }catch(_){finish(null);}
+            };
+        }catch(_){finish(null);}
+    });
+}
+async function playFixedVoice(text,token){
+    syncWorkerVoicePreference();
+    if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
+    const age=Number(selectedChildAge)||6;
+    const pace=currentMode==='senior'?.9:age<=6?.94:1;
+    const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
+    const key=JSON.stringify(['melotts-v1',WORKER_URL,text,rate]);
+    let bytes=cloudAudioCache.get(key);
+    if(!bytes)bytes=await savedAudio('get',key);
+    if(token!==speechToken)return 'cancelled';
+    if(!bytes && Date.now()<cloudSpeechCooldownUntil)return null;
+    if(!bytes){
+        const controller=new AbortController();cloudSpeechController=controller;
+        let timer,failureReason='Cloudflare 配音暫時無法使用';
+        const cancelled=new Promise(resolve=>{
+            const finish=()=>{controller.abort();resolve('cancelled');};finishSpeech=finish;
+        });
+        const boundedWait=new Promise(resolve=>{
+            const fallback=reason=>{failureReason=reason;controller.abort();resolve(null);};
+            timer=setTimeout(()=>fallback('配音準備超過 8 秒'),8000);
+            $('speechPreparation').classList.remove('hidden');
+            $('btnUseDeviceSpeechNow').onclick=()=>{primeSpeech();fallback('已選擇立即使用裝置朗讀');};
+        });
+        const download=(async()=>{
+            try{
+                for(let attempt=0;attempt<2;attempt++){
+                    if(controller.signal.aborted || token!==speechToken)return null;
+                    let retryable=false;
+                    try{
+                        const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-cloudflare',{
+                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true})});
+                        if(!response.ok){
+                            const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
+                            if(response.status===429)pauseWorkerVoiceForQuota();
+                            retryable=[500,502,504].includes(response.status) || (response.status===503 && failureReason.includes('暫時'));
+                        }else{
+                            if(!response.headers.get('Content-Type')?.includes('audio/'))return null;
+                            const blob=await response.blob();if(!blob.size || blob.size>2000000)return null;
+                            return blob;
+                        }
+                    }catch(error){
+                        if(controller.signal.aborted || token!==speechToken)return null;
+                        retryable=true;
+                    }
+                    if(!retryable || attempt===1)return null;
+                    updateVoiceStatus('配音連線暫時中斷，正在自動重試一次。');
+                    await new Promise(resolve=>setTimeout(resolve,500));
+                }
+                return null;
+            }catch(_){return null;}finally{clearTimeout(timer);}
+        })();
+        const result=await Promise.race([download,cancelled,boundedWait]);
+        if(cloudSpeechController===controller){cloudSpeechController=null;finishSpeech=null;$('speechPreparation').classList.add('hidden');$('btnUseDeviceSpeechNow').onclick=null;}
+        clearTimeout(timer);
+        if(result==='cancelled' || token!==speechToken)return 'cancelled';
+        if(!result){cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus(failureReason+'，已改用裝置朗讀。');showToast(failureReason+'；將使用裝置聲音。');return null;}
+        bytes=result;cloudAudioCache.set(key,bytes);
+        void savedAudio('put',key,bytes);
+        while(cloudAudioCache.size>50)cloudAudioCache.delete(cloudAudioCache.keys().next().value);
+    }
+    if(token!==speechToken)return 'cancelled';
+    const playback=await new Promise(resolve=>{
+        const url=URL.createObjectURL(bytes),audio=new Audio(url);activeCloudAudio=audio;
+        audio.playbackRate=rate;
+        audio.preservesPitch=true;
+        audio.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
+        let ended=false,timer;
+        const finish=(outcome='cancelled')=>{
+            if(ended)return;ended=true;clearTimeout(timer);audio.onended=audio.onerror=audio.onplaying=audio.ontimeupdate=null;
+            audio.pause();audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);
+            if(activeCloudAudio===audio)activeCloudAudio=null;if(finishSpeech===finish)finishSpeech=null;resolve(outcome);
+        };
+        const watch=()=>{clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),30000);};
+        finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
+        audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),5000);
+        updateVoiceStatus('正在使用 Cloudflare 固定中文配音。已取得的音檔會保存供重聽。');
+        try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
+    });
+    if(['error','timeout'].includes(playback)){
+        cloudAudioCache.delete(key);void savedAudio('delete',key);
+    }
+    return playback;
+}
+async function playNarrationChunk(text,token){
+    let fixed;
+    try{fixed=await playFixedVoice(text,token);}catch(error){
+        console.warn('Worker audio playback failed:',error);fixed='error';
+    }
+    if(token!==speechToken || fixed==='cancelled')return 'cancelled';
+    if(fixed==='end')return 'end';
+    if(fixed!==null){
+        // 播放階段失敗也需要備援，不能只處理下載失敗。
+        cloudSpeechCooldownUntil=Date.now()+300000;
+        updateVoiceStatus('Worker 音檔暫時無法播放，正在改用裝置朗讀同一段。');
+        showToast('配音播放失敗，已自動切換裝置朗讀。');
+    }
+    if(!('speechSynthesis' in window))return 'unsupported';
+    let outcome=await speakChunk(text,token);
+    if(token!==speechToken || outcome==='cancelled')return 'cancelled';
+    if(['error','timeout'].includes(outcome)){
+        try{speechSynthesis.cancel();}catch(_){}
+        updateVoiceStatus('裝置朗讀暫時停住，正在自動重試同一段。');
+        await speechDelay(180);
+        if(token!==speechToken)return 'cancelled';
+        outcome=await speakChunk(text,token);
+    }
+    return outcome;
+}
+
+function speakChunk(text,token){
+    return new Promise(resolve=>{
+        const utterance=new SpeechSynthesisUtterance(text);activeSpeechUtterance=utterance;
+        const voice=chooseSpeechVoice(),emotion=getSentenceEmotion(text);
+        if(voice)utterance.voice=voice;
+        updateVoiceStatus(voice?'正在使用裝置備用聲音：'+voice.name+'（'+voice.lang+'）。':'正在'+getDeviceVoiceLabel()+'的預設中文聲音。');
+        utterance.lang=voice?.lang || 'zh-TW';utterance.rate=emotion.rate;utterance.pitch=emotion.pitch;
+        utterance.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
+        let ended=false,timer;
+        const finish=(outcome='cancelled')=>{
+            if(ended)return;ended=true;clearTimeout(timer);
+            utterance.onend=utterance.onerror=utterance.onstart=utterance.onboundary=null;
+            if(activeSpeechUtterance===utterance)activeSpeechUtterance=null;
+            if(finishSpeech===finish)finishSpeech=null;
+            resolve(outcome);
+        };
+        const watch=ms=>{clearTimeout(timer);timer=setTimeout(()=>{
+            finish('timeout');if(token===speechToken){try{speechSynthesis.cancel();}catch(_) {}}
+        },ms);};
+        finishSpeech=finish;
+        utterance.onend=()=>finish('end');
+        utterance.onerror=()=>finish('error');
+        utterance.onstart=()=>watch(Math.max(20000,text.length*700/emotion.rate));
+        utterance.onboundary=()=>watch(Math.max(20000,text.length*700/emotion.rate));
+        watch(6000);
+        try{if(speechSynthesis.paused)speechSynthesis.resume();speechSynthesis.speak(utterance);}
+        catch(_){finish('error');}
+    });
+}
+
+function stopSpeech() {
+
+    speechToken++;
+    if (finishSpeech) { const finish=finishSpeech;finishSpeech=null;finish(); }
+
+    try {
+
+        speechSynthesis.cancel();
+
+    }
+
+    catch(e) {}
+
+    speechPlaying =
+        false;
+
+}
+
+
+async function speak(text){
+    const sceneVersion=actVersion;
+    await waitForAdventureResume(sceneVersion);
+    if(sceneVersion!==actVersion || !text)return;
+    const chunks=splitSpeechText(text);if(!chunks.length)return;
+    stopSpeech();let token=speechToken;speechPlaying=true;
+    try{
+        for(let index=0;index<chunks.length;){
+            if(adventurePaused && sceneVersion===actVersion){
+                await waitForAdventureResume(sceneVersion);
+                if(sceneVersion!==actVersion)return;
+                token=speechToken;speechPlaying=true;
+            }
+            if(sceneVersion!==actVersion || token!==speechToken)return;
+            const supported='speechSynthesis' in window;
+            // Volume zero is an explicit user's choice to read silently.
+            if(Number(voiceSettings.volume)===0){updateVoiceStatus('已靜音，使用文字模式。');return;}
+            const outcome=await playNarrationChunk(chunks[index],token);
+            if(sceneVersion!==actVersion)return;
+            if(adventurePaused){
+                await waitForAdventureResume(sceneVersion);
+                if(sceneVersion!==actVersion)return;
+                token=speechToken;speechPlaying=true;continue;
+            }
+            if(token!==speechToken || outcome==='cancelled')return;
+            if(outcome!=='end'){
+                try{if(supported)speechSynthesis.cancel();}catch(_) {}
+                const reason=outcome==='unsupported'?'此瀏覽器無法朗讀。':outcome==='timeout'?'朗讀停住或沒有回報完成。':'這段朗讀發生錯誤。';
+                updateVoiceStatus(reason);
+                const choice=await waitForSpeechRecovery(reason);
+                if(adventurePaused && sceneVersion===actVersion){
+                    await waitForAdventureResume(sceneVersion);
+                    if(sceneVersion!==actVersion)return;
+                    token=speechToken;speechPlaying=true;continue;
+                }
+                if(token!==speechToken || sceneVersion!==actVersion || choice==='cancelled')return;
+                if(choice==='text')return;
+                continue;
+            }
+            index++;
+            if(index<chunks.length)await speechDelay(/[。！？!?]$/.test(chunks[index-1])?300:160);
+        }
+    }finally{if(token===speechToken)speechPlaying=false;}
+}
+
+/* =====================================================
+   BLE
+===================================================== */
+
+function clearBLEConnection() {
+    lastPhysicalButtonLock=null;
+    if(bleCharacteristic)bleCharacteristic.removeEventListener?.('characteristicvaluechanged',onBleEvent);
+    bleCharacteristic=null;bleWriteQueue=Promise.resolve();stopControllerSetup();
+    for(const id of ['btnDisconnect','btnCalibrate','btnLearnHold','btnInvertDirections','btnTurnTrial'])$(id).disabled=true;
+    $('statusIndicator').className='w-4 h-4 rounded-full bg-slate-500 inline-block shadow';
+    $('statusText').textContent='已斷線';
+    $('statusIcon').className='fa-solid fa-plug-circle-xmark text-slate-500 text-xl';
+    resetCoopHolds();resetCoopCommands();void syncCoopDevices();
+    if(holdSource==='ble'){stopHold();renderActionProgress();}
+}
+function disconnectBLE() {
+    const device=bleDevice;
+    // Clear timers and notification listener immediately, even if the device
+    // does not deliver its disconnection notification until later.
+    clearBLEConnection();
+    if(device?.gatt?.connected) {
+        try {device.gatt.disconnect();}
+        catch(e) {console.error(e);showToast('中斷連線失敗，請再試一次。');}
+    }
+}
+async function connectBLE() {
+    if(connectionPending)return;
+    if(!navigator.bluetooth){showToast('此瀏覽器不支援裝置藍牙，請使用支援 Web Bluetooth 的瀏覽器。');return;}
+    if(bleDevice?.gatt?.connected && bleCharacteristic){showToast('裝置已連線。');return;}
+    connectionPending=true;$('btnConnect').disabled=true;
+    let selectedDevice=null;
+    try {
+        showToast('正在搜尋故事裝置……');
+        selectedDevice=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_CONFIG.serviceUuid]});
+        if(selectedDevice===familyDevice || (familyDevice && selectedDevice.id===familyDevice.id))throw new Error('請選另一個裝置，孩子和家人不能使用同一裝置。');
+        bleDevice=selectedDevice;
+        const disconnect=()=>{
+            if(bleDevice!==selectedDevice)return;
+            selectedDevice.removeEventListener('gattserverdisconnected',disconnect);
+            clearBLEConnection();showToast('故事裝置已斷線，可重新連接。');
+        };
+        selectedDevice.addEventListener('gattserverdisconnected',disconnect);
+        const server=await selectedDevice.gatt.connect();
+        const service=await server.getPrimaryService(BLE_CONFIG.serviceUuid);
+        const characteristic=await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
+        bleCharacteristic=characteristic;bleWriteQueue=Promise.resolve();lastPhysicalButtonLock=null;
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged',onBleEvent);
+        $('btnDisconnect').disabled=false;
+        $('statusIndicator').className='w-4 h-4 rounded-full bg-emerald-500 inline-block shadow-lg animate-pulse';
+        $('statusText').textContent='已連線';
+        $('statusIcon').className='fa-solid fa-plug-circle-check text-emerald-400 text-xl';
+        for(const id of ['btnCalibrate','btnLearnHold','btnInvertDirections'])$(id).disabled=false;
+        refreshStoryControls();
+        await sendBLE(currentMode==='senior'?'MODE_SENIOR':'MODE_CHILD');
+        await sendBLE('INFO');await sendBLE('READY');await syncControllerAction();
+        showToast('藍牙連線成功！');
+    } catch(e) {
+        if(selectedDevice!==familyDevice && selectedDevice?.gatt?.connected)selectedDevice.gatt.disconnect();
+        clearBLEConnection();console.error(e);
+        showToast(e.name==='NotFoundError'?'已取消裝置選擇。':'藍牙連線失敗：'+e.message);
+    } finally {connectionPending=false;$('btnConnect').disabled=false;}
+}
+
+async function onBleEvent(event) {
+    if(event.target?.uuid && event.target !== bleCharacteristic)return;
+
+    const value =
+        new TextDecoder()
+        .decode(
+            event.target.value
+        )
+        .trim()
+        .toUpperCase();
+
+    console.log(
+        '收到硬體訊號：',
+        value
+    );
+
+
+    // Diagnostic packets never count as actions or interrupt hold progress.
+    if(value.startsWith('FW:')) return;
+    if(value.startsWith('TURN:')) {
+        if(waitingForAction && !adventurePaused && ['TURN_LEFT','TURN_RIGHT'].includes(expectedAction)) {
+            const [,state,degrees]=value.split(':');
+            const angle=Number(degrees);
+            const hints={WAIT:'先把戴裝置的手放胸前，停穩一下。',READY:'已準備好，手臂跟著身體慢慢轉。',MOVE:'正在轉動',STOP:'角度已足夠，請停穩一下。',WRONG:'收到相反方向，回到起點停穩再試；若反覆出現，按「反轉左右方向」。',BLOCK:'手腕晃動較多，手放胸前，跟著身體平穩轉動。',FAST:'轉得太快，請停穩後慢慢轉。',RETRY:'這次轉動時間較長，停穩後再試。'};
+            $('turnDiagnostics').textContent=(hints[state] || '正在讀取轉身訊號。')+(['MOVE','STOP'].includes(state)&&Number.isFinite(angle)?' 已累積約 '+Math.max(0,angle)+' 度。':'');
+        }
+        return;
+    }
+    // 狀態通知不是運動；不讓 READY / START 打斷正在撐住的計時。
+    if (value === 'READY') {stopControllerSetup();await syncControllerAction();return;}
+    if (value === 'CALIBRATING') {
+        startControllerSetup('正在校正，請保持舒適中立姿勢不動 2 秒。');
+        showToast('🎯 正在校正姿勢，請保持不動。');
+        return;
+    }
+    if (value === 'CALIBRATED') {
+        stopControllerSetup();
+        stopHold(); renderActionProgress();
+        $('controllerHint').textContent = '姿勢校正完成。每次動作回到中立，再做下一次。';
+        await syncControllerAction();
+        showToast('🎯 姿勢校正完成！');
+        return;
+    }
+    if (value === 'HOLDPOSE_WAIT') {
+        startControllerSetup('請舉起手臂並改變腕部傾角，保持不動一秒；八秒內完成。',10000);return;
+    }
+    if (value === 'HOLDPOSE_SAVED' || value === 'HOLDPOSE_FAILED') {
+        stopControllerSetup();stopHold();renderActionProgress();
+        $('controllerHint').textContent=value === 'HOLDPOSE_SAVED'
+            ? '撐住姿勢已記住，故事提示時做同樣姿勢，放回中立就停止。'
+            : '未記錄到姿勢。先校正中立，再抬手並改變腕部傾角後重試。';
+        showToast($('controllerHint').textContent);await syncControllerAction();return;
+    }
+    if (value === 'LR_INVERTED' || value === 'LR_DEFAULT') {
+        stopHold();renderActionProgress();
+        $('controllerHint').textContent='左右方向已切換，回到中間，再依故事提示試一次。';
+        showToast('左右方向已切換。');await syncControllerAction();return;
+    }
+    if (value === 'HOLD_END') {
+        if(isCooperation() && coopStates && !coopStates.child.done){coopStates.child.started=null;coopStates.child.last=null;coopStates.child.tick=0;renderCoopProgress();}
+        if (holdSource === 'ble') { stopHold('動作中斷，請重新開始計時。'); renderActionProgress(); }
+        return;
+    }
+    if (value === 'SENSOR_ERROR') {
+        startControllerSetup('裝置感測器讀取失敗，請檢查接線或重新啟動裝置。');return;
+    }
+    if(value==='SENSOR_READY'){stopControllerSetup();await syncControllerAction();return;}
+    if (value === 'START') {
+        if (!busy && !acts.length) await generateStory();
+        else showToast('故事已開始，請依目前提示做動作。');
+        return;
+    }
+
+    if (
+        value ===
+        'SWITCH_MODE_SENIOR'
+        ||
+        value ===
+        'MODE_SENIOR'
+    ) {
+
+        await switchMode(
+            'senior',
+            false
+        );
+
+        return;
+
+    }
+
+
+    if (
+        value ===
+        'SWITCH_MODE_CHILD'
+        ||
+        value ===
+        'MODE_CHILD'
+    ) {
+
+        await switchMode(
+            'child',
+            false
+        );
+
+        return;
+
+    }
+
+
+    if (
+        !waitingForAction ||
+        busy
+    ) {
+
+        return;
+
+    }
+
+
+    await handleAction(value, 'ble');
+
+}
+
+
+async function sendBLE(command) {
+    const characteristic = bleCharacteristic;
+    if (!characteristic) return false;
+    const operation = bleWriteQueue.then(async () => {
+        if (characteristic !== bleCharacteristic) return false;
+        await characteristic.writeValue(new TextEncoder().encode(command));
+        return true;
+    });
+    // BLE 寫入依序執行，避免 PAUSE / EXPECT / 震動指令互相碰撞。
+    bleWriteQueue = operation.catch(() => false);
+    try { return await operation; }
+    catch (e) { console.error('BLE 傳送失敗', e); return false; }
+}
+
+async function syncPhysicalButtonLock() {
+    if(!bleCharacteristic)return;
+    const locked=!storyFinished && (busy || acts.length>0);
+    if(lastPhysicalButtonLock===locked)return;
+    lastPhysicalButtonLock=locked;
+    const characteristic=bleCharacteristic;
+    if(!await sendBLE(locked?'GAME_ACTIVE':'GAME_IDLE') && bleCharacteristic===characteristic && lastPhysicalButtonLock===locked)lastPhysicalButtonLock=null;
+}
+async function syncControllerAction() {
+    if(isCooperation()){resetCoopCommands();await syncCoopDevices();return;}
+    await syncPhysicalButtonLock();
+    await sendBLE(!adventurePaused && !controllerLearning && waitingForAction && !busy && expectedAction
+        ? (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + expectedAction : 'PAUSE');
+}
+
+/* =====================================================
+   主題 UI
+===================================================== */
+
+function updateSelectedTopicLabel() {
+    const senior=currentMode==='senior';
+    for(const id of ['childThemeHeader','themeButtonsContainer','customTopicPanel','selectedTopicLabel'])$(id).classList.toggle('hidden',senior);
+    $('customTopicInput').disabled=senior;
+    const topic=senior?SENIOR_THEME:$('customTopicInput').value.trim() || selectedTheme;
+    $('selectedTopicLabel').textContent='本次主題：'+topic+' · 每次生成全新情節';
+    $('themeCount').textContent=CHILD_THEMES.length+' 個冒險世界';
+}
+function renderChildThemes() {
+
+    const container =
+        $('themeButtonsContainer');
+
+    container.innerHTML = '';
+
+    if(currentMode==='senior')return;
+    CHILD_THEMES.forEach(
+        (theme,index) => {
+
+            const button =
+                document.createElement(
+                    'button'
+                );
+
+            button.className =
+                theme.name === selectedTheme && !$('customTopicInput').value.trim()
+
+                    ?
+
+                'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold'
+
+                    :
+
+                'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+
+            button.innerHTML =
+                `${theme.icon} ${theme.short}`;
+
+            button.addEventListener(
+                'click',
+                () => {
+
+                    document
+                        .querySelectorAll(
+                            '.theme-btn'
+                        )
+                        .forEach(b => {
+
+                            b.className =
+                                'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+
+                        });
+
+                    button.className =
+                        'theme-btn active bg-purple-900/50 border border-purple-500 text-purple-200 py-2 px-2 rounded-xl text-xs font-semibold';
+
+                    selectedTheme =
+                        theme.name;
+
+                    $('customTopicInput').value =
+                        '';
+                    updateSelectedTopicLabel();
+
+                }
+            );
+
+            container.appendChild(
+                button
+            );
+
+        }
+    );
+
+}
+
+
+/* =====================================================
+   重置冒險
+===================================================== */
+
+function resetAdventure() {
+    $('generationStatus').textContent='';
+    audioBuildController?.abort();storyPreview=false;stopCoop();
+    adventurePaused=false;storyFinished=false;releasePauseWaiters();
+    if(generationController){generationController.abort();generationController=null;}
+    void sendBLE('PAUSE');
+    adventureVersion++;
+    actVersion++;
+    actionStepVersion++;
+    actionSteps = [];
+    $('actionPrompt').classList.add('hidden');
+    $('actionSequencePanel').classList.add('hidden');
+    $('storyDisplay').replaceChildren();$('storyDisplay').classList.add('hidden');
+    $('welcomeMessage').classList.remove('hidden');
+    currentActionStepIndex = 0;
+    currentStepStory = '';
+    replayInProgress = false;
+    replayCancelRequested = false;
+    busy = false;
+    $('btnGenerate').disabled = false;
+    $('btnText').textContent = currentMode === 'senior' ? '開始坐姿健康操' : '開始精彩故事冒險';
+    $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
+    clearTimeout(actTimer);
+    resetActionProgress();
+    $('actionProgressPanel').classList.add('hidden');
+
+    stopSpeech();
+
+    waitingForAction =
+        false;
+
+    expectedAction =
+        '';
+
+    currentStory =
+        '';
+
+    currentAction =
+        '';
+
+    currentActionNarration =
+        '';
+
+    currentActionPurpose =
+        '';
+
+    adventure =
+        null;
+
+    acts =
+        [];
+
+    currentActIndex =
+        0;
+
+    currentRound =
+        0;
+
+    maxRound =
+        11;
+
+    history =
+        [];
+
+    storyMemory =
+        null;
+
+    adventureSeed =
+        '';
+
+    sceneId =
+        '';
+
+    sceneSeed =
+        '';
+
+    $('btnSpeak').disabled =
+        true;
+    refreshStoryControls();
+
+}
+
+
+/* =====================================================
+   模式
+===================================================== */
+
+async function switchMode(
+    mode,
+    notifyDevice = true
+) {
+
+    if(mode===currentMode)return;
+    const previous=modeTopics[currentMode];
+    if(currentMode==='child' && previous){previous.theme=selectedTheme;previous.custom=$('customTopicInput').value || '';}
+    resetAdventure();
+    $('customTopicInput').value=mode==='child' ? modeTopics.child.custom : '';
+
+    currentMode =
+        mode;
+
+    const senior =
+        mode === 'senior';
+
+    $('actionPrompt')
+        .classList
+        .add('hidden');
+
+    $('storyDisplay').innerHTML =
+        '';
+
+    $('storyDisplay')
+        .classList
+        .add('hidden');
+
+    $('welcomeMessage')
+        .classList
+        .remove('hidden');
+
+
+    if (senior) {
+
+        $('appBody')
+            .classList
+            .add('mode-senior');
+
+        $('modeChildBtn').className =
+            'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white';
+
+        $('modeSeniorBtn').className =
+            'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-emerald-600 text-white shadow-md';
+
+        $('mainTitle').className =
+            'text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300';
+
+        $('badgeText').textContent =
+            '長輩模式・AI 坐姿健康操';
+
+        $('welcomeIcon').textContent =
+            '🌿✨';
+
+        $('welcomeTitle').textContent =
+            '準備好開始坐姿健康操了嗎？';
+
+        $('welcomeDesc').textContent =
+            '坐在穩固、有椅背的椅子上，雙腳平放地面。選擇難度，跟著語音做輕柔手部活動。';
+
+        selectedTheme=modeTopics.senior.theme;
+        renderChildThemes();
+
+        $('seniorDifficultyPanel')
+            .classList
+            .remove('hidden');
+
+        $('btnText').textContent =
+            '開始坐姿健康操';
+
+        $('customTopicInput').placeholder =
+            '也可以輸入想聽的故事主題，例如：老朋友的茶館';
+
+        selectedTheme = modeTopics.senior.theme;
+
+
+        if (
+            notifyDevice &&
+            bleCharacteristic
+        ) {
+
+            await sendBLE(
+                'MODE_SENIOR'
+            );
+
+        }
+
+    }
+
+    else {
+
+        $('appBody')
+            .classList
+            .remove('mode-senior');
+
+        $('modeChildBtn').className =
+            'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 bg-pink-600 text-white shadow-md';
+
+        $('modeSeniorBtn').className =
+            'px-5 py-2 rounded-xl font-bold text-sm transition flex items-center gap-2 text-slate-400 hover:text-white';
+
+        $('mainTitle').className =
+            'text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300';
+
+        $('badgeText').textContent =
+            '沈浸式互動繪本・故事會隨你的行動改變';
+
+        $('welcomeIcon').textContent =
+            '📖✨';
+
+        $('welcomeTitle').textContent =
+            '準備好開始冒險了嗎？';
+
+        $('welcomeDesc').textContent =
+            '適合 5～8 歲：選擇喜歡的主題，跟著簡單的小故事動一動。';
+
+        selectedTheme = modeTopics.child.theme;
+
+        renderChildThemes();
+
+        $('seniorDifficultyPanel')
+            .classList
+            .add('hidden');
+
+        $('btnText').textContent =
+            '開始精彩故事冒險';
+
+        $('customTopicInput').placeholder =
+            '或者輸入你想聽的故事，例如：會飛的橘色章魚';
+
+
+        if (
+            notifyDevice &&
+            bleCharacteristic
+        ) {
+
+            await sendBLE(
+                'MODE_CHILD'
+            );
+
+        }
+
+    }
+
+    updateSelectedTopicLabel();
+    refreshStoryControls();
+}
+
+
+/* =====================================================
+   Worker Response
+===================================================== */
+
+async function parseAIResponse(res) {
+
+    const rawText = await res.text();
+
+    let raw;
+
+    try {
+        raw = JSON.parse(rawText);
+    } catch (error) {
+
+        throw new Error(
+            'Worker 回傳的不是有效 JSON：\n\n' +
+            rawText
+        );
+
+    }
+
+    if (!res.ok || raw.ok === false) {
+
+        const detail =
+            typeof raw.detail === 'string'
+                ? raw.detail
+                : JSON.stringify(
+                    raw.detail || {},
+                    null,
+                    2
+                  );
+
+        const geminiError =
+            raw.geminiError
+                ? JSON.stringify(
+                    raw.geminiError,
+                    null,
+                    2
+                  )
+                : '';
+
+        throw new Error(
+            'Worker / AI 服務發生錯誤\n\n' +
+
+            'HTTP 狀態：' +
+            res.status +
+            '\n\n' +
+
+            'Worker 錯誤：\n' +
+            (raw.error || '未知錯誤') +
+
+            '\n\n' +
+
+            '詳細資訊：\n' +
+            detail +
+
+            (
+                geminiError
+                    ? '\n\nWorker / AI 詳細錯誤：\n' +
+                      geminiError
+                    : ''
+            )
+        );
+    }
+
+    return raw;
+}
+
+
+/* =====================================================
+   ⭐ 從 Worker 找出完整冒險
+===================================================== */
+
+function extractAdventure(data) {
+    let story = data?.story;
+    if (typeof story === 'string') {
+        try { story = JSON.parse(story); }
+        catch (_) { throw new Error('Worker 回傳的故事不是有效 JSON。'); }
+    }
+    const source = story && typeof story === 'object' && !Array.isArray(story)
+        ? story : data?.adventure && typeof data.adventure === 'object' ? data.adventure : data;
+    const foundActs = Array.isArray(source?.acts) ? source.acts
+        : Array.isArray(data?.acts) ? data.acts : null;
+    if (!foundActs?.length) throw new Error('Worker 回傳格式不正確：找不到故事 acts。');
+    // Preserve the complete story: playback/cache metadata and topic/plot information
+    // must survive local saving and replay, rather than only keeping title/summary/acts.
+    return {...source, title: source?.title || data?.title || '聲動奇境',
+        summary: source?.summary || data?.summary || '', acts: foundActs};
+}
+
+function narrativeKey(text) {
+    return String(text || '').normalize('NFKC').replace(/[\p{P}\p{Z}\s]/gu, '');
+}
+function distinctNarrative(text, previous) {
+    const value = String(text || '').trim(), key = narrativeKey(value);
+    return key && !narrativeKey(previous).includes(key) ? value : '';
+}
+function storyOpening(story) {
+    return distinctNarrative(story?.opening, story?.acts?.[0]?.story);
+}
+
+
+/* =====================================================
+   舊狀態相容
+===================================================== */
+
+function updateAdventureState(data) {
+
+    if (data.storyMemory) {
+
+        storyMemory =
+            data.storyMemory;
+
+    }
+
+    if (data.adventureSeed) {
+
+        adventureSeed =
+            data.adventureSeed;
+
+    }
+
+    if (
+        data.round !== undefined
+    ) {
+
+        currentRound =
+            Number(
+                data.round
+            ) || 0;
+
+    }
+
+    if (
+        data.maxRound !== undefined
+    ) {
+
+        maxRound =
+            Number(
+                data.maxRound
+            ) || 11;
+
+    }
+
+    if (data.sceneId) {
+
+        sceneId =
+            data.sceneId;
+
+    }
+
+    if (data.sceneSeed) {
+
+        sceneSeed =
+            data.sceneSeed;
+
+    }
+
+}
+
+
+/* =====================================================
+   故事顯示
+===================================================== */
+
+function appendStory(
+    title,
+    text
+) {
+
+    const display =
+        $('storyDisplay');
+
+    const box =
+        document.createElement(
+            'div'
+        );
+
+    box.className =
+        'p-4 rounded-xl bg-slate-900/70 border border-slate-800';
+
+    const titleEl =
+        document.createElement(
+            'div'
+        );
+
+    titleEl.className =
+        currentMode === 'senior'
+
+            ?
+
+        'text-xs font-bold text-emerald-300 mb-2'
+
+            :
+
+        'text-xs font-bold text-purple-300 mb-2';
+
+    titleEl.textContent =
+        title;
+
+    box.appendChild(
+        titleEl
+    );
+
+    const p =
+        document.createElement(
+            'p'
+        );
+
+    p.className =
+        'text-slate-200';
+
+    p.textContent =
+        text;
+
+    if (String(text || '').trim()) box.appendChild(p);
+
+    display.appendChild(
+        box
+    );
+
+    $('storyScroll').scrollTop =
+        $('storyScroll').scrollHeight;
+
+}
+
+
+/* =====================================================
+   ⭐ 顯示目前這一幕
+===================================================== */
+
+async function showCurrentAct(
+    speakIt = true
+) {
+
+    if (
+        !acts.length
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+     * 如果已經超過最後一幕
+     */
+
+    if (
+        currentActIndex >=
+        acts.length
+    ) {
+
+        showEnding();
+
+        return;
+
+    }
+
+
+    clearTimeout(actTimer);
+    const version = ++actVersion;
+    waitingForAction = false;
+    expectedAction = '';
+    stopHold();
+    $('actionPrompt').classList.add('hidden');
+
+    const act =
+        acts[
+            currentActIndex
+        ];
+
+
+    if (!act) {
+
+        currentActIndex++;
+
+        await showCurrentAct(
+            speakIt
+        );
+
+        return;
+
+    }
+
+
+    currentRound =
+        currentActIndex + 1;
+
+    maxRound =
+        acts.length;
+
+
+    currentStory =
+        String(
+            act.story || ''
+        ).trim();
+
+
+    actionSteps = getActActions(act);
+    currentActionStepIndex = 0;
+    currentStepStory = '';
+    actionStepVersion++;
+    currentAction = actionSteps[0]?.action || '';
+    resetActionProgress(actionSteps[0] || {});
+
+    /*
+     * ⭐ 顯示第幾幕
+     */
+
+    const actNumber =
+        currentActIndex + 1;
+
+
+    let actLabel =
+        currentMode === 'senior'
+
+            ?
+
+        `🌿 第 ${actNumber} 個活動・${act.title || '活動'}`
+
+            :
+
+        `📖 第 ${actNumber} 幕・${act.title || '冒險'}`;
+
+
+    /*
+     * 最後一幕特別標示
+     */
+
+    if (
+        currentActIndex ===
+        acts.length - 1
+    ) {
+
+        actLabel =
+            currentMode === 'senior'
+
+                ?
+
+            `🌿 最終活動・${act.title || '完成'}`
+
+                :
+
+            `🎬 最終章・${act.title || '結局'}`;
+
+    }
+
+
+    appendStory(
+        actLabel,
+        currentStory ||
+        '故事正在繼續……'
+    );
+
+
+    /*
+     * 故事語音
+     */
+
+    if (
+        speakIt &&
+        currentStory
+    ) {
+
+        await speak(
+            currentStory
+        );
+
+    }
+
+
+    await waitForAdventureResume(version);
+    if (version !== actVersion) return;
+
+    /*
+     * 顯示動作
+     */
+
+    if (actionSteps.length) {
+        await prepareCurrentAction(speakIt, version);
+        return;
+    }
+
+    /*
+     * 如果 AI 某一幕真的沒有 action
+     *
+     * 不把它當結局。
+     *
+     * 自動進下一幕。
+     */
+
+    waitingForAction =
+        false;
+
+    expectedAction =
+        '';
+
+    $('actionPrompt')
+        .classList
+        .add('hidden');
+
+
+    if (
+        currentActIndex <
+        acts.length - 1
+    ) {
+        if(currentMode==='senior' && Number(act.restSeconds)>0) appendStory('⏳ 放鬆與準備',`請慢慢放鬆 ${Math.min(60,Number(act.restSeconds))} 秒，再進入下一段活動。`);
+
+        actTimer = setTimeout(
+            async () => {
+                await waitForAdventureResume(version);
+    if (version !== actVersion) return;
+                busy = true;
+                currentActIndex++;
+
+                await showCurrentAct(
+                    true
+                );
+
+            },
+            Math.max(currentMode==='senior' ? Math.min(60,Math.max(0,Number(act.restSeconds)||0))*1000 : 0, speakIt && !('speechSynthesis' in window)
+                ? Math.min(20000,Math.max(4000,currentStory.length*150)) : 900)
+        );
+
+    }
+
+    else {
+
+        showEnding();
+
+    }
+
+}
+
+
+/* =====================================================
+   動作 UI
+===================================================== */
+
+function showAction(data) {
+    renderActionProgress();
+    const isTurn=['TURN_LEFT','TURN_RIGHT'].includes(normalizeAction(data?.action));
+    $('turnDiagnostics').classList.toggle('hidden',!isTurn);
+    $('turnDiagnostics').textContent=isTurn?'等待裝置轉身訊號。若一直沒有新提示，請確認已燒錄裝置 3.7，並重新連線。':'';
+
+    let action =
+        normalizeAction(
+            data?.action
+        );
+
+
+    if (!action) {
+
+        waitingForAction =
+            false;
+
+        expectedAction =
+            '';
+
+        $('actionPrompt')
+            .classList
+            .add('hidden');
+
+        return;
+
+    }
+
+
+    currentAction =
+        action;
+
+
+    currentActionNarration =
+        getActionNarration(
+            data
+        );
+
+
+    currentActionPurpose =
+        data?.actionPurpose ||
+        (currentMode==='senior'?'以舒適幅度完成這個操作。':'完成這個動作，故事就會繼續。');
+
+
+    expectedAction =
+        action;
+
+
+    waitingForAction =
+        true;
+
+
+    $('actionPrompt')
+        .classList
+        .remove(
+            'hidden',
+            'action-locked'
+        );
+
+
+    $('actionPrompt')
+        .classList
+        .add(
+            'action-ready'
+        );
+
+
+    $('promptText').textContent =
+
+        getActionIcon(
+            action
+        )
+        +
+        ' '
+        +
+        (getActionContext(data) || currentActionNarration);
+
+
+    const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'手腕向左傾斜一次，再回到中間。',TILT_RIGHT:'手腕向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
+    $('actionSubText').textContent='💡 '+(getActionContext(data)?'做法：'+getActionMovementNarration(data):currentActionPurpose)+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'')+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
+
+    if(!isCooperation())void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
+    setupCoop(data);
+    refreshStoryControls();
+
+}
+
+
+/* =====================================================
+   鎖定動作
+===================================================== */
+
+function lockAction() {
+    resetCoopHolds();resetCoopCommands();void sendFamily('PAUSE');
+    void sendBLE('PAUSE');
+    waitingForAction = false;
+    stopHold();
+    renderActionProgress();
+
+    $('actionPrompt')
+        .classList
+        .remove(
+            'hidden'
+        );
+
+    $('actionPrompt')
+        .classList
+        .add(
+            'action-locked'
+        );
+
+    $('actionSubText').textContent =
+        '🔊 正在播放劇情，請先聽完……';
+
+}
+
+
+/* =====================================================
+   ⭐ 真正結局
+===================================================== */
+
+function showEnding() {
+    stopCoop();void sendFamily('STORY_COMPLETE');
+    storyFinished=true;adventurePaused=false;releasePauseWaiters();refreshStoryControls();
+    actVersion++;
+    clearTimeout(actTimer);
+    stopHold();
+    $('actionProgressPanel').classList.add('hidden');
+
+    waitingForAction =
+        false;
+
+    expectedAction =
+        '';
+
+    busy =
+        false;
+
+
+    $('actionPrompt')
+        .classList
+        .remove(
+            'hidden',
+            'action-locked'
+        );
+
+
+    $('promptText').textContent =
+
+        currentMode === 'senior'
+
+            ?
+
+        '🎉 活動圓滿完成！'
+
+            :
+
+        '🎉 冒險圓滿結束！';
+
+
+    $('actionSubText').textContent =
+
+        currentMode === 'senior'
+
+            ?
+
+        '今天的完整健康活動已完成。'
+
+            :
+
+        '你完成了這場完整的 11 幕冒險。';
+
+
+    if (
+        bleCharacteristic
+    ) {
+
+        sendBLE(
+            'STORY_COMPLETE'
+        );
+
+    }
+
+
+    if(acts.length===1 && acts[0]?.practiceTurn){$('promptText').textContent='✓ 左右轉身測試完成';$('actionSubText').textContent='若左右相反，請反轉左右方向後再測試。腕部判定仍可能誤認手臂旋轉。';}
+    showToast(
+
+        currentMode === 'senior'
+
+            ?
+
+        '🎉 今日活動完成！'
+
+            :
+
+        '🎉 完整冒險完成！'
+
+    );
+
+}
+
+
+/* =====================================================
+   ⭐ 完成動作
+===================================================== */
+
+async function handleAction(action, source = 'manual') {
+    if(isCooperation() && coopStates){await handleCoopAction('child',action,source);return;}
+    if(source==='manual')primeFeedbackAudio();
+    if (!waitingForAction || busy || adventurePaused || controllerLearning || document.hidden) return;
+    // Match raw device values: normalizeAction's senior fallback must not turn
+    // an unrelated or unknown hardware signal into a successful ARM_UP.
+    const received = String(action || '').trim().toUpperCase();
+    if (received !== expectedAction) {
+        if (source === 'ble' && holdSource === 'ble') {
+            stopHold('偵測到其他動作，請重新開始計時。');
+            renderActionProgress();
+        }
+        return;
+    }
+    if (actionHoldSeconds > 0) {
+        if (source === 'manual' && manualHolding) {
+            stopHold('已停止模擬，請重新開始計時。');
+            renderActionProgress();
+            return;
+        }
+        startHold(source);
+        if (source === 'ble' && holdSource === 'ble' && holdStartedAt !== null &&
+            performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
+            await completeAction(received);
+        }
+        return;
+    }
+    actionCount = Math.min(actionTargetCount, actionCount + 1);
+    if(actionCount<actionTargetCount)showActionFeedback(`✓ 第 ${actionCount} 次成功，還差 ${actionTargetCount-actionCount} 次。`,'tick');
+    renderActionProgress();
+    if (actionCount >= actionTargetCount) await completeAction(received);
+    else if (source === 'ble') void sendBLE('ACTION_TICK');
+}
+
+async function completeAction(received) {
+    if (!waitingForAction || busy || adventurePaused || controllerLearning || received !== expectedAction) return;
+    const version = actVersion;
+    const stepVersion = actionStepVersion;
+    const completedStep = actionSteps[currentActionStepIndex] || {};
+    showActionFeedback(actionHoldSeconds>0?'✓ 持續時間達標，動作完成！':`✓ 第 ${actionCount} 次成功，${actionTargetCount} 次全部完成！`,'complete');
+    waitingForAction = false;
+    refreshStoryControls();
+    expectedAction = '';
+    busy = true;
+    // Keep the bar full while announcing this step's success.
+    $('actionProgressBar').value = actionHoldSeconds > 0 ? actionHoldSeconds : actionTargetCount;
+    $('actionProgressText').textContent = actionHoldSeconds > 0
+        ? `持續 ${actionHoldSeconds}/${actionHoldSeconds} 秒・完成！`
+        : `動作進度 ${actionCount}/${actionTargetCount}・完成！`;
+    stopHold();
+    $('btnManualAction').textContent = '✨ 正在準備下一個動作……';
+    $('actionPrompt').classList.add('action-locked');
+    $('promptText').textContent = currentMode==='senior'?'✓ 這個步驟完成了。':'✨ 做得好！';
+    $('actionSubText').textContent = currentActionStepIndex + 1 < actionSteps.length
+        ? (currentMode==='senior' ? '動作完成，準備下一個活動……' : '這個動作完成了，本幕故事正在繼續……') : (currentMode==='senior' ? '本段活動完成，請慢慢放鬆。' : '本幕動作全部完成，故事正在繼續……');
+    stopSpeech();
+    await sendBLE('PAUSE');
+    await waitForAdventureResume(version);
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    await sendBLE('ACTION_OK');
+    await waitForAdventureResume(version);
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    history.push({role:'user',action:received,round:currentRound,
+        actionStep:currentActionStepIndex + 1,targetCount:actionTargetCount,
+        holdSeconds:actionHoldSeconds,title:acts[currentActIndex]?.title || ''});
+    const resultStory = String(completedStep.storyAfter || '').trim();
+    if (resultStory) {
+        appendStory(currentMode==='senior' ? '✓ 動作完成・放鬆一下' : '✨ 你的行動改變了故事', resultStory);
+        await speak(resultStory);
+    }
+    await waitForAdventureResume(version);
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await waitForAdventureResume(version);
+    if (version !== actVersion || stepVersion !== actionStepVersion) return;
+    if (currentActionStepIndex + 1 < actionSteps.length) {
+        currentActionStepIndex++;
+        await prepareCurrentAction(true, version);
+        return;
+    }
+    renderActionSequence(true);
+    currentActIndex++;
+    if (currentActIndex >= acts.length) { showEnding(); return; }
+    await showCurrentAct(true);
+    if (version + 1 === actVersion) busy = false;
+}
+
+
+/* =====================================================
+   ⭐ 開始完整故事
+===================================================== */
+
+// 僅儲存少量已生成摘要，讓下次故事避開同樣開場；儲存不可用時仍可生成。
+const RECENT_STORIES_KEY = 'story-adventure-recent-v1';
+function getRecentStories() {
+    try {
+        const items = JSON.parse(localStorage.getItem(RECENT_STORIES_KEY) || '[]');
+        if (!Array.isArray(items)) return [];
+        return items.slice(-5).filter(item => item && typeof item === 'object').map(item => ({
+            title: String(item.title || '').slice(0, 80),
+            opening: String(item.opening || '').slice(0, 220),
+            ending:String(item.ending || '').slice(0,180),topic:String(item.topic || '').slice(0,200),
+            variation:item.variation && typeof item.variation==='object' ? Object.fromEntries(['opening','mission','twist','plotFamily'].map(key=>[key,String(item.variation[key] || '').slice(0,100)])) : {}
+        }));
+    } catch (_) { return []; }
+}
+function rememberStory(story, topic = '') {
+    try {
+        const items = getRecentStories();
+        items.push({title: String(story.title || '').slice(0, 80),
+            opening: String(story.opening || story.acts?.[0]?.story || '').slice(0, 220),
+            ending:String(story.ending || story.acts?.[story.acts.length-1]?.story || '').slice(0,180),
+            topic:String(story.requestedTopic || topic).slice(0,200),variation:story.variation || {}});
+        localStorage.setItem(RECENT_STORIES_KEY, JSON.stringify(items.slice(-5)));
+    } catch (_) { /* 禁用瀏覽器儲存時不阻擋故事。 */ }
+}
+
+const LOCAL_LIBRARY_KEY='story-library-v1';
+function readSavedJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch(_){return fallback;}}
+function librarySelection(topic){const key=[currentMode,currentMode==='senior'?'':topic,currentMode==='senior'?0:selectedChildAge,selectedDifficulty];if(isCooperation())key.push('coop',familyPosture());return JSON.stringify(key);}
+function readLocalLibrary(){const rows=readSavedJSON(LOCAL_LIBRARY_KEY,[]);return Array.isArray(rows)?rows.filter(row=>row && Array.isArray(row.story?.acts)):[];}
+function saveFullStory(story,key,id){try{const rows=readLocalLibrary().filter(row=>!(id && row.id===id && row.key===key));rows.push({key,id,story});localStorage.setItem(LOCAL_LIBRARY_KEY,JSON.stringify(rows.slice(-30)));}catch(_){showToast('瀏覽器儲存空間不足，這次內容無法保存在此裝置。');}}
+function getStoryClientId(){let id=readSavedJSON('story-client-id',null);if(typeof id!=='string' || !/^[a-zA-Z0-9-]{16,80}$/.test(id)){id=typeof crypto!=='undefined' && crypto.randomUUID?crypto.randomUUID():'browser-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem('story-client-id',JSON.stringify(id));}catch(_){}}return id;}
+$('btnReplaySaved').addEventListener('click',()=>generateStory(true));
+
+async function generateStory(preferSaved=false) {
+    // DOM click events are objects, not a request to replay saved content.
+    preferSaved = preferSaved === true;
+
+    if (busy)
+        return;
+
+
+    const custom =
+        $('customTopicInput')
+        .value
+        .trim();
+
+
+    const topic = currentMode==='senior' ? SENIOR_THEME : custom || selectedTheme;
+
+
+    if (!topic) {
+
+        showToast(
+            '請先選擇或輸入主題。'
+        );
+
+        return;
+
+    }
+
+
+    const selection=librarySelection(topic);
+    const localRows=readLocalLibrary().filter(row=>row.key===selection);
+    const useSaved=preferSaved;
+    let localRow=useSaved && localRows.length?localRows[Math.floor(Math.random()*localRows.length)]:null;
+    resetAdventure();
+    $('generationStatus').textContent=preferSaved?'正在尋找已保存內容，不會生成新故事。':'正在生成新內容，請稍候……';
+
+    const requestVersion = adventureVersion;
+    const requestController=new AbortController();generationController=requestController;
+    const requestTimer=setTimeout(()=>requestController.abort(),150000);
+    primeSpeech();
+
+    busy =
+        true;
+
+    await syncPhysicalButtonLock();
+
+
+    const btn =
+        $('btnGenerate');
+
+
+    btn.disabled =
+        true;
+
+
+    $('btnText').textContent =
+
+        currentMode === 'senior'
+
+            ?
+
+        'AI 正在安排坐姿健康操……'
+
+            :
+
+        'AI 正在創造完整冒險……';
+
+
+    $('btnIcon').className =
+        'fa-solid fa-spinner animate-spin';
+
+
+    try {
+
+        /*
+         * ⭐⭐⭐
+         * 新 Worker API
+         * ⭐⭐⭐
+         */
+
+        let data;
+        if(localRow){data={story:localRow.story,libraryId:localRow.id,source:'library',notice:'正在播放已保存內容，沒有重新生成。'};}
+        else {
+        try {
+        const res =
+            await fetch(
+
+                WORKER_URL.replace(/\/+$/, '') + '/generate',
+
+                {
+
+                    method:'POST',
+                    signal:requestController.signal,
+
+                    headers:{
+                        'Content-Type':
+                            'application/json'
+                    },
+
+                    body:JSON.stringify({
+
+                        mode:
+                            currentMode,
+
+                        ...(currentMode==='child' ? {topic,age:selectedChildAge} : {}),
+
+                        difficulty:
+                            selectedDifficulty,
+
+                        recentStories: getRecentStories(),
+                        clientId:getStoryClientId(),preferSaved:useSaved,playerMode:isCooperation()?'coop':'solo',familyPosture:familyPosture(),
+                        recentLibraryIds:localRows.map(row=>row.id).filter(Boolean).slice(-5)
+
+                    })
+
+                }
+
+            );
+
+
+        data=await parseAIResponse(res);
+        }
+        catch(error){
+          if(requestVersion!==adventureVersion)throw error;
+          throw error;
+        }
+        }
+
+
+
+        if(!preferSaved && data.source==='library'){
+            if(requestVersion!==adventureVersion)return;
+            const reason=String(data.notice || '服務目前無法新增內容。').replace(/，改用已保存內容[。.]?/g,'。');
+            const message=reason+' 本次沒有生成新內容，請稍後再試。';
+            $('generationStatus').textContent=message;showToast(message);return;
+        }
+        if(requestVersion!==adventureVersion)return;
+        $('generationStatus').textContent='';
+        clearTimeout(requestTimer);
+        if(generationController===requestController)generationController=null;
+
+        /*
+         * 找出完整 11 幕
+         */
+
+        if (requestVersion !== adventureVersion) return;
+        adventure =
+            extractAdventure(
+                data
+            );
+
+
+        adventure.libraryId=data.libraryId || adventure.libraryId;
+        acts =
+            adventure.acts;
+
+
+        /*
+         * 保險：
+         * 如果 AI 多產生幾幕，
+         * 前端仍可以正常播放。
+         */
+
+        maxRound =
+            acts.length;
+
+
+        if (
+            maxRound < 1
+        ) {
+
+            throw new Error(
+                '故事沒有任何幕。'
+            );
+
+        }
+
+
+        /*
+         * 如果超過 11 幕，
+         * 不硬砍掉，讓 Worker 的結果完整播放。
+         */
+
+        rememberStory(adventure,topic);
+        if(!localRow)saveFullStory(adventure,selection,data.libraryId);
+        if(data.notice)showToast(data.notice);
+
+
+        currentActIndex =
+            0;
+
+
+        currentRound =
+            0;
+
+
+        currentStory =
+            '';
+
+
+        history = [
+
+            {
+
+                role:'user',
+
+                topic:
+                    topic
+
+            },
+
+            {
+
+                role:'system',
+
+                message:
+                    '已取得完整冒險，共 ' +
+                    acts.length +
+                    ' 幕。'
+
+            }
+
+        ];
+
+
+        $('welcomeMessage')
+            .classList
+            .add(
+                'hidden'
+            );
+
+
+        $('storyDisplay')
+            .innerHTML =
+            '';
+
+
+        $('storyDisplay')
+            .classList
+            .remove(
+                'hidden'
+            );
+
+
+        /*
+         * ⭐ 顯示故事標題
+         */
+
+        if (
+            adventure.title
+        ) {
+
+            appendStory(
+
+                currentMode === 'senior'
+
+                    ?
+
+                '🌿 ' +
+                adventure.title
+
+                    :
+
+                '✨ ' +
+                adventure.title,
+
+                storyOpening(adventure)
+
+            );
+
+        }
+
+
+        /*
+         * ⭐ 開始第一幕
+         */
+
+        storyPreview=false;
+        const opening = storyOpening(adventure);
+        if (opening) await speak(opening);
+        if (requestVersion !== adventureVersion) return;
+        await showCurrentAct(true);
+
+        if (requestVersion !== adventureVersion) return;
+
+        $('btnSpeak')
+            .disabled =
+            false;
+
+
+        if (
+            bleCharacteristic
+        ) {
+
+            await sendBLE(
+
+                currentMode === 'senior'
+
+                    ?
+
+                'START'
+
+                    :
+
+                'START_STORY'
+
+            );
+
+        }
+
+
+        if (requestVersion !== adventureVersion) return;
+        showToast(
+            currentMode==='senior'?'🌿 健康操已開始。':`✨ 冒險開始！共 ${acts.length} 幕`
+        );
+
+
+    }
+
+    catch(e) {
+
+        if (requestVersion !== adventureVersion) return;
+        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+e.message+(preferSaved?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
+        console.error(
+            e
+        );
+
+
+        showToast(
+            e.name==='AbortError' ? '故事生成等候逾時，請稍後再試。' : (currentMode==='senior'?'健康操生成失敗：':'故事生成失敗：') + e.message
+        );
+
+
+        console.error(
+            'Worker 錯誤：',
+            e
+        );
+
+    }
+
+    finally {
+        clearTimeout(requestTimer);
+        if(generationController===requestController)generationController=null;
+
+        if (requestVersion === adventureVersion) {
+            $('btnText').textContent = currentMode === 'senior'
+                ? '開始坐姿健康操' : '開始精彩故事冒險';
+            $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
+            btn.disabled = false;
+            busy = false;
+            refreshStoryControls();
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   語音初始化
+===================================================== */
+
+function primeSpeech() {
+    primeFeedbackAudio();
+
+    if (
+        'speechSynthesis' in window
+    ) {
+
+        try {
+
+            speechSynthesis.getVoices();
+            // Warm up the device reader while the user's tap is still active.
+            // Do not interfere with narration already in progress.
+            // speechPlaying also covers Worker preparation and recovery waits.
+            // In those states a real tap must still be able to prime the device reader.
+            if(!activeSpeechUtterance && !activeCloudAudio && !speechSynthesis.speaking && typeof SpeechSynthesisUtterance!=='undefined'){
+                const warmup=new SpeechSynthesisUtterance('。');
+                warmup.lang='zh-TW';warmup.volume=0;
+                if(speechSynthesis.paused)speechSynthesis.resume();
+                speechSynthesis.speak(warmup);
+            }
+
+        }
+
+        catch(e) {}
+
+    }
+
+}
+
+
+/* =====================================================
+   初始化
+===================================================== */
+
+document.addEventListener(
+
+    'DOMContentLoaded',
+
+    () => {
+
+
+        initializeCooperationUI();
+        renderChildThemes();
+        refreshStoryControls();
+        $('btnPauseStory').addEventListener('click',toggleAdventurePause);
+        $('btnTurnTrial').addEventListener('click',startTurnTrial);
+        document.querySelectorAll('[data-child-age]').forEach(button=>button.addEventListener('click',()=>{
+            selectedChildAge=Number(button.dataset.childAge);
+            refreshChildAgeUI();
+        }));
+        updateSelectedTopicLabel();
+        $('customTopicInput').addEventListener('input',updateSelectedTopicLabel);
+
+        loadVoiceSettings();
+
+
+        updateVoiceSettingUI();
+
+
+        primeSpeech();
+
+
+        if (
+            'speechSynthesis' in window
+        ) {
+
+            speechSynthesis.addEventListener(
+
+                'voiceschanged',
+
+                loadVoices
+
+            );
+
+        }
+
+
+        loadVoices();
+
+
+        /*
+         * BLE
+         */
+
+        $('btnConnect')
+            .addEventListener(
+                'click',
+                connectBLE
+            );
+
+        $('btnDisconnect').addEventListener('click',disconnectBLE);
+        $('btnLearnHold').addEventListener('click', async () => {
+            if (!bleCharacteristic || controllerLearning) return;
+            startControllerSetup('舉起手臂並改變腕部傾角，保持不動一秒。',10000);
+            await sendBLE('PAUSE');
+            if (!await sendBLE('LEARN_HOLD')) {
+                stopControllerSetup();
+                showToast('傳送失敗，請重新連線後設定姿勢。');await syncControllerAction();
+            }
+        });
+        $('btnInvertDirections').addEventListener('click', async () => {
+            if (!bleCharacteristic || controllerLearning) return;
+            stopHold();renderActionProgress();await sendBLE('PAUSE');
+            if (!await sendBLE('INVERT_LR')) {showToast('左右設定傳送失敗，請重新連線。');await syncControllerAction();}
+        });
+        $('btnCalibrate').addEventListener('click', async () => {
+            if (!bleCharacteristic) { showToast('請先連接故事裝置。'); return; }
+            startControllerSetup('正在校正，請保持舒適中立姿勢不動 2 秒。');
+            await sendBLE('PAUSE');
+            if(!await sendBLE('CALIBRATE')){stopControllerSetup();showToast('校正指令傳送失敗，請重新連線。');await syncControllerAction();}
+        });
+
+
+        /*
+         * 開始故事
+         */
+
+        $('btnGenerate')
+            .addEventListener(
+                'click',
+                () => generateStory()
+            );
+
+
+        /*
+         * 手動完成動作
+         */
+
+        $('btnManualAction')
+            .addEventListener(
+
+                'click',
+
+                async () => {
+
+                    if (
+                        !waitingForAction
+                    ) {
+
+                        showToast(
+                            '🔒 目前沒有等待中的動作。'
+                        );
+
+                        return;
+
+                    }
+
+
+                    await handleAction(
+                        expectedAction
+                    );
+
+                }
+
+            );
+
+
+        /*
+         * 自訂主題
+         */
+
+        $('customTopicInput')
+            .addEventListener(
+
+                'input',
+
+                () => {
+
+                    const value =
+                        $('customTopicInput')
+                        .value
+                        .trim();
+
+
+                    if (!value) {renderChildThemes();return;}
+
+
+                    document
+                        .querySelectorAll(
+                            '.theme-btn'
+                        )
+                        .forEach(
+                            b => {
+
+                                b.className =
+                                    'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
+
+                            }
+                        );
+
+                }
+
+            );
+
+
+        /*
+         * 長輩難度
+         */
+
+        document
+            .querySelectorAll(
+                '.difficulty-btn'
+            )
+            .forEach(
+                button => {
+
+                    button.addEventListener(
+
+                        'click',
+
+                        () => {
+
+                            document
+                                .querySelectorAll(
+                                    '.difficulty-btn'
+                                )
+                                .forEach(
+                                    b => {
+
+                                        b.classList.remove(
+                                            'active'
+                                        );
+
+                                    }
+                                );
+
+
+                            button.classList.add(
+                                'active'
+                            );
+
+
+                            selectedDifficulty =
+                                button.dataset.difficulty;
+                            refreshStoryControls();
+
+                        }
+
+                    );
+
+                }
+            );
+
+
+        /*
+         * 語音設定
+         */
+
+        $('btnVoiceSettings')
+            .addEventListener(
+
+                'click',
+
+                () => {
+
+                    loadVoices();
+
+                    updateVoiceSettingUI();
+
+                    $('voiceModal')
+                        .classList
+                        .remove(
+                            'hidden'
+                        );
+
+                }
+
+            );
+
+
+        $('btnCloseVoiceSettings')
+            .addEventListener(
+
+                'click',
+
+                () => {
+
+                    $('voiceModal')
+                        .classList
+                        .add(
+                            'hidden'
+                        );
+
+                }
+
+            );
+
+
+        $('voiceModal')
+            .addEventListener(
+
+                'click',
+
+                event => {
+
+                    if (
+                        event.target ===
+                        $('voiceModal')
+                    ) {
+
+                        $('voiceModal')
+                            .classList
+                            .add(
+                                'hidden'
+                            );
+
+                    }
+
+                }
+
+            );
+
+
+        /*
+         * 選擇聲音
+         */
+
+        $('fixedVoiceToggle').addEventListener('change',()=>{syncWorkerVoicePreference();saveVoiceSettings();});
+        $('btnTestFeedback').addEventListener('click',async()=>{
+            primeFeedbackAudio();
+            if(Number(voiceSettings.volume)===0){showToast('目前音量是 0，請先調高下方音量。');return;}
+            const played=await playFeedbackTone('complete');
+            showToast(played?'已播放兩聲提示音；若沒聽到，請確認網站與裝置沒有靜音。':'提示音未能播放，請確認瀏覽器允許音訊後再試。');
+        });
+        $('voiceSelect')
+            .addEventListener(
+
+                'change',
+
+                () => {
+
+                    const value =
+                        $('voiceSelect')
+                        .value;
+
+
+                    if(value==='__SYSTEM_TW__'){
+                        selectedVoice=null;voiceSettings.voiceURI=value;
+                        saveVoiceSettings();
+                        updateVoiceStatus('已選擇'+getDeviceVoiceLabel()+'，使用裝置的預設中文聲音。');
+                        return;
+                    }
+
+                    if (
+                        value ===
+                        '__AUTO__'
+                    ) {
+
+                        selectedVoice =
+                            null;
+
+                        voiceSettings.voiceURI =
+                            '';
+                        selectedVoice=chooseSpeechVoice();
+
+                        saveVoiceSettings();
+
+                        return;
+
+                    }
+
+
+                    selectedVoice =
+                        availableVoices.find(
+
+                            voice =>
+                                voice.voiceURI ===
+                                value
+
+                        )
+                        ||
+                        null;
+
+
+                    voiceSettings.voiceURI =
+                        selectedVoice
+                            ? value
+                            : '';
+
+
+                    saveVoiceSettings();
+
+                }
+
+            );
+
+
+        /*
+         * 語速
+         */
+
+        $('rateRange')
+            .addEventListener(
+
+                'input',
+
+                () => {
+
+                    voiceSettings.rate =
+                        Number(
+                            $('rateRange')
+                            .value
+                        );
+
+
+                    $('rateValue').textContent =
+                        voiceSettings.rate
+                        .toFixed(2);
+
+
+                    saveVoiceSettings();
+
+                }
+
+            );
+
+
+        /*
+         * 音調
+         */
+
+        $('pitchRange')
+            .addEventListener(
+
+                'input',
+
+                () => {
+
+                    voiceSettings.pitch =
+                        Number(
+                            $('pitchRange')
+                            .value
+                        );
+
+
+                    $('pitchValue').textContent =
+                        voiceSettings.pitch
+                        .toFixed(2);
+
+
+                    saveVoiceSettings();
+
+                }
+
+            );
+
+
+        /*
+         * 音量
+         */
+
+        $('volumeRange')
+            .addEventListener(
+
+                'input',
+
+                () => {
+
+                    voiceSettings.volume =
+                        Number(
+                            $('volumeRange')
+                            .value
+                        );
+
+
+                    $('volumeValue').textContent =
+                        voiceSettings.volume
+                        .toFixed(2);
+
+
+                    saveVoiceSettings();
+
+                }
+
+            );
+
+
+        /*
+         * 語氣
+         */
+
+        document
+            .querySelectorAll(
+                '.voice-emotion'
+            )
+            .forEach(
+
+                button => {
+
+                    button.addEventListener(
+
+                        'click',
+
+                        () => {
+
+                            voiceSettings.emotion =
+                                button.dataset.emotion;
+
+
+                            document
+                                .querySelectorAll(
+                                    '.voice-emotion'
+                                )
+                                .forEach(
+                                    b => {
+
+                                        b.classList.toggle(
+
+                                            'active',
+
+                                            b ===
+                                            button
+
+                                        );
+
+                                    }
+                                );
+
+
+                            saveVoiceSettings();
+
+                        }
+
+                    );
+
+                }
+
+            );
+
+
+        /*
+         * 測試聲音
+         */
+
+        $('btnVoiceTest')
+            .addEventListener(
+
+                'click',
+
+                async () => {
+
+                    if(busy || replayInProgress){showToast('請等目前朗讀結束，再測試聲音。');return;}
+
+                    const text =
+
+                        currentMode === 'senior'
+
+                            ?
+
+                        '您好，歡迎來到聲動奇境。請慢慢活動身體，保持輕鬆。'
+
+                            :
+
+                        '等等！前面好像出現了什麼……我們一起看看接下來會發生什麼。';
+
+
+                    await speak(
+                        text
+                    );
+
+                }
+
+            );
+
+
+        /*
+         * 恢復語音預設
+         */
+
+        $('btnVoiceReset')
+            .addEventListener(
+
+                'click',
+
+                () => {
+
+                    stopSpeech();
+
+
+                    voiceSettings = {
+                        fixedVoice:true,
+
+                        rate:.96,
+
+                        pitch:1,
+
+                        volume:1,
+
+                        emotion:'natural',
+
+                        voiceURI:getDefaultDeviceVoiceURI(),
+
+                        version:12
+
+                    };
+
+
+                    selectedVoice =
+                        null;
+
+
+                    saveVoiceSettings();
+
+
+                    loadVoices();
+
+
+                    updateVoiceSettingUI();
+
+
+                    showToast(
+                        '🎙️ 已恢復預設聲音設定'
+                    );
+
+                }
+
+            );
+
+
+        /*
+         * 播放目前故事
+         */
+
+        $('btnSpeak')
+            .addEventListener(
+
+                'click',
+
+                async () => {
+                    if(storyPreview){await startPreview();return;}
+                    if (
+                        speechPlaying
+                    ) {
+
+                        if (replayInProgress) replayCancelRequested = true;
+                        stopSpeech();
+
+                        return;
+
+                    }
+
+
+                    if (
+                        !currentStory
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    if (busy || replayInProgress) return;
+                    const replayVersion = actVersion;
+                    const replayStepVersion = actionStepVersion;
+                    const wasWaiting = waitingForAction;
+                    const step = actionSteps[currentActionStepIndex];
+                    replayInProgress = true;
+                    replayCancelRequested = false;
+                    lockAction();
+                    try {
+                        await speak([currentStory, currentStepStory].filter(Boolean).join('。'));
+                        if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
+                        if (wasWaiting && step) {
+                            if (!replayCancelRequested) await speak(getActionNarration(step));
+                            if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
+                            showAction(step);
+                        }
+                    } finally {
+                        if (replayVersion === actVersion){replayInProgress = false;resetCoopCommands();void syncCoopDevices();}
+                    }
+
+                }
+
+            );
+
+    }
+
+);
+
+let familyDevice=null,familyCharacteristic=null,familyQueue=Promise.resolve(),familyConnecting=false,familyLearning=false,cooperationUIInitialized=false;
+let coopStates=null,coopTimer=null,storyPreview=false,audioBuildController=null,familySetupTimer=null;
+const coopCommands={child:{},family:{}};
+function resetCoopCommands(){coopCommands.child={};coopCommands.family={};}
+function isCooperation(){return currentMode==='child' && $('playStyle').value==='coop';}
+function familyPosture(){return $('familyPosture').value==='seated'?'seated':'general';}
+function refreshCoopUI(){
+    const active=isCooperation();$('btnConnect').textContent=active?'連接孩子的裝置':'連接故事裝置';$('btnDisconnect').textContent=active?'中斷孩子連線':'中斷連線';$('coopOptions').classList.toggle('hidden',!active);$('familyBLEPanel').classList.toggle('hidden',!active);
+    $('playStylePanel').classList.toggle('hidden',currentMode==='senior');
+    for(const id of ['playStyle','familyPosture'])$(id).disabled=busy || (!!acts.length && !storyFinished);
+    $('coopProgress').classList.toggle('hidden',!active || !coopStates);
+    $('btnStartPreview').disabled=!storyPreview || busy || !!audioBuildController;
+    $('btnTestCoop').disabled=!storyPreview || busy || !!audioBuildController;
+    $('btnBuildAudio').disabled=!storyPreview || busy || !adventure?.libraryId || !!audioBuildController;
+    $('btnCancelAudio').classList.toggle('hidden',!audioBuildController);
+}
+async function sendFamily(command){
+    const characteristic=familyCharacteristic;if(!characteristic)return false;
+    const job=familyQueue.then(async()=>{if(characteristic!==familyCharacteristic)return false;await characteristic.writeValue(new TextEncoder().encode(command));return true;});
+    familyQueue=job.catch(()=>false);try{return await job;}catch(_){return false;}
+}
+function clearFamily(){
+    familyCharacteristic?.removeEventListener?.('characteristicvaluechanged',onFamilyEvent);
+    familyCharacteristic=null;familyQueue=Promise.resolve();familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();
+    $('familyStatus').textContent='家人裝置未連線';
+    resetCoopHolds();if(coopStates){syncCoopDevices();renderCoopProgress();}
+}
+async function connectFamily(){
+    if(familyConnecting){showToast('正在連接家人裝置，請先完成裝置選擇。');return;}
+    if(familyCharacteristic){showToast('家人裝置已連線。要換裝置，請先中斷家人連線。');return;}
+    if(typeof navigator.bluetooth?.requestDevice!=='function'){familyNotice('未找到網頁藍牙。iPhone 請在 Safari 啟用 Beacio 並允許此網站，再重新整理；Android 或電腦請使用支援藍牙的瀏覽器。');return;}
+    familyConnecting=true;$('btnConnectFamily').disabled=true;let device;
+    try{
+        device=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_CONFIG.serviceUuid]});
+        if(device.id===bleDevice?.id || device===bleDevice)throw new Error('請選另一個裝置，孩子和家人不能使用同一個裝置。');
+        familyDevice=device;device.addEventListener('gattserverdisconnected',()=>{if(device===familyDevice){clearFamily();showToast('家人裝置已斷線，合作任務等待重新連線。');}});
+        const server=await device.gatt.connect(),service=await server.getPrimaryService(BLE_CONFIG.serviceUuid);
+        const characteristic=await service.getCharacteristic(BLE_CONFIG.characteristicUuid);
+        familyCharacteristic=characteristic;resetCoopCommands();await characteristic.startNotifications();characteristic.addEventListener('characteristicvaluechanged',onFamilyEvent);
+        $('familyStatus').textContent='家人已連線：'+(device.name||device.id);
+        await sendFamily(familyPosture()==='seated'?'MODE_SENIOR':'MODE_CHILD');await sendFamily('READY');await syncCoopDevices();
+    }catch(error){if(device && device!==bleDevice && device.gatt?.connected)device.gatt.disconnect();clearFamily();showToast(error.message||'家人裝置連線失敗。');}
+    finally{familyConnecting=false;$('btnConnectFamily').disabled=false;}
+}
+async function onFamilyEvent(event){
+    if(event.target!==familyCharacteristic)return;
+    const value=new TextDecoder().decode(event.target.value).trim().toUpperCase();
+    if(['CALIBRATED','HOLDPOSE_SAVED','HOLDPOSE_FAILED','LR_INVERTED','LR_DEFAULT','SENSOR_READY'].includes(value)){familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();await syncCoopDevices();$('familyStatus').textContent='家人裝置：'+value;return;}
+    if(value==='HOLDPOSE_WAIT'){$('familyStatus').textContent='家人請維持撐住姿勢，等待儲存。';return;}
+    if(['SENSOR_ERROR','CALIBRATING'].includes(value)){familyLearning=true;resetCoopHolds();await syncCoopDevices();return;}
+    // Physical MODE/START events are deliberately ignored while cooperating.
+    if(value==='HOLD_END'){if(coopStates){coopStates.family.started=null;if(coopStates.rule==='support')coopStates.family.done=false;renderCoopProgress();}return;}
+    await handleCoopAction('family',value,'ble');
+}
+function resetCoopHolds(){
+    if(!coopStates)return;
+    for(const state of [coopStates.child,coopStates.family])if(state.seconds>0){state.started=null;state.last=null;state.done=false;state.tick=0;state.manual=false;}
+}
+function stopCoop(){clearInterval(coopTimer);coopTimer=null;coopStates=null;resetCoopCommands();}
+function setupCoop(step){
+    if(coopStates && coopStates.version===actVersion && coopStates.stepVersion===actionStepVersion && coopStates.child.data===step){renderCoopProgress();void syncCoopDevices();return;}
+    stopCoop();if(!isCooperation() || !step.familyAction){refreshCoopUI();return;}
+    const state=(data)=>({data,action:String(data.action).toUpperCase(),count:0,target:Math.max(1,Math.floor(Number(data.targetCount)||1)),seconds:['JUMP','TILT_LEFT','TILT_RIGHT','TURN_LEFT','TURN_RIGHT'].includes(String(data.action).toUpperCase())?0:Number(data.holdSeconds)||0,started:null,last:null,done:false,tick:0,manual:false});
+    coopStates={child:state(step),family:state(step.familyAction),rule:step.cooperation||'together',version:actVersion,stepVersion:actionStepVersion};
+    coopTimer=setInterval(()=>{
+        if(!coopStates)return;
+        if(coopStates.version!==actVersion || coopStates.stepVersion!==actionStepVersion){stopCoop();return;}
+        if(busy || !waitingForAction || adventurePaused || controllerLearning || familyLearning || document.hidden){resetCoopHolds();renderCoopProgress();return;}
+        const now=performance.now();
+        for(const [role,state] of Object.entries({child:coopStates.child,family:coopStates.family})){
+            if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.tick=0;if(!state.done || coopStates.rule==='support')state.done=false;showActionFeedback((role==='child'?'孩子':'家人')+'的動作中斷，請重新開始。','interrupted');}
+            const second=state.started===null?0:Math.floor((now-state.started)/1000);
+            if(second>state.tick && second<state.seconds){state.tick=second;showActionFeedback((role==='child'?'孩子':'家人')+'已持續 '+second+' 秒。','tick');}
+            if(state.manual && state.started!==null && now-state.started>=state.seconds*1000)state.done=true;
+        }
+        renderCoopProgress();void checkCoopComplete();
+    },100);
+    renderCoopProgress();void syncCoopDevices();
+}
+function coopRoleEnabled(role){
+    if(!coopStates)return false;
+    if(coopStates.rule==='child-first' && role==='family')return coopStates.child.done;
+    if(coopStates.rule==='family-first' && role==='child')return coopStates.family.done;
+    if(coopStates.rule==='support' && role==='child')return coopStates.family.started!==null;
+    return true;
+}
+async function syncCoopDevices(){
+    const active=isCooperation();
+    async function update(role,slot,command){const device=role==='child'?bleCharacteristic:familyCharacteristic,cache=coopCommands[role];if(!device)return;if(cache.device!==device){coopCommands[role]={device};}const latest=coopCommands[role];if(latest[slot]===command)return;latest[slot]=command;if(!await (role==='child'?sendBLE(command):sendFamily(command)) && coopCommands[role]===latest)delete latest[slot];}
+    await update('family','lock',active && !storyFinished && (busy || acts.length)?'GAME_ACTIVE':'GAME_IDLE');
+    if(!active){await update('family','action','PAUSE');return;}
+    const command=role=>{if(!coopStates || busy || !waitingForAction || adventurePaused || controllerLearning || familyLearning || replayInProgress || document.hidden || (!bleCharacteristic || !familyCharacteristic))return 'PAUSE';const state=coopStates[role];return !coopRoleEnabled(role) || (state.done && !(role==='family' && coopStates.rule==='support'))?'PAUSE':(state.seconds>0?'TIMED:':'EXPECT:')+state.action;};
+    await update('child','action',command('child'));await update('family','action',command('family'));
+}
+function renderCoopProgress(){
+    refreshCoopUI();if(!coopStates)return;
+    if(waitingForAction && !busy)renderActionProgress();
+    const family=coopStates.family;$('btnManualFamily').textContent=family.seconds?(family.manual && family.started!==null?'停止模擬家人持續動作':'開始模擬家人持續動作'):'模擬一次家人目前動作';
+    const names={child:'孩子',family:'家人'};
+    $('coopRule').textContent=({together:'一起完成：雙方各自達標後繼續。','child-first':'孩子先做，完成後換家人。','family-first':'家人先做，完成後換孩子。',support:'家人持續撐住，孩子再完成自己的動作；中斷後要重新撐住。'})[coopStates.rule];
+    for(const role of ['child','family']){
+        const state=coopStates[role],elapsed=state.started===null?0:Math.min(state.seconds,(performance.now()-state.started)/1000);
+        $(role+'CoopTask').textContent=names[role]+'：'+getActionNarration(state.data);
+        $(role+'CoopProgress').textContent=state.done?'✓ 已達標':!coopRoleEnabled(role)?'等待另一位先完成':state.seconds?elapsed.toFixed(1)+' / '+state.seconds+' 秒':state.count+' / '+state.target+' 次';
+    }
+}
+async function handleCoopAction(role,action,source){
+    if(!coopStates || coopStates.completing || !waitingForAction || busy || adventurePaused || controllerLearning || familyLearning || replayInProgress || document.hidden || !coopRoleEnabled(role))return;
+    if(source==='ble' && (!bleCharacteristic || !familyCharacteristic))return;
+    const state=coopStates[role],received=String(action).toUpperCase();
+    if(received!==state.action){if(state.seconds && state.started!==null){state.started=null;state.tick=0;if(coopStates.rule==='support')state.done=false;}renderCoopProgress();return;}
+    if(state.done && !(role==='family' && coopStates.rule==='support'))return;
+    const now=performance.now();
+    if(state.seconds){
+        if(source==='manual' && state.manual && state.started!==null){state.started=null;state.done=false;state.manual=false;renderCoopProgress();return;}
+        if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.done=false;}
+        state.last=now;
+        if(state.started===null){state.started=now;state.tick=0;state.manual=source==='manual';showActionFeedback((role==='child'?'孩子':'家人')+'開始計時。','start');void syncCoopDevices();}
+        if(now-state.started>=state.seconds*1000)state.done=true;
+    }else{state.count=Math.min(state.target,state.count+1);state.done=state.count>=state.target;showActionFeedback((role==='child'?'孩子':'家人')+'成功 '+state.count+'/'+state.target+' 次。',state.done?'complete':'tick');void (role==='child'?sendBLE('ACTION_TICK'):sendFamily('ACTION_TICK'));}
+    actionCount=coopStates.child.count;renderActionProgress();renderCoopProgress();await checkCoopComplete();await syncCoopDevices();
+}
+async function checkCoopComplete(){
+    if(!coopStates || coopStates.completing || !coopStates.child.done || !coopStates.family.done || busy || !waitingForAction || adventurePaused || controllerLearning || familyLearning || document.hidden)return;
+    const family=coopStates.family;
+    if(coopStates.rule==='support' && (family.started===null || (!family.manual && performance.now()-family.last>HOLD_SIGNAL_TIMEOUT_MS)))return;
+    const states=coopStates;states.completing=true;
+    actionCount=actionTargetCount;const received=expectedAction;
+    // Claim completion synchronously before any BLE writes so duplicate events cannot advance twice.
+    void sendFamily('PAUSE');void sendFamily('ACTION_OK');await completeAction(received);
+}
+function collectStoryAudio(){
+    if(!adventure)return [];
+    const texts=[adventure.opening,adventure.ending];
+    for(const act of adventure.acts||[]){texts.push(act.story);for(const step of getActActions(act)){texts.push(step.storyBefore,getActionNarration(step),step.storyAfter);if(step.familyAction)texts.push('家人的任務。'+getActionNarration(step.familyAction));}}
+    return [...new Set(texts.filter(Boolean).flatMap(splitSpeechText))];
+}
+async function startPreview(manual=false){
+    if(!storyPreview || busy || audioBuildController)return;
+    if(manual!==true && isCooperation() && (!bleCharacteristic || !familyCharacteristic)){showToast('請先連接孩子和家人兩個不同的裝置，或按手動測試遊玩。');return;}
+    storyPreview=false;busy=true;primeSpeech();refreshCoopUI();const version=adventureVersion;
+    try{await showCurrentAct(true);}finally{if(version===adventureVersion){busy=false;refreshStoryControls();}}
+}
+async function storyAudioRequest(controller,body){
+    const timer=setTimeout(()=>controller.abort(),90000);
+    try{
+        const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/story-audio',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const data=await response.json();if(!response.ok || data.ok!==true)throw new Error(data.error||'配音製作或保存失敗');return data;
+    }finally{clearTimeout(timer);}
+}
+async function buildStoryAudio(){
+    if(!storyPreview || busy || audioBuildController || !adventure?.libraryId)return;
+    const controller=new AbortController();audioBuildController=controller;const version=adventureVersion,story=adventure,clips=collectStoryAudio();refreshCoopUI();
+    try{
+        for(let i=0;i<clips.length;i++){
+            $('audioBuildStatus').textContent='正在製作並保存配音 '+(i+1)+'/'+clips.length+'，完成後再開始遊玩。';
+            await storyAudioRequest(controller,{libraryId:story.libraryId,text:clips[i]});
+            if(version!==adventureVersion)return;
+        }
+        await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
+        if(version!==adventureVersion)return;story.audioReady=true;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
+    }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
+    finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
+}
+function familyNotice(message){$('familyStatus').textContent=message;showToast(message);}
+function initializeCooperationUI(){
+    if(cooperationUIInitialized)return;
+    cooperationUIInitialized=true;
+    $('playStyle').addEventListener('change',()=>{resetAdventure();refreshCoopUI();});
+    $('familyPosture').addEventListener('change',()=>{resetAdventure();void sendFamily(familyPosture()==='seated'?'MODE_SENIOR':'MODE_CHILD');refreshCoopUI();});
+    $('btnConnectFamily').addEventListener('click',connectFamily);
+    $('btnDisconnectFamily').addEventListener('click',()=>{if(!familyCharacteristic && !familyDevice?.gatt?.connected){familyNotice('家人裝置尚未連線，請先按「連接家人的裝置」。');return;}const device=familyDevice;clearFamily();device?.gatt?.disconnect();});
+    for(const [id,command] of [['btnCalibrateFamily','CALIBRATE'],['btnHoldFamily','LEARN_HOLD'],['btnInvertFamily','INVERT_LR']])$(id).addEventListener('click',async()=>{if(!familyCharacteristic){familyNotice('請先連接家人的裝置，再設定校正、撐住姿勢或左右方向。');return;}if(familyLearning){familyNotice('家人裝置正在設定，請等待確認或稍後重試。');return;}familyLearning=true;resetCoopHolds();await syncCoopDevices();clearTimeout(familySetupTimer);familySetupTimer=setTimeout(()=>{familyLearning=false;resetCoopCommands();void sendFamily('CANCEL_HOLD');void syncCoopDevices();showToast('家人裝置尚未確認設定，請重新嘗試。');},10000);if(!await sendFamily(command)){familyLearning=false;clearTimeout(familySetupTimer);resetCoopCommands();void syncCoopDevices();showToast('家人裝置設定傳送失敗。');}});
+    $('btnManualFamily').addEventListener('click',()=>{primeFeedbackAudio();if(!coopStates || !waitingForAction){familyNotice('請先選合作模式並生成故事，等家人任務出現後再模擬。');return;}if(busy || adventurePaused || controllerLearning || familyLearning || document.hidden || !coopRoleEnabled('family')){familyNotice('目前還沒輪到家人動作，或活動正在暫停／設定；請依畫面提示等待。');return;}void handleCoopAction('family',coopStates.family.action,'manual');});
+    $('btnStartPreview').addEventListener('click',()=>startPreview());$('btnTestCoop').addEventListener('click',()=>startPreview(true));$('btnBuildAudio').addEventListener('click',buildStoryAudio);$('btnCancelAudio').addEventListener('click',()=>audioBuildController?.abort());refreshCoopUI();
+}
+
+</script>
+
+</body>
+
+</html>
 
