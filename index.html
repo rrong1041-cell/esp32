@@ -1027,7 +1027,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.10 — 操作語音、加大提示音與閒置提醒
+   FRONTEND 16.11 — 動作失敗語音與修正提醒
 
    新架構：
 
@@ -1223,11 +1223,27 @@ async function playFeedbackTone(kind){
 // Unlock early during a real touch/click, before any AI or BLE awaits.
 document.addEventListener('pointerdown',primeFeedbackAudio,{capture:true});
 document.addEventListener('keydown',event=>{if(event.key==='Enter' || event.key===' ')primeFeedbackAudio();},{capture:true});
-function showActionFeedback(text,kind){
+const FAILURE_VOICE_INTERVAL_MS=8000;
+let failureVoiceAt={child:-Infinity,family:-Infinity};
+const DETECTED_ACTIONS=new Set(['SWIPE_LEFT','SWIPE_RIGHT','JUMP','SHAKE','RUN','ARM_UP','ARM_DOWN','TILT_LEFT','TILT_RIGHT','HOLD_UP','TURN_LEFT','TURN_RIGHT']);
+function reportActionFailure(reason,role='child'){
+    if(!waitingForAction || busy || adventurePaused || controllerLearning || familyLearning || replayInProgress || document.hidden)return;
+    const state=isCooperation()?coopStates?.[role]:null;
+    if(state && (!coopRoleEnabled(role) || (state.done && !(role==='family' && coopStates.rule==='support'))))return;
+    const task=state?getActionNarration(state.data):currentActionNarration;
+    const count=state?state.count:actionCount,target=state?state.target:actionTargetCount,seconds=state?state.seconds:actionHoldSeconds;
+    const progress=!seconds && count>0 && count<target?' 已完成 '+count+' 次，還差 '+(target-count)+' 次。':'';
+    showActionFeedback((state?(role==='family'?'家人，':'孩子，'):'')+reason+progress+' 先回到中間停穩，再試一次。'+task,'interrupted',role);
+}
+function showActionFeedback(text,kind,role='child'){
     $('actionFeedback').textContent=text;
     $('actionFeedback').className='text-base font-bold mt-2 min-h-6 '+(kind==='interrupted'?'text-amber-300':'text-emerald-300');
+    if(kind==='interrupted'){
+        const now=performance.now();if(now-failureVoiceAt[role]<FAILURE_VOICE_INTERVAL_MS)return;
+        failureVoiceAt[role]=now;
+    }
     playFeedbackTone(kind);
-    if(kind!=='complete')void announcePrompt(text,{key:kind==='tick'?'progress':kind});
+    if(kind!=='complete')void announcePrompt(text,{key:kind==='tick'?'progress':kind==='interrupted'?role+'-interrupted':kind,roles:[role]});
 }
 // 短回饋即時使用裝置語音，與故事共用播放鎖，不中斷故事或累積過期秒數。
 let promptQueue=[],promptSpeechBusy=false,activePrompt=null;
@@ -1259,11 +1275,12 @@ const ACTION_IDLE_FIRST_MS=20000,ACTION_IDLE_REPEAT_MS=30000;
 let actionLastActivityAt=0,actionNextReminderAt=Infinity;
 function armActionReminder(){actionLastActivityAt=performance.now();actionNextReminderAt=actionLastActivityAt+ACTION_IDLE_FIRST_MS;}
 function markActionActivity(role='child'){
-    if(activePrompt?.options.key==='idle' && (!activePrompt.options.roles || activePrompt.options.roles.includes(role)))stopSpeech();
+    if((activePrompt?.options.key==='idle' || activePrompt?.options.key===role+'-interrupted') && (!activePrompt.options.roles || activePrompt.options.roles.includes(role)))stopSpeech();
     if(isCooperation() && coopStates?.[role]){coopStates[role].lastActivityAt=performance.now();coopStates[role].nextReminderAt=performance.now()+ACTION_IDLE_FIRST_MS;}
     else armActionReminder();
-    for(const item of promptQueue.filter(x=>x.options.key==='idle'))item.resolve();
-    promptQueue=promptQueue.filter(x=>x.options.key!=='idle');
+    const stale=x=>(x.options.key==='idle' && (!x.options.roles || x.options.roles.includes(role))) || x.options.key===role+'-interrupted';
+    for(const item of promptQueue.filter(stale))item.resolve();
+    promptQueue=promptQueue.filter(x=>!stale(x));
 }
 function tickSpokenGuidance(){
     void drainPrompts();
@@ -1288,7 +1305,7 @@ setInterval(tickSpokenGuidance,1000);
 function stopHold(reason = '') {
     resetCoopHolds();
     const wasHolding=holdStartedAt!==null;
-    if(reason && wasHolding && waitingForAction && !busy && !adventurePaused)showActionFeedback(reason,'interrupted');
+    if(reason && wasHolding && waitingForAction && !busy && !adventurePaused)reportActionFailure(reason);
     clearInterval(holdTimer);
     holdTimer = null;
     holdStartedAt = null;
@@ -1299,6 +1316,7 @@ function stopHold(reason = '') {
 }
 
 function resetActionProgress(data = {}) {
+    failureVoiceAt={child:-Infinity,family:-Infinity};
     data = normalizeSwipeTask(data);
     stopHold();
     $('actionFeedback').textContent='';
@@ -2706,6 +2724,7 @@ async function onBleEvent(event) {
             const angle=Number(degrees);
             const hints={WAIT:'先把戴裝置的手放胸前，停穩一下。',READY:'已準備好，手臂跟著身體慢慢轉。',MOVE:'正在轉動',STOP:'角度已足夠，請停穩一下。',WRONG:'收到相反方向，回到起點停穩再試；若反覆出現，按「反轉左右方向」。',BLOCK:'手腕晃動較多，手放胸前，跟著身體平穩轉動。',FAST:'轉得太快，請停穩後慢慢轉。',RETRY:'這次轉動時間較長，停穩後再試。'};
             $('turnDiagnostics').textContent=(hints[state] || '正在讀取轉身訊號。')+(['MOVE','STOP'].includes(state)&&Number.isFinite(angle)?' 已累積約 '+Math.max(0,angle)+' 度。':'');
+            if(['WRONG','BLOCK','FAST','RETRY'].includes(state))reportActionFailure(({WRONG:'轉動方向相反了。',BLOCK:'裝置晃動較多，這次還沒有判定成功。',FAST:'這次轉得太快，請慢慢做。',RETRY:'這次還沒達到轉動條件。'})[state]);
         }
         return;
     }
@@ -2741,7 +2760,7 @@ async function onBleEvent(event) {
         showToast('左右方向已切換。');void announcePrompt('左右方向已切換，回到中間，再依提示做動作。',{key:'setup'});await syncControllerAction();return;
     }
     if (value === 'HOLD_END') {
-        if(isCooperation() && coopStates && !coopStates.child.done){coopStates.child.started=null;coopStates.child.last=null;coopStates.child.tick=0;renderCoopProgress();}
+        if(isCooperation() && coopStates && !coopStates.child.done){const wasStarted=coopStates.child.seconds>0 && coopStates.child.started!==null;coopStates.child.started=null;coopStates.child.last=null;coopStates.child.tick=0;if(wasStarted)reportActionFailure('動作中斷，持續時間還未達標。');renderCoopProgress();}
         if (holdSource === 'ble') { stopHold('動作中斷，請重新開始計時。'); renderActionProgress(); }
         return;
     }
@@ -3811,11 +3830,13 @@ async function handleAction(action, source = 'manual') {
     // Match raw device values: normalizeAction's senior fallback must not turn
     // an unrelated or unknown hardware signal into a successful ARM_UP.
     const received = String(action || '').trim().toUpperCase();
+    if(!DETECTED_ACTIONS.has(received))return;
     if (received !== expectedAction) {
         if (source === 'ble' && holdSource === 'ble') {
             stopHold('偵測到其他動作，請重新開始計時。');
             renderActionProgress();
         }
+        reportActionFailure('這次動作和目前提示不同。');
         return;
     }
     markActionActivity();
@@ -5028,7 +5049,7 @@ async function onFamilyEvent(event){
     if(value==='HOLDPOSE_WAIT'){$('familyStatus').textContent='家人請維持撐住姿勢，等待儲存。';return;}
     if(['SENSOR_ERROR','CALIBRATING'].includes(value)){familyLearning=true;resetCoopHolds();await syncCoopDevices();return;}
     // Physical MODE/START events are deliberately ignored while cooperating.
-    if(value==='HOLD_END'){if(coopStates){coopStates.family.started=null;if(coopStates.rule==='support')coopStates.family.done=false;renderCoopProgress();}return;}
+    if(value==='HOLD_END'){if(coopStates){const wasStarted=coopStates.family.seconds>0 && coopStates.family.started!==null;coopStates.family.started=null;if(coopStates.rule==='support')coopStates.family.done=false;if(wasStarted)reportActionFailure('動作中斷，持續時間還未達標。','family');renderCoopProgress();}return;}
     await handleCoopAction('family',value,'ble');
 }
 function resetCoopHolds(){
@@ -5048,7 +5069,7 @@ function setupCoop(step){
         if(busy || !waitingForAction || adventurePaused || controllerLearning || familyLearning || document.hidden){resetCoopHolds();renderCoopProgress();return;}
         const now=performance.now();
         for(const [role,state] of Object.entries({child:coopStates.child,family:coopStates.family})){
-            if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.tick=0;if(!state.done || coopStates.rule==='support')state.done=false;showActionFeedback((role==='child'?'孩子':'家人')+'的動作中斷，請重新開始。','interrupted');}
+            if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.tick=0;if(!state.done || coopStates.rule==='support')state.done=false;reportActionFailure('動作中斷，持續時間還未達標。',role);}
             const second=state.started===null?0:Math.floor((now-state.started)/1000);
             if(second>state.tick && second<state.seconds){state.tick=second;showActionFeedback((role==='child'?'孩子':'家人')+'已持續 '+second+' 秒。','tick');}
             if(state.manual && state.started!==null && now-state.started>=state.seconds*1000)state.done=true;
@@ -5088,7 +5109,8 @@ async function handleCoopAction(role,action,source){
     if(!coopStates || coopStates.completing || !waitingForAction || busy || adventurePaused || controllerLearning || familyLearning || replayInProgress || document.hidden || !coopRoleEnabled(role))return;
     if(source==='ble' && (!bleCharacteristic || !familyCharacteristic))return;
     const state=coopStates[role],received=String(action).toUpperCase();
-    if(received!==state.action){if(state.seconds && state.started!==null){state.started=null;state.tick=0;if(coopStates.rule==='support')state.done=false;}renderCoopProgress();return;}
+    if(!DETECTED_ACTIONS.has(received))return;
+    if(received!==state.action){if(state.seconds && state.started!==null){state.started=null;state.tick=0;if(coopStates.rule==='support')state.done=false;}reportActionFailure('這次動作和目前提示不同。',role);renderCoopProgress();return;}
     if(state.done && !(role==='family' && coopStates.rule==='support'))return;
     markActionActivity(role);
     const now=performance.now();
