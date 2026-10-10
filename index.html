@@ -1031,7 +1031,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.18 — 開放創作與重複檢查
+   FRONTEND 16.19 — 結構情節與互動角色
 
    新架構：
 
@@ -4072,10 +4072,15 @@ function recentStoryRecord(item) {
         title: recentStoryText(item.title, 80), opening: recentStoryText(item.opening, 220),
         ending: recentStoryText(item.ending, 180), topic,
         narrative: recentStoryText(item.narrative, 12000),
-        storyDesign: Object.fromEntries(['goal', 'obstacle', 'turn', 'payoff'].map(key =>
-            [key, recentStoryText(item.storyDesign?.[key], 180)])),
-        variation: Object.fromEntries(['opening', 'mission', 'twist', 'plotFamily'].map(key =>
-            [key, recentStoryText(item.variation?.[key], 180)]))
+        storyDesign: Object.fromEntries([
+            ['goal', 180], ['obstacle', 180], ['turn', 180], ['payoff', 180],
+            ['storyKind', 80], ['conflictKind', 80], ['resolutionKind', 80]
+        ].map(([key, limit]) => [key, recentStoryText(item.storyDesign?.[key], limit)])),
+        variation: Object.fromEntries([
+            ['opening', 180], ['mission', 180], ['twist', 180], ['plotFamily', 180],
+            ['storyKind', 80], ['conflictKind', 80], ['resolutionKind', 80],
+            ['interactionPattern', 160]
+        ].map(([key, limit]) => [key, recentStoryText(item.variation?.[key], limit)]))
     };
     return record.title || record.opening || record.narrative ? record : null;
 }
