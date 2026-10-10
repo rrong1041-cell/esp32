@@ -848,7 +848,7 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 <label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Worker 中文配音（額度用完時暫停，失敗時使用備用聲音）</label>
 <p id="workerVoicePolicyStatus" class="text-xs text-slate-300 mb-3" role="status">自動優先使用 Worker 配音。</p>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
-<p class="text-xs text-slate-400 mb-3">提示音已加大：成功一聲，計時每秒一聲，完成兩聲。成功、中斷與校正提示會即時朗讀；20 秒沒有相符動作會提醒，之後每隔 30 秒重講。短提示使用裝置聲音，不消耗 AI 額度。音量仍依下方設定。</p>
+<p class="text-xs text-slate-400 mb-3">提示音已加大：成功一聲，計時每秒一聲，完成兩聲。成功、中斷與校正提示會即時朗讀；20 秒沒有相符動作會提醒，之後每隔 30 秒重講。計時每秒使用短提示音，不逐秒朗讀；語音提示優先使用與故事相同的 Worker 配音，會使用配音額度，失敗時切換裝置聲音。</p>
 <p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。額度用完時會自動改用裝置朗讀，重置後再恢復 Worker；不同裝置的聲線可能不同。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
 <div
 id="voiceStatus"
@@ -1027,7 +1027,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.12 — 裝置旋律與提示音
+   FRONTEND 16.13 — 即時計時音與一致配音
 
    新架構：
 
@@ -1244,9 +1244,10 @@ function showActionFeedback(text,kind,role='child'){
     }
     playFeedbackTone(kind);
     if(kind==='interrupted')void (role==='family'?sendFamily('ACTION_FAIL'):sendBLE('ACTION_FAIL'));
-    if(kind!=='complete')void announcePrompt(text,{key:kind==='tick'?'progress':kind==='interrupted'?role+'-interrupted':kind,roles:[role]});
+    if(kind==='timer' || kind==='timerStart')void (role==='family'?sendFamily('ACTION_TICK'):sendBLE('ACTION_TICK'));
+    if(!['complete','timer','timerStart'].includes(kind))void announcePrompt(text,{key:kind==='tick'?'progress':kind==='interrupted'?role+'-interrupted':kind,roles:[role]});
 }
-// 短回饋即時使用裝置語音，與故事共用播放鎖，不中斷故事或累積過期秒數。
+// 語音提示沿用故事配音；每秒計時只用短音，避免排隊朗讀過期秒數。
 let promptQueue=[],promptSpeechBusy=false,activePrompt=null;
 function cancelPrompts(){for(const item of promptQueue)item.resolve();promptQueue=[];}
 function announcePrompt(text,options={}){
@@ -1268,7 +1269,7 @@ async function drainPrompts(){
             if(document.hidden || replayInProgress || (adventurePaused && !item.options.allowPaused) || (busy && !item.options.essential))break;
             promptQueue.shift();
             activePrompt=item;
-            try{await speak(item.text,{deviceOnly:true,recover:false,allowPaused:item.options.allowPaused});}catch(_){/* 失敗不阻擋動作與下一個提示。 */}finally{if(activePrompt===item)activePrompt=null;item.resolve();}
+            try{await speak(item.text,{recover:false,allowPaused:item.options.allowPaused});}catch(_){/* 失敗不阻擋動作與下一個提示。 */}finally{if(activePrompt===item)activePrompt=null;item.resolve();}
         }
     }finally{promptSpeechBusy=false;}
 }
@@ -1428,7 +1429,7 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     await waitForAdventureResume(version);
     if(version!==actVersion || stepVersion!==actionStepVersion)return;
     showAction(step);
-    if(speakIt)await speak($('actionSubText').textContent.replace(/^💡\s*/,''),{deviceOnly:true,recover:false});
+    if(speakIt)await speak($('actionSubText').textContent.replace(/^💡\s*/,''),{recover:false});
     await waitForAdventureResume(version);
     if(version!==actVersion || stepVersion!==actionStepVersion)return;
     busy = false;
@@ -1447,7 +1448,7 @@ function startHold(source) {
     holdLastFeedbackSecond = 0;
     holdSource = source;
     manualHolding = source === 'manual';
-    showActionFeedback('✓ 已偵測到動作，開始計時。','start');
+    showActionFeedback('✓ 已偵測到動作，開始計時。','timerStart');
     const version = actVersion;
     const stepVersion = actionStepVersion;
     holdTimer = setInterval(() => {
@@ -1465,7 +1466,7 @@ function startHold(source) {
         const elapsedSeconds=Math.floor((performance.now()-holdStartedAt)/1000);
         if(elapsedSeconds>holdLastFeedbackSecond && elapsedSeconds<actionHoldSeconds){
             holdLastFeedbackSecond=elapsedSeconds;
-            showActionFeedback(`✓ 已持續 ${elapsedSeconds} 秒，繼續保持。`,'tick');
+            showActionFeedback(`✓ 已持續 ${elapsedSeconds} 秒，繼續保持。`,'timer');
         }
         // BLE 完成由相符通知確認，避免最後一個封包後仍靠計時器自行成功。
         if (holdSource === 'manual' && performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
@@ -5073,7 +5074,7 @@ function setupCoop(step){
         for(const [role,state] of Object.entries({child:coopStates.child,family:coopStates.family})){
             if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.tick=0;if(!state.done || coopStates.rule==='support')state.done=false;reportActionFailure('動作中斷，持續時間還未達標。',role);}
             const second=state.started===null?0:Math.floor((now-state.started)/1000);
-            if(second>state.tick && second<state.seconds){state.tick=second;showActionFeedback((role==='child'?'孩子':'家人')+'已持續 '+second+' 秒。','tick');}
+            if(second>state.tick && second<state.seconds){state.tick=second;showActionFeedback((role==='child'?'孩子':'家人')+'已持續 '+second+' 秒。','timer',role);}
             if(state.manual && state.started!==null && now-state.started>=state.seconds*1000)state.done=true;
         }
         renderCoopProgress();void checkCoopComplete();
@@ -5120,7 +5121,7 @@ async function handleCoopAction(role,action,source){
         if(source==='manual' && state.manual && state.started!==null){state.started=null;state.done=false;state.manual=false;renderCoopProgress();return;}
         if(state.started!==null && !state.manual && (!state.done || coopStates.rule==='support') && now-state.last>HOLD_SIGNAL_TIMEOUT_MS){state.started=null;state.done=false;}
         state.last=now;
-        if(state.started===null){state.started=now;state.tick=0;state.manual=source==='manual';showActionFeedback((role==='child'?'孩子':'家人')+'開始計時。','start');void syncCoopDevices();}
+        if(state.started===null){state.started=now;state.tick=0;state.manual=source==='manual';showActionFeedback((role==='child'?'孩子':'家人')+'開始計時。','timerStart',role);void syncCoopDevices();}
         if(now-state.started>=state.seconds*1000)state.done=true;
     }else{state.count=Math.min(state.target,state.count+1);state.done=state.count>=state.target;showActionFeedback((role==='child'?'孩子':'家人')+'成功 '+state.count+'/'+state.target+' 次。',state.done?'complete':'tick');void (role==='child'?sendBLE('ACTION_TICK'):sendFamily('ACTION_TICK'));}
     if(state.done && !coopStates[role==='child'?'family':'child'].done)void announcePrompt((role==='child'?'孩子':'家人')+'的動作完成，請放鬆等待。',{key:role+'-complete'});
