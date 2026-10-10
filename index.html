@@ -1031,7 +1031,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.17 — 兒童連貫說故事
+   FRONTEND 16.18 — 開放創作與重複檢查
 
    新架構：
 
@@ -4058,29 +4058,85 @@ async function completeAction(received) {
    ⭐ 開始完整故事
 ===================================================== */
 
-// 僅儲存少量已生成摘要，讓下次故事避開同樣開場；儲存不可用時仍可生成。
+// 保留真正的敘事，讓下次能比較內容；瀏覽器不允許儲存時仍記住本次工作階段。
 const RECENT_STORIES_KEY = 'story-adventure-recent-v1';
+let recentStoryMemory = [], recentStoryPending = [], recentStoryPersisted = [], recentStorySession = [];
+function recentStoryText(value, limit) {
+    return typeof value === 'string' ? value.trim().slice(0, limit) : '';
+}
+function recentStoryRecord(item) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+    const topic = recentStoryText(item.topic, 200);
+    const record = {
+        mode: item.mode === 'senior' || (!item.mode && ['坐姿健康操', '午後健康活動'].includes(topic)) ? 'senior' : 'child',
+        title: recentStoryText(item.title, 80), opening: recentStoryText(item.opening, 220),
+        ending: recentStoryText(item.ending, 180), topic,
+        narrative: recentStoryText(item.narrative, 12000),
+        storyDesign: Object.fromEntries(['goal', 'obstacle', 'turn', 'payoff'].map(key =>
+            [key, recentStoryText(item.storyDesign?.[key], 180)])),
+        variation: Object.fromEntries(['opening', 'mission', 'twist', 'plotFamily'].map(key =>
+            [key, recentStoryText(item.variation?.[key], 180)]))
+    };
+    return record.title || record.opening || record.narrative ? record : null;
+}
+function mergeRecentStories(items) {
+    const merged = [];
+    for (const item of items) {
+        const record = recentStoryRecord(item);
+        if (!record) continue;
+        const duplicate = merged.findIndex(previous => previous.mode === record.mode &&
+            (previous.narrative && record.narrative
+                ? previous.narrative === record.narrative
+                : previous.title === record.title && previous.opening === record.opening));
+        if (duplicate >= 0) {
+            // A legacy summary must not discard the richer narrative of the same saved story.
+            if (!record.narrative && merged[duplicate].narrative) continue;
+            merged.splice(duplicate, 1);
+        }
+        merged.push(record);
+    }
+    return merged.slice(-16);
+}
 function getRecentStories() {
     try {
         const items = JSON.parse(localStorage.getItem(RECENT_STORIES_KEY) || '[]');
-        if (!Array.isArray(items)) return [];
-        return items.slice(-5).filter(item => item && typeof item === 'object').map(item => ({
-            title: String(item.title || '').slice(0, 80),
-            opening: String(item.opening || '').slice(0, 220),
-            ending:String(item.ending || '').slice(0,180),topic:String(item.topic || '').slice(0,200),
-            variation:item.variation && typeof item.variation==='object' ? Object.fromEntries(['opening','mission','twist','plotFamily'].map(key=>[key,String(item.variation[key] || '').slice(0,100)])) : {}
-        }));
-    } catch (_) { return []; }
+        if (Array.isArray(items)) recentStoryPersisted = mergeRecentStories(items);
+    } catch (_) { /* 使用記憶體內已知的故事，避免停用儲存時每次都從零開始。 */ }
+    recentStoryMemory = mergeRecentStories([...recentStoryPersisted, ...recentStoryPending, ...recentStorySession]);
+    return recentStoryMemory.map(item => ({...item, storyDesign: {...item.storyDesign}, variation: {...item.variation}}));
 }
-function rememberStory(story, topic = '') {
+function rememberStory(story, topic = '', persist = true) {
+    if (!story || typeof story !== 'object') return;
+    const storyActs = Array.isArray(story.acts) ? story.acts : [];
+    const parts = [story.opening], movementPrompts = new Set();
+    for (const act of storyActs) {
+        parts.push(act?.story);
+        for (const step of Array.isArray(act?.actions) ? act.actions : []) {
+            parts.push(step?.storyBefore, step?.storyAfter);
+            for (const text of [step?.actionText, step?.actionPurpose]) {
+                if (typeof text === 'string' && text.trim()) movementPrompts.add(narrativeKey(text));
+            }
+        }
+    }
+    parts.push(story.ending);
+    // Movement helpers and repeated UI prompts are not story content, even when copied into a narrative field.
+    const narrative = parts.filter(text => typeof text === 'string' && text.trim() &&
+        !movementPrompts.has(narrativeKey(text))).map(text => text.trim()).join('\n').slice(0, 12000);
+    const record = recentStoryRecord({mode: story.mode || currentMode,
+        title: story.title, opening: story.opening || storyActs[0]?.story,
+        ending: story.ending || storyActs[storyActs.length - 1]?.story,
+        topic: story.requestedTopic || topic, variation: story.variation, storyDesign: story.storyDesign, narrative});
+    if (!record) return;
+    recentStoryMemory = mergeRecentStories([...getRecentStories(), record]);
+    recentStorySession = mergeRecentStories([...recentStorySession, record]);
+    // Unchecked stories participate in this session's comparisons, but never enter a later save.
+    if (!persist) return;
+    const persistentItems = mergeRecentStories([...recentStoryPersisted, ...recentStoryPending, record]);
     try {
-        const items = getRecentStories();
-        items.push({title: String(story.title || '').slice(0, 80),
-            opening: String(story.opening || story.acts?.[0]?.story || '').slice(0, 220),
-            ending:String(story.ending || story.acts?.[story.acts.length-1]?.story || '').slice(0,180),
-            topic:String(story.requestedTopic || topic).slice(0,200),variation:story.variation || {}});
-        localStorage.setItem(RECENT_STORIES_KEY, JSON.stringify(items.slice(-5)));
-    } catch (_) { /* 禁用瀏覽器儲存時不阻擋故事。 */ }
+        localStorage.setItem(RECENT_STORIES_KEY, JSON.stringify(persistentItems));
+        recentStoryPersisted = persistentItems;
+        recentStoryPending = [];
+    } catch (_) { recentStoryPending = mergeRecentStories([...recentStoryPending, record]); }
 }
 
 const LOCAL_LIBRARY_KEY='story-library-v1';
@@ -4274,7 +4330,8 @@ async function generateStory(preferSaved=false) {
          * 不硬砍掉，讓 Worker 的結果完整播放。
          */
 
-        rememberStory(adventure,topic);
+        $('generationStatus').textContent=preferSaved?'正在重播已保存內容。':'本次為新生成內容：'+String(adventure.title || '新故事');
+        rememberStory(adventure,topic,preferSaved || shouldSave);
         if(!localRow && (preferSaved || shouldSave))saveFullStory(adventure,selection,data.libraryId);
         if(!preferSaved && !shouldSave)showToast('本次內容不保存，可以直接遊玩。');
         if(data.notice)showToast(data.notice);
