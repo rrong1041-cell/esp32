@@ -1031,7 +1031,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.19 — 結構情節與互動角色
+   FRONTEND 16.20 — 連續說故事
 
    新架構：
 
@@ -1471,6 +1471,56 @@ async function ensureSeniorHand(version){
     return done;
 }
 document.addEventListener('DOMContentLoaded',()=>{$('btnHandReady').addEventListener('click',()=>void confirmHandTransfer());});
+function storyFirstRun(story,startIndex,prefix='') {
+    const parts=[prefix],entries=[];
+    let endIndex=startIndex;
+    for(let index=startIndex;index<(story?.acts||[]).length;index++){
+        const act=story.acts[index];endIndex=index;entries.push({index,act});
+        if(typeof act.story==='string')parts.push(act.story.trim());
+        const step=Array.isArray(act.actions)?act.actions[0]:null;
+        if(step){parts.push(step.invitation||'');break;}
+    }
+    return {text:parts.filter(Boolean).join(''),endIndex,entries};
+}
+function storyFirstAudioRuns(story) {
+    const texts=[];let index=0,prefix='';
+    while(index<(story?.acts||[]).length){
+        const run=storyFirstRun(story,index,prefix);
+        texts.push(run.text);
+        prefix=story.acts[run.endIndex]?.actions?.[0]?.storyAfter||'';
+        index=run.endIndex+1;
+    }
+    if(prefix)texts.push(prefix);
+    return texts;
+}
+
+function isStoryFirstPlayback(){return currentMode==='child' && adventure?.narrativeLayoutVersion===3;}
+let currentStoryNarration='';
+async function playStoryFirstRun(speakIt=true,continuation='') {
+    if(!acts.length)return;
+    if(currentActIndex>=acts.length){showEnding();return;}
+    clearTimeout(actTimer);
+    const version=++actVersion;
+    busy=true;waitingForAction=false;expectedAction='';stopHold();
+    $('actionPrompt').classList.add('hidden');
+    const run=storyFirstRun({acts},currentActIndex,continuation);
+    for(const {index,act} of run.entries)appendStory(`📖 ${act.title||'故事繼續'}`,act.story);
+    currentActIndex=run.endIndex;
+    currentRound=currentActIndex+1;maxRound=acts.length;
+    const act=acts[currentActIndex];
+    currentStory=String(act.story||'').trim();
+    currentStoryNarration=run.text;
+    actionSteps=getActActions(act);currentActionStepIndex=0;
+    currentStepStory='';actionStepVersion++;
+    currentAction=actionSteps[0]?.action||'';
+    resetActionProgress(actionSteps[0]||{});
+    if(speakIt && run.text)await speak(run.text);
+    await waitForAdventureResume(version);
+    if(version!==actVersion)return;
+    if(actionSteps.length){await prepareCurrentAction(false,version);return;}
+    showEnding();
+}
+
 async function prepareCurrentAction(speakIt = true, version = actVersion) {
     const step = actionSteps[currentActionStepIndex];
     if (!step || version !== actVersion) return;
@@ -2421,14 +2471,15 @@ function getSentenceEmotion(text){
 }
 function splitSpeechText(text){
     const clean=removeEmoji(String(text)).replace(/\s+/g,' ').trim();
+    const clipLimit=currentMode==='child' && adventure?.narrativeLayoutVersion===3?240:65;
     const sentences=clean.match(/[^。！？!?；;]+[。！？!?；;]*|[。！？!?；;]+/g)||[];
     const result=[];
     for(const sentence of sentences){
         let part=sentence;
-        while(Array.from(part).length>65){
-            const chars=Array.from(part),head=chars.slice(0,65).join('');
+        while(Array.from(part).length>clipLimit){
+            const chars=Array.from(part),head=chars.slice(0,clipLimit).join('');
             const comma=Math.max(head.lastIndexOf('，'),head.lastIndexOf('、'),head.lastIndexOf(','));
-            const cut=comma>=20?Array.from(head.slice(0,comma+1)).length:65;
+            const cut=comma>=20?Array.from(head.slice(0,comma+1)).length:clipLimit;
             result.push(chars.slice(0,cut).join(''));part=chars.slice(cut).join('');
         }
         if(part.trim())result.push(part.trim());
@@ -2437,7 +2488,7 @@ function splitSpeechText(text){
     // Keep several short sentences together so the narrator can carry the dialogue and intonation.
     const paragraphs=[];
     for(const part of result){
-        if(paragraphs.length && Array.from(paragraphs.at(-1)+part).length<=65)paragraphs[paragraphs.length-1]+=part;
+        if(paragraphs.length && Array.from(paragraphs.at(-1)+part).length<=clipLimit)paragraphs[paragraphs.length-1]+=part;
         else paragraphs.push(part);
     }
     return paragraphs;
@@ -2578,7 +2629,7 @@ async function playFixedVoice(text,token){
                     let retryable=false;
                     try{
                         const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-cloudflare',{
-                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true && (currentMode!=='child' || adventure?.audioLayoutVersion===2)})});
+                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true && (currentMode!=='child' || adventure?.audioLayoutVersion===(adventure?.narrativeLayoutVersion===3?3:2))})});
                         if(!response.ok){
                             const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
                             if(response.status===429)pauseWorkerVoiceForQuota();
@@ -2748,7 +2799,7 @@ async function speak(text,options={}){
                 continue;
             }
             index++;
-            if(index<chunks.length)await speechDelay(/[。！？!?]$/.test(chunks[index-1])?300:160);
+            if(index<chunks.length)await speechDelay(isStoryFirstPlayback()?100:/[。！？!?]$/.test(chunks[index-1])?300:160);
         }
     }finally{if(token===speechToken)speechPlaying=false;}
 }
@@ -3089,6 +3140,7 @@ function resetAdventure() {
     $('welcomeMessage').classList.remove('hidden');
     currentActionStepIndex = 0;
     currentStepStory = '';
+    currentStoryNarration = '';
     replayInProgress = false;
     replayCancelRequested = false;
     busy = false;
@@ -3541,8 +3593,9 @@ function appendStory(
 ===================================================== */
 
 async function showCurrentAct(
-    speakIt = true
+    speakIt = true, continuation = ''
 ) {
+    if(isStoryFirstPlayback())return playStoryFirstRun(speakIt,continuation);
 
     if (
         !acts.length
@@ -3924,7 +3977,7 @@ function showEnding() {
 
             :
 
-        '你完成了這場完整的 11 幕冒險。';
+        '你和夥伴一起完成了這個故事。';
 
 
     if (
@@ -4032,6 +4085,13 @@ async function completeAction(received) {
         actionStep:currentActionStepIndex + 1,targetCount:actionTargetCount,
         holdSeconds:actionHoldSeconds,title:acts[currentActIndex]?.title || ''});
     const resultStory = currentMode==='senior'?'完成了。慢慢把手放回原位，放鬆一下。':String(completedStep.storyAfter || '').trim();
+    if(isStoryFirstPlayback()){
+        if(resultStory)appendStory('📖 故事繼續',resultStory);
+        renderActionSequence(true);
+        currentActIndex++;
+        await showCurrentAct(true,resultStory);
+        return;
+    }
     if (resultStory) {
         appendStory(currentMode==='senior' ? '✓ 動作完成・放鬆一下' : '✨ 你的行動改變了故事', resultStory);
         await speak(resultStory);
@@ -5178,10 +5238,10 @@ document.addEventListener(
                     replayCancelRequested = false;
                     lockAction();
                     try {
-                        await speak([currentStory, currentStepStory].filter(Boolean).join('。'));
+                        await speak(isStoryFirstPlayback()?currentStoryNarration:[currentStory, currentStepStory].filter(Boolean).join('。'));
                         if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
                         if (wasWaiting && step) {
-                            if (!replayCancelRequested) await speak(getActionNarration(step));
+                            if (!replayCancelRequested && !isStoryFirstPlayback()) await speak(getActionNarration(step));
                             if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
                             showAction(step);
                         }
@@ -5334,8 +5394,8 @@ async function checkCoopComplete(){
 }
 function collectStoryAudio(){
     if(!adventure)return [];
-    const texts=[adventure.opening,adventure.ending];
-    for(const act of adventure.acts||[]){texts.push(act.story);for(const step of getActActions(act)){texts.push(step.storyBefore,getActionNarration(step),step.storyAfter);if(step.familyAction)texts.push('家人的任務。'+getActionNarration(step.familyAction));}}
+    const texts=adventure.narrativeLayoutVersion===3?storyFirstAudioRuns(adventure):[adventure.opening,adventure.ending];
+    for(const act of adventure.acts||[]){if(adventure.narrativeLayoutVersion!==3)texts.push(act.story);for(const step of getActActions(act)){if(adventure.narrativeLayoutVersion!==3)texts.push(step.storyBefore,step.storyAfter);texts.push(getActionNarration(step));if(step.familyAction)texts.push('家人的任務。'+getActionNarration(step.familyAction));}}
     return [...new Set(texts.filter(Boolean).flatMap(splitSpeechText))];
 }
 async function startPreview(manual=false){
@@ -5361,7 +5421,7 @@ async function buildStoryAudio(){
             if(version!==adventureVersion)return;
         }
         await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
-        if(version!==adventureVersion)return;story.audioReady=true;story.audioLayoutVersion=currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        if(version!==adventureVersion)return;story.audioReady=true;story.audioLayoutVersion=story.narrativeLayoutVersion===3?3:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
         $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
     }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
     finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
