@@ -633,6 +633,10 @@ class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
 <button id="btnRetrySpeech" type="button" class="bg-cyan-600 text-white font-bold rounded-xl px-4 py-3">重試朗讀</button>
 <button id="btnContinueText" type="button" class="bg-slate-700 text-white font-bold rounded-xl px-4 py-3">這段看文字繼續</button>
 </div></div>
+<div id="handReadyPanel" class="hidden mt-4 p-4 rounded-xl border border-cyan-500 bg-slate-900">
+<p id="handReadyText" class="text-xl text-cyan-100 font-bold" role="status" aria-live="polite"></p>
+<button id="btnHandReady" type="button" class="mt-3 px-5 py-3 rounded-xl bg-cyan-600 text-white font-bold">已換好，準備好了</button>
+</div>
 <div
 id="actionPrompt"
 class="hidden mt-4 pt-3 border-t border-slate-800 bg-pink-950/40 p-4 rounded-xl border border-pink-500/30 action-big">
@@ -761,7 +765,7 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 <p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
 <div id="seniorStoryControls" class="hidden space-y-2">
 <button id="btnPauseStory" disabled class="w-full bg-emerald-950 border border-emerald-400/50 text-emerald-100 text-lg font-bold px-4 py-3 rounded-xl">⏸ 休息一下</button>
-<p id="pauseStoryHint" class="text-base text-slate-300 leading-relaxed">可以隨時休息，左右轉的已完成次數會保留。</p>
+<p id="pauseStoryHint" class="text-base text-slate-300 leading-relaxed">可以隨時休息，已偵測到的秒數與次數會保留。</p>
 </div>
 <div class="flex gap-3">
 
@@ -1027,7 +1031,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.13 — 即時計時音與一致配音
+   FRONTEND 16.17 — 兒童連貫說故事
 
    新架構：
 
@@ -1137,6 +1141,13 @@ let actionCount = 0;
 let actionTargetCount = 1;
 let actionHoldSeconds = 0;
 let holdStartedAt = null;
+let seniorHoldSeconds = 0;
+function holdElapsed(){
+    const accumulated=currentMode==='senior'?seniorHoldSeconds:0;
+    if(holdStartedAt===null)return Math.min(actionHoldSeconds,accumulated);
+    const end=currentMode==='senior' && holdSource==='ble'?Math.min(performance.now(),holdLastSignalAt??holdStartedAt):performance.now();
+    return Math.min(actionHoldSeconds,accumulated+Math.max(0,end-holdStartedAt)/1000);
+}
 let holdLastSignalAt = null;
 let holdTimer = null;
 let holdSource = '';
@@ -1233,6 +1244,7 @@ function reportActionFailure(reason,role='child'){
     const task=state?getActionNarration(state.data):currentActionNarration;
     const count=state?state.count:actionCount,target=state?state.target:actionTargetCount,seconds=state?state.seconds:actionHoldSeconds;
     const progress=!seconds && count>0 && count<target?' 已完成 '+count+' 次，還差 '+(target-count)+' 次。':'';
+    if(currentMode==='senior' && !state){showActionFeedback('先休息一下。已完成的進度會保留。'+progress+'準備好，再慢慢做。'+task,'interrupted',role);return;}
     showActionFeedback((state?(role==='family'?'家人，':'孩子，'):'')+reason+progress+' 先回到中間停穩，再試一次。'+task,'interrupted',role);
 }
 function showActionFeedback(text,kind,role='child'){
@@ -1308,6 +1320,7 @@ setInterval(tickSpokenGuidance,1000);
 function stopHold(reason = '') {
     resetCoopHolds();
     const wasHolding=holdStartedAt!==null;
+    if(currentMode==='senior' && wasHolding)seniorHoldSeconds=holdElapsed();
     if(reason && wasHolding && waitingForAction && !busy && !adventurePaused)reportActionFailure(reason);
     clearInterval(holdTimer);
     holdTimer = null;
@@ -1322,6 +1335,7 @@ function resetActionProgress(data = {}) {
     failureVoiceAt={child:-Infinity,family:-Infinity};
     data = normalizeSwipeTask(data);
     stopHold();
+    seniorHoldSeconds=0;
     $('actionFeedback').textContent='';
     actionCount = 0;
     const count = Number(data.targetCount);
@@ -1337,16 +1351,15 @@ function renderActionProgress() {
     renderActionSequence();
     const holding = actionHoldSeconds > 0;
     const childState=isCooperation() && coopStates?.child;
-    const elapsed = childState ? (childState.done?childState.seconds:childState.started===null?0:Math.min(childState.seconds,(performance.now()-childState.started)/1000)) : holdStartedAt === null ? 0 :
-        Math.min(actionHoldSeconds, (performance.now() - holdStartedAt) / 1000);
+    const elapsed = childState ? (childState.done?childState.seconds:childState.started===null?0:Math.min(childState.seconds,(performance.now()-childState.started)/1000)) : holdElapsed();
     $('actionProgressPanel').classList.toggle('hidden', !currentAction);
     $('actionProgressText').textContent = holding
-        ? `持續 ${elapsed.toFixed(1)} / ${actionHoldSeconds} 秒・剩餘 ${Math.max(0, Math.ceil(actionHoldSeconds - elapsed))} 秒`
+        ? `${currentMode==='senior'?'已累積':'持續'} ${elapsed.toFixed(1)} / ${actionHoldSeconds} 秒・剩餘 ${Math.max(0, Math.ceil(actionHoldSeconds - elapsed))} 秒`
         : `動作進度 ${actionCount}/${actionTargetCount}`;
     $('actionProgressBar').max = holding ? actionHoldSeconds : actionTargetCount;
     $('actionProgressBar').value = holding ? elapsed : actionCount;
     $('actionProgressHint').textContent = holding
-        ? (['RUN', 'SHAKE', 'SWIPE_LEFT', 'SWIPE_RIGHT'].includes(currentAction)
+        ? (currentMode==='senior' ? '偵測到指定動作才累積時間；可以停一下，已累積時間會保留。' : ['RUN', 'SHAKE', 'SWIPE_LEFT', 'SWIPE_RIGHT'].includes(currentAction)
             ? '持續反覆做動作；停止或訊號中斷會重新計時。'
             : '保持指定姿勢；放下或訊號中斷會重新計時。')
         : (['SWIPE_LEFT', 'SWIPE_RIGHT'].includes(currentAction)
@@ -1402,6 +1415,62 @@ function renderActionSequence(completed = false) {
     });
 }
 
+let handTransfer=null,handConfirmedAct=-1,handResumePending=false;
+function armHandReminder(state){clearInterval(state.reminder);state.reminder=setInterval(()=>{if(handTransfer===state && state.phase==='ready' && !document.hidden && !adventurePaused)void announcePrompt('請將裝置戴到'+state.hand+'，換好後按裝置的開始按鈕。',{essential:true,key:'hand'});},30000);}
+function seniorActivityHand(index=currentActIndex){
+    let ordinal=0;
+    for(let i=0;i<=index;i++)if(getActActions(acts[i]||{}).length)ordinal++;
+    const total=acts.filter(act=>getActActions(act||{}).length).length;
+    return ordinal<=Math.ceil(total/2)?'右手':'左手';
+}
+function cancelHandTransfer(){
+    const state=handTransfer;handTransfer=null;handConfirmedAct=-1;
+    if(state){clearInterval(state.reminder);clearTimeout(state.timer);state.resolve(false);void sendBLE('HAND_CANCEL');}
+    $('handReadyPanel').classList.add('hidden');
+}
+function retryHandTransfer(state,message){
+    if(handTransfer!==state)return;
+    clearTimeout(state.timer);controllerLearning=false;state.phase='ready';
+    $('handReadyText').textContent=message;$('btnHandReady').disabled=false;
+    armHandReminder(state);void sendBLE('HAND_WAIT');void announcePrompt(message,{essential:true,key:'hand'});
+}
+async function confirmHandTransfer(){
+    const state=handTransfer;
+    if(!state || state.phase!=='ready' || adventurePaused || document.hidden)return;
+    if(!bleCharacteristic){$('handReadyText').textContent='請先連接裝置，再按準備好了。';return;}
+    state.phase='confirming';$('btnHandReady').disabled=true;
+    clearInterval(state.reminder);
+    await sendBLE('HAND_CANCEL');
+    const message='請把手肘靠在桌上或扶手上。手掌朝下，手腕放平。保持不動兩秒。';
+    $('handReadyText').textContent=message;
+    await speak(message,{recover:false});
+    if(handTransfer!==state)return;
+    await waitForAdventureResume(state.version);
+    if(handTransfer!==state)return;
+    state.phase='calibrating';controllerLearning=true;
+    state.timer=setTimeout(()=>retryHandTransfer(state,'校正尚未完成。請確認裝置固定好，按開始按鈕再試一次。'),12000);
+    if(!await sendBLE('CALIBRATE'))retryHandTransfer(state,'校正傳送失敗。請確認連線，按開始按鈕再試一次。');
+}
+async function ensureSeniorHand(version){
+    if(currentMode!=='senior' || !bleCharacteristic || handConfirmedAct===currentActIndex)return true;
+    const hand=seniorActivityHand();
+    if(handConfirmedAct>=0 && seniorActivityHand(handConfirmedAct)===hand){handConfirmedAct=currentActIndex;return true;}
+    cancelHandTransfer();
+    let resolve;const done=new Promise(r=>resolve=r);
+    const state={version,index:currentActIndex,hand,phase:'prompt',resolve,timer:null,reminder:null};handTransfer=state;
+    const message='現在請將裝置戴到'+hand+'，固定好。換好後，按一下裝置的開始按鈕。';
+    $('handReadyPanel').classList.remove('hidden');$('handReadyText').textContent=message;$('btnHandReady').disabled=true;
+    appendStory('⌚ 佩戴位置',message);
+    await speak(message,{recover:false});
+    if(handTransfer!==state)return false;
+    await waitForAdventureResume(version);
+    if(handTransfer!==state)return false;
+    state.phase='ready';$('btnHandReady').disabled=false;
+    if(!await sendBLE('HAND_WAIT')){$('handReadyText').textContent='換手提示傳送失敗，請檢查連線。';}
+    armHandReminder(state);
+    return done;
+}
+document.addEventListener('DOMContentLoaded',()=>{$('btnHandReady').addEventListener('click',()=>void confirmHandTransfer());});
 async function prepareCurrentAction(speakIt = true, version = actVersion) {
     const step = actionSteps[currentActionStepIndex];
     if (!step || version !== actVersion) return;
@@ -1412,10 +1481,11 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     currentAction = step.action;
     currentActionNarration = getActionNarration(step);
     currentActionPurpose = step.actionPurpose || (currentMode==='senior'?'以舒適幅度完成這個操作。':'完成這個動作，故事就會繼續。');
-    currentStepStory = distinctNarrative(step.storyBefore, currentStory);
+    currentStepStory = currentMode==='senior'?'手肘靠在桌上或扶手上。手掌朝下，手腕先放平。':distinctNarrative(step.storyBefore, currentStory);
     resetActionProgress(step);
     lockAction();
     $('promptText').textContent = `📖 本幕第 ${currentActionStepIndex + 1} 個動作正在準備……`;
+    if(!await ensureSeniorHand(version) || version!==actVersion || stepVersion!==actionStepVersion)return;
     if (currentStepStory) {
         appendStory(currentMode==='senior' ? `🌿 第 ${currentRound} 個活動・動作 ${currentActionStepIndex + 1}/${actionSteps.length}` : `🎭 第 ${currentRound} 幕・動作 ${currentActionStepIndex + 1}/${actionSteps.length}`, currentStepStory);
         if (speakIt) await speak(currentStepStory);
@@ -1429,7 +1499,7 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     await waitForAdventureResume(version);
     if(version!==actVersion || stepVersion!==actionStepVersion)return;
     showAction(step);
-    if(speakIt)await speak($('actionSubText').textContent.replace(/^💡\s*/,''),{recover:false});
+    // The movement was just spoken above. Keep the visual help without reading it twice.
     await waitForAdventureResume(version);
     if(version!==actVersion || stepVersion!==actionStepVersion)return;
     busy = false;
@@ -1445,7 +1515,7 @@ function startHold(source) {
     holdLastSignalAt = now;
     if (holdStartedAt !== null) return;
     holdStartedAt = now;
-    holdLastFeedbackSecond = 0;
+    holdLastFeedbackSecond = Math.floor(currentMode==='senior'?seniorHoldSeconds:0);
     holdSource = source;
     manualHolding = source === 'manual';
     showActionFeedback('✓ 已偵測到動作，開始計時。','timerStart');
@@ -1463,13 +1533,13 @@ function startHold(source) {
             return;
         }
         renderActionProgress();
-        const elapsedSeconds=Math.floor((performance.now()-holdStartedAt)/1000);
+        const elapsedSeconds=Math.floor(holdElapsed());
         if(elapsedSeconds>holdLastFeedbackSecond && elapsedSeconds<actionHoldSeconds){
             holdLastFeedbackSecond=elapsedSeconds;
             showActionFeedback(`✓ 已持續 ${elapsedSeconds} 秒，繼續保持。`,'timer');
         }
         // BLE 完成由相符通知確認，避免最後一個封包後仍靠計時器自行成功。
-        if (holdSource === 'manual' && performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
+        if (holdSource === 'manual' && holdElapsed() >= actionHoldSeconds) {
             void completeAction(expectedAction);
         }
     }, 100);
@@ -1478,6 +1548,7 @@ function startHold(source) {
 
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) { stopHold(); renderActionProgress(); }
+    if(handTransfer?.phase==='ready')void sendBLE(document.hidden || adventurePaused?'HAND_CANCEL':'HAND_WAIT');
 });
 
 
@@ -1646,8 +1717,8 @@ function refreshStoryControls(){
     $('manualActionHint').textContent=currentMode==='senior'?'裝置會辨識目前動作。達成指定次數或持續秒數後，進入下一段活動。':'裝置實體動作會觸發故事。達成指定次數或持續秒數後，故事會進入下一幕。';
     $('seniorStoryControls').classList.toggle('hidden',currentMode!=='senior');
     $('btnPauseStory').disabled=!acts.length || storyFinished;
-    $('seniorDifficultyHint').textContent=({easy:'簡單：持續動作 2～3 秒，左右轉 1 次。',normal:'普通：持續動作 2～4 秒，左右轉最多 2 次。',challenge:'挑戰：持續動作 2～6 秒，左右轉最多 3 次。'})[selectedDifficulty] || '';
-    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+    $('seniorDifficultyHint').textContent=({easy:'簡單：持續動作 2～3 秒，計次動作 1 次。',normal:'普通：持續動作 2～4 秒，計次動作最多 2 次。',challenge:'挑戰：持續動作 2～6 秒，計次動作最多 3 次。'})[selectedDifficulty] || '';
+    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；已偵測到的秒數與次數會保留。':'可以隨時休息，已偵測到的秒數與次數會保留。';
     $('btnSpeak').setAttribute('aria-label',currentMode==='senior'?'重聽目前活動說明':'重聽目前故事');
     $('btnSpeak').setAttribute('title',currentMode==='senior'?'重聽目前活動說明':'重聽目前故事');
     $('btnPauseStory').textContent=adventurePaused?'▶ 我休息好了，繼續活動':'⏸ 休息一下';
@@ -1662,8 +1733,9 @@ function toggleAdventurePause(){
     adventurePaused=!adventurePaused;
     if(adventurePaused){cancelPrompts();stopHold();stopSpeech();void sendBLE('PAUSE');void announcePrompt('活動已暫停，請慢慢休息。',{essential:true,allowPaused:true});}
     else {cancelPrompts();stopSpeech();releasePauseWaiters();armActionReminder();void syncControllerAction();if(!busy)void announcePrompt('繼續活動。'+currentActionNarration,{key:'resume'});}
+    if(handTransfer?.phase==='ready')void sendBLE(adventurePaused?'HAND_CANCEL':'HAND_WAIT');
     renderActionProgress();refreshStoryControls();
-    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；持續秒數會重新計時。':'可以隨時休息，左右轉的已完成次數會保留。';
+    $('pauseStoryHint').textContent=adventurePaused?'活動已暫停。休息好了再按繼續；已偵測到的秒數與次數會保留。':'可以隨時休息，已偵測到的秒數與次數會保留。';
 }
 
 const ACTION_INSTRUCTIONS = {
@@ -1769,8 +1841,12 @@ function getActionContext(data) {
     return purpose;
 }
 function getActionNarration(data) {
-    const context=getActionContext(data),movement=getActionMovementNarration(data);
-    return context?`${context}。請${movement}。`:movement;
+    return getActionMovementNarration(data);
+}
+function seniorActionTitle(data){
+    const action=normalizeAction(data?.action);
+    const names={ARM_UP:'手慢慢往上翹',ARM_DOWN:'手慢慢往下彎',SWIPE_LEFT:'手慢慢往左移',SWIPE_RIGHT:'手慢慢往右移',TILT_LEFT:'手慢慢向左側傾',TILT_RIGHT:'手慢慢向右側傾',SHAKE:'手輕輕來回動',HOLD_UP:'保持先前記住的姿勢'};
+    return (names[action]||'手部活動')+'・'+(actionHoldSeconds>0?'累積 '+actionHoldSeconds+' 秒':actionTargetCount+' 次');
 }
 function getActionMovementNarration(data) {
     data = normalizeSwipeTask(data);
@@ -1786,6 +1862,14 @@ function getActionMovementNarration(data) {
     const isCountAction = ['SWIPE_LEFT', 'SWIPE_RIGHT', 'JUMP', 'TILT_LEFT', 'TILT_RIGHT', 'TURN_LEFT', 'TURN_RIGHT'].includes(action);
     const hasCount = Number.isFinite(count) && count >= 1;
     const isTimed = !isCountAction && Number.isFinite(seconds) && seconds > 0;
+    if(currentMode==='senior'){
+        const cues={
+            ARM_UP:'把戴裝置的手慢慢往上翹。',ARM_DOWN:'把戴裝置的手慢慢往下彎。',
+            TILT_LEFT:'把戴裝置的手慢慢向左側傾一下，再回正。',TILT_RIGHT:'把戴裝置的手慢慢向右側傾一下，再回正。',
+            SWIPE_LEFT:'把戴裝置的手慢慢往左移，再回到中間。',SWIPE_RIGHT:'把戴裝置的手慢慢往右移，再回到中間。',
+            SHAKE:'把戴裝置的手輕輕來回動，不要用力甩。',HOLD_UP:'慢慢做出先前記住的抬手姿勢。'};
+        if(cues[action])return cues[action]+(isTimed?`偵測到動作累積 ${seconds} 秒就完成，可以停一下。`:`做 ${hasCount?Math.floor(count):1} 次，不用趕。`);
+    }
     const movements = {
         SWIPE_LEFT:'反覆向左揮動', SWIPE_RIGHT:'反覆向右揮動',
         SHAKE:'輕輕來回搖動', RUN:'安全原地踏步',
@@ -2349,7 +2433,14 @@ function splitSpeechText(text){
         }
         if(part.trim())result.push(part.trim());
     }
-    return result;
+    if(currentMode!=='child')return result;
+    // Keep several short sentences together so the narrator can carry the dialogue and intonation.
+    const paragraphs=[];
+    for(const part of result){
+        if(paragraphs.length && Array.from(paragraphs.at(-1)+part).length<=65)paragraphs[paragraphs.length-1]+=part;
+        else paragraphs.push(part);
+    }
+    return paragraphs;
 }
 function speechDelay(ms){
     return new Promise(resolve=>{
@@ -2432,6 +2523,31 @@ function savedAudio(operation,key,blob){
         }catch(_){finish(null);}
     });
 }
+// Reduce within-clip voice dynamics without changing cached audio or pitch.
+// Never redirect an element into a suspended context: keep native playback available.
+function attachVoiceLeveling(audio,volume){
+    primeFeedbackAudio();
+    const context=feedbackAudio;
+    if(!context || context.state!=='running' || !context.createMediaElementSource || !context.createDynamicsCompressor)return null;
+    const nodes=[];
+    try{
+        const compressor=context.createDynamicsCompressor();nodes.push(compressor);
+        compressor.threshold.value=-24;compressor.knee.value=18;compressor.ratio.value=4;
+        compressor.attack.value=.008;compressor.release.value=.25;
+        const limiter=context.createDynamicsCompressor();nodes.push(limiter);
+        limiter.threshold.value=-3;limiter.knee.value=0;limiter.ratio.value=20;
+        limiter.attack.value=.003;limiter.release.value=.1;
+        const master=context.createGain();nodes.push(master);master.gain.value=volume;
+        compressor.connect(limiter);limiter.connect(master);master.connect(context.destination);
+        const source=context.createMediaElementSource(audio);nodes.push(source);
+        source.connect(compressor);audio.volume=1;
+        return {disconnect(){for(const node of nodes)try{node.disconnect();}catch(_){}}};
+    }catch(error){
+        for(const node of nodes)try{node.disconnect();}catch(_){}
+        // A partial media source attachment must fail explicitly, not play silently.
+        throw error;
+    }
+}
 async function playFixedVoice(text,token){
     syncWorkerVoicePreference();
     if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
@@ -2462,7 +2578,7 @@ async function playFixedVoice(text,token){
                     let retryable=false;
                     try{
                         const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-cloudflare',{
-                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true})});
+                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true && (currentMode!=='child' || adventure?.audioLayoutVersion===2)})});
                         if(!response.ok){
                             const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
                             if(response.status===429)pauseWorkerVoiceForQuota();
@@ -2498,17 +2614,17 @@ async function playFixedVoice(text,token){
         audio.playbackRate=rate;
         audio.preservesPitch=true;
         audio.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
-        let ended=false,timer;
+        let ended=false,timer,voiceGraph=null;
         const finish=(outcome='cancelled')=>{
             if(ended)return;ended=true;clearTimeout(timer);audio.onended=audio.onerror=audio.onplaying=audio.ontimeupdate=null;
-            audio.pause();audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);
+            audio.pause();voiceGraph?.disconnect();voiceGraph=null;audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);
             if(activeCloudAudio===audio)activeCloudAudio=null;if(finishSpeech===finish)finishSpeech=null;resolve(outcome);
         };
         const watch=()=>{clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),30000);};
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
         audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),5000);
         updateVoiceStatus('正在使用 Cloudflare 固定中文配音。已取得的音檔會保存供重聽。');
-        try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
+        try{voiceGraph=attachVoiceLeveling(audio,audio.volume);if(voiceGraph)updateVoiceStatus('正在播放 Worker 配音，已啟用人聲音量平衡。');const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
     });
     if(['error','timeout'].includes(playback)){
         cloudAudioCache.delete(key);void savedAudio('delete',key);
@@ -2642,6 +2758,8 @@ async function speak(text,options={}){
 ===================================================== */
 
 function clearBLEConnection() {
+    if(handTransfer)handResumePending=true;
+    cancelHandTransfer();
     cancelPrompts();actionNextReminderAt=Infinity;
     lastPhysicalButtonLock=null;
     if(bleCharacteristic)bleCharacteristic.removeEventListener?.('characteristicvaluechanged',onBleEvent);
@@ -2694,6 +2812,7 @@ async function connectBLE() {
         refreshStoryControls();
         await sendBLE(currentMode==='senior'?'MODE_SENIOR':'MODE_CHILD');
         await sendBLE('INFO');await sendBLE('READY');await syncControllerAction();
+        if(handResumePending && currentMode==='senior' && actionSteps.length){handResumePending=false;void prepareCurrentAction(true,actVersion);}
         showToast('藍牙連線成功！');void announcePrompt('裝置已連線，固定好手腕裝置後，先重新校正姿勢。',{key:'connection'});
     } catch(e) {
         if(selectedDevice!==familyDevice && selectedDevice?.gatt?.connected)selectedDevice.gatt.disconnect();
@@ -2721,6 +2840,17 @@ async function onBleEvent(event) {
 
     // Diagnostic packets never count as actions or interrupt hold progress.
     if(value.startsWith('FW:')) return;
+    if(value==='HAND_READY'){await confirmHandTransfer();return;}
+    if(handTransfer && value==='CALIBRATING')return;
+    if(handTransfer && value==='CALIBRATED' && handTransfer.phase==='calibrating'){
+        const state=handTransfer;handTransfer=null;clearTimeout(state.timer);clearInterval(state.reminder);
+        stopControllerSetup();handConfirmedAct=state.index;$('handReadyPanel').classList.add('hidden');
+        state.resolve(true);return;
+    }
+    if(handTransfer && value==='SENSOR_ERROR'){
+        retryHandTransfer(handTransfer,'感測器沒有回應，請檢查接線後再按開始按鈕。');return;
+    }
+
     if(value.startsWith('TURN:')) {
         if(waitingForAction && !adventurePaused && ['TURN_LEFT','TURN_RIGHT'].includes(expectedAction)) {
             const [,state,degrees]=value.split(':');
@@ -2942,6 +3072,7 @@ function renderChildThemes() {
 ===================================================== */
 
 function resetAdventure() {
+    handResumePending=false;cancelHandTransfer();
     cancelPrompts();actionNextReminderAt=Infinity;
     $('generationStatus').textContent='';
     audioBuildController?.abort();storyPreview=false;stopCoop();
@@ -2962,7 +3093,7 @@ function resetAdventure() {
     replayCancelRequested = false;
     busy = false;
     $('btnGenerate').disabled = false;
-    $('btnText').textContent = currentMode === 'senior' ? '開始坐姿健康操' : '開始精彩故事冒險';
+    $('btnText').textContent = currentMode === 'senior' ? '開始坐姿手部活動' : '開始精彩故事冒險';
     $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
     clearTimeout(actTimer);
     resetActionProgress();
@@ -3078,13 +3209,13 @@ async function switchMode(
             'text-4xl md:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300';
 
         $('badgeText').textContent =
-            '長輩模式・AI 坐姿健康操';
+            '長輩模式・坐姿手部活動';
 
         $('welcomeIcon').textContent =
             '🌿✨';
 
         $('welcomeTitle').textContent =
-            '準備好開始坐姿健康操了嗎？';
+            '準備好開始坐姿手部活動了嗎？';
 
         $('welcomeDesc').textContent =
             '坐在穩固、有椅背的椅子上，雙腳平放地面。選擇難度，跟著語音做輕柔手部活動。';
@@ -3097,7 +3228,7 @@ async function switchMode(
             .remove('hidden');
 
         $('btnText').textContent =
-            '開始坐姿健康操';
+            '開始坐姿手部活動';
 
         $('customTopicInput').placeholder =
             '也可以輸入想聽的故事主題，例如：老朋友的茶館';
@@ -3477,7 +3608,9 @@ async function showCurrentAct(
         ).trim();
 
 
+    if(currentMode==='senior')currentStory=currentStory.replace(/接著將動作換到另一邊[。．]?/g,'接著進行下一項活動。');
     actionSteps = getActActions(act);
+    if(currentMode==='senior' && actionSteps.length)currentStory='接下來做手部活動。慢慢來，不舒服就休息。';
     currentActionStepIndex = 0;
     currentStepStory = '';
     actionStepVersion++;
@@ -3694,11 +3827,12 @@ function showAction(data) {
         +
         ' '
         +
-        (getActionContext(data) || currentActionNarration);
+        (currentMode==='senior'?seniorActionTitle(data):(getActionContext(data) || currentActionNarration));
 
 
-    const seniorHints={ARM_UP:'坐好，慢慢抬高手腕或前臂，保持舒適姿勢。',ARM_DOWN:'慢慢向下傾斜手腕，保持舒適姿勢。',TILT_LEFT:'手腕向左傾斜一次，再回到中間。',TILT_RIGHT:'手腕向右傾斜一次，再回到中間。',HOLD_UP:'做出已設定的撐住姿勢，保持到進度完成。',SHAKE:'輕輕來回搖動，保持平穩節奏。',SWIPE_LEFT:'慢慢向左揮動，回到中間再做。',SWIPE_RIGHT:'慢慢向右揮動，回到中間再做。'};
-    $('actionSubText').textContent='💡 '+(getActionContext(data)?'做法：'+getActionMovementNarration(data):currentActionPurpose)+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'')+(currentMode==='senior'?' '+(seniorHints[action] || ''):'');
+    $('actionSubText').textContent=currentMode==='senior'
+        ? '💡 手肘靠好，手掌朝下。'+currentActionNarration+' 不舒服就停下休息。'
+        : '💡 '+(getActionContext(data)?'做法：'+getActionMovementNarration(data):currentActionPurpose)+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'');
 
     if(!isCooperation())void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
     setupCoop(data);
@@ -3786,7 +3920,7 @@ function showEnding() {
 
             ?
 
-        '今天的完整健康活動已完成。'
+        '今天的坐姿手部活動已完成。'
 
             :
 
@@ -3851,7 +3985,7 @@ async function handleAction(action, source = 'manual') {
         }
         startHold(source);
         if (source === 'ble' && holdSource === 'ble' && holdStartedAt !== null &&
-            performance.now() - holdStartedAt >= actionHoldSeconds * 1000) {
+            holdElapsed() >= actionHoldSeconds) {
             await completeAction(received);
         }
         return;
@@ -3887,7 +4021,7 @@ async function completeAction(received) {
     $('actionSubText').textContent = currentActionStepIndex + 1 < actionSteps.length
         ? (currentMode==='senior' ? '動作完成，準備下一個活動……' : '這個動作完成了，本幕故事正在繼續……') : (currentMode==='senior' ? '本段活動完成，請慢慢放鬆。' : '本幕動作全部完成，故事正在繼續……');
     stopSpeech();
-    await announcePrompt(completionText,{essential:true});
+    if(currentMode==='senior')await announcePrompt(completionText,{essential:true});
     await sendBLE('PAUSE');
     await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
@@ -3897,7 +4031,7 @@ async function completeAction(received) {
     history.push({role:'user',action:received,round:currentRound,
         actionStep:currentActionStepIndex + 1,targetCount:actionTargetCount,
         holdSeconds:actionHoldSeconds,title:acts[currentActIndex]?.title || ''});
-    const resultStory = String(completedStep.storyAfter || '').trim();
+    const resultStory = currentMode==='senior'?'完成了。慢慢把手放回原位，放鬆一下。':String(completedStep.storyAfter || '').trim();
     if (resultStory) {
         appendStory(currentMode==='senior' ? '✓ 動作完成・放鬆一下' : '✨ 你的行動改變了故事', resultStory);
         await speak(resultStory);
@@ -4018,7 +4152,7 @@ async function generateStory(preferSaved=false) {
 
             ?
 
-        'AI 正在安排坐姿健康操……'
+        '正在安排坐姿手部活動……'
 
             :
 
@@ -4271,7 +4405,7 @@ async function generateStory(preferSaved=false) {
 
         if (requestVersion !== adventureVersion) return;
         showToast(
-            currentMode==='senior'?'🌿 健康操已開始。':`✨ 冒險開始！共 ${acts.length} 幕`
+            currentMode==='senior'?'🌿 手部活動已開始。':`✨ 冒險開始！共 ${acts.length} 幕`
         );
 
 
@@ -4287,7 +4421,7 @@ async function generateStory(preferSaved=false) {
 
 
         showToast(
-            e.name==='AbortError' ? '故事生成等候逾時，請稍後再試。' : (currentMode==='senior'?'健康操生成失敗：':'故事生成失敗：') + e.message
+            e.name==='AbortError' ? '故事生成等候逾時，請稍後再試。' : (currentMode==='senior'?'手部活動生成失敗：':'故事生成失敗：') + e.message
         );
 
 
@@ -4304,7 +4438,7 @@ async function generateStory(preferSaved=false) {
 
         if (requestVersion === adventureVersion) {
             $('btnText').textContent = currentMode === 'senior'
-                ? '開始坐姿健康操' : '開始精彩故事冒險';
+                ? '開始坐姿手部活動' : '開始精彩故事冒險';
             $('btnIcon').className = 'fa-solid fa-wand-magic-sparkles';
             btn.disabled = false;
             busy = false;
@@ -5165,7 +5299,7 @@ async function buildStoryAudio(){
             if(version!==adventureVersion)return;
         }
         await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
-        if(version!==adventureVersion)return;story.audioReady=true;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        if(version!==adventureVersion)return;story.audioReady=true;story.audioLayoutVersion=currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
         $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
     }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
     finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
