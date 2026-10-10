@@ -686,7 +686,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險版 17.0</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 14段互動</option><option value="short">短篇 · 8段互動</option></select><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。選主題後生成新故事，已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險穩定版 17.1</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -1039,7 +1039,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 17.0 — 完整隨機冒險與雙裝置合作
+   FRONTEND 17.1 — 完整冒險局部修正與生成等候上限
 
    新架構：
 
@@ -3429,6 +3429,10 @@ async function parseAIResponse(res) {
     }
 
     if (!res.ok || raw.ok === false) {
+        if(typeof raw.code==='string' && raw.code.startsWith('STORY_')){
+            const error=new Error(raw.error || '這次故事尚未完成，請稍後再試。');
+            error.code=raw.code;error.workerDetail=raw.detail;error.httpStatus=res.status;throw error;
+        }
 
         const detail =
             typeof raw.detail === 'string'
@@ -4302,7 +4306,13 @@ async function generateStory(preferSaved=false) {
 
     const requestVersion = adventureVersion;
     const requestController=new AbortController();generationController=requestController;
-    const requestTimer=setTimeout(()=>requestController.abort(),storyEdition==='full'?240000:150000);
+    const requestTimer=setTimeout(()=>requestController.abort(),storyEdition==='full'?165000:150000);
+    const generationStartedAt=Date.now();
+    const generationProgressTimer=!preferSaved && storyEdition==='full'?setInterval(()=>{
+        if(requestVersion!==adventureVersion || generationController!==requestController || requestController.signal.aborted)return;
+        const seconds=Math.floor((Date.now()-generationStartedAt)/1000);
+        $('generationStatus').textContent='正在準備新故事，已等候 '+seconds+' 秒。'+(seconds>=90?'AI回應較慢；這次最多等候約三分鐘。':'完成後會檢查故事與動作。');
+    },1000):null;
     primeSpeech();
 
     busy =
@@ -4403,6 +4413,7 @@ async function generateStory(preferSaved=false) {
         if(requestVersion!==adventureVersion)return;
         $('generationStatus').textContent='';
         clearTimeout(requestTimer);
+        clearInterval(generationProgressTimer);
         if(generationController===requestController)generationController=null;
 
         /*
@@ -4416,7 +4427,7 @@ async function generateStory(preferSaved=false) {
             );
         if(currentMode==='child' && storyEdition==='full' && adventure.storyEdition!=='full'){
             adventure=null;
-            throw new Error('完整版網頁已就緒，但Worker仍是舊版。請同步更新Worker至6.5.0或更新版本，再生成完整故事。');
+            throw new Error('完整版網頁已就緒，但Worker仍是舊版。請同步更新Worker至6.5.1或更新版本，再生成完整故事。');
         }
 
 
@@ -4599,7 +4610,8 @@ async function generateStory(preferSaved=false) {
     catch(e) {
 
         if (requestVersion !== adventureVersion) return;
-        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+e.message+(preferSaved?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
+        const generationError=e.name==='AbortError'?'這次AI回應超過等候上限，已停止等待。可稍後重試，或播放已保存內容。':e.message;
+        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+generationError+(preferSaved || e.code || e.name==='AbortError'?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
         console.error(
             e
         );
@@ -4619,6 +4631,7 @@ async function generateStory(preferSaved=false) {
 
     finally {
         clearTimeout(requestTimer);
+        clearInterval(generationProgressTimer);
         if(generationController===requestController)generationController=null;
 
         if (requestVersion === adventureVersion) {
