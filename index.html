@@ -68,6 +68,7 @@ progress{width:100%;height:16px;accent-color:var(--ok)}
     <label for="age">孩子年齡</label>
     <select id="age"><option>5</option><option selected>6</option><option>7</option><option>8</option></select>
     <button id="btnGen" class="main">生成故事</button>
+    <button id="btnSample">試玩範例故事</button>
   </div>
   <details style="margin-top:10px"><summary>改用手動貼上故事</summary>
     <textarea id="json" placeholder='{"title":"…","scenes":[…]}' aria-label="故事 JSON" style="margin-top:8px"></textarea>
@@ -352,6 +353,8 @@ function loadStory(){
   ui();
 }
 
+const SAMPLE={"title": "會飛的蝸牛", "scenes": [{"text": "你在草地上遇到一隻蝸牛，名字叫嚕嚕。嚕嚕說他要飛到雲朵上，吃一口棉花糖雲。你說：「蝸牛不會飛啦！」嚕嚕說：「慢慢來，不急不急！先到山坡頂再說。」", "action": "RUN", "after": "你們爬到山坡頂了，風呼呼地吹。"}, {"text": "山坡頂的樹梢上，卡著一個超大的風箏。它大得像一張床，坐得下兩個人。嚕嚕搆不到，只好抬頭看著你。嚕嚕說：「你比我高，風箏就靠你啦！」", "action": "ARM_UP", "after": "風箏拿下來了，紅紅的好漂亮。"}, {"text": "風箏上沾滿了小樹葉，沉甸甸的。嚕嚕在旁邊直打噴嚏。嚕嚕說：「葉子不抖掉，風箏會飛不動，哈啾！」", "action": "SHAKE", "after": "葉子嘩啦嘩啦掉光了。"}, {"text": "你和嚕嚕坐上風箏。可是風太小，風箏動也不動。風箏的頭朝右邊，風要往右邊吹才飛得起來。嚕嚕遞給你一片大芭蕉葉。", "action": "SWIPE_RIGHT", "after": "風呼地吹起來，風箏飄起來一點點！"}, {"text": "風箏飄起來，可是飛不高。旁邊的草叢裡，跳出一隻綠青蛙。青蛙呱呱叫：「蹦蹦跳，風箏就會醒過來！跟我學，我最會了！」", "action": "JUMP", "after": "風箏抖了抖，咻地衝上天！"}, {"text": "哇！風箏衝得太快，在天上晃來晃去。嚕嚕尖叫：「慢慢來——不急——啊！」你抓緊風箏，想把風箏的尾巴按穩。", "action": "ARM_DOWN", "after": "尾巴穩住了，嚕嚕鬆了一口氣。"}, {"text": "前面飄來一大朵烏雲，黑黑的，擋住了天空。嚕嚕對烏雲說：「請借過！」烏雲動也不動。風從右邊來，要把烏雲往左邊掃開。", "action": "SWIPE_LEFT", "after": "烏雲被掃到左邊，藍天跑出來了。"}, {"text": "風箏輕輕降落在雲朵邊。雲朵像軟軟的棉被，路好長好長。棉花糖雲住在路的另一頭。嚕嚕說：「慢慢來，不急……咦？天要黑了！」", "action": "RUN", "after": "你們走到了雲朵的大門前。"}, {"text": "雲朵的大門關得緊緊的，門上掛著一串小鈴鐺。門後傳來打呼聲，呼嚕呼嚕。嚕嚕小聲說：「管家睡著了，要把他叫醒才行。」", "action": "SHAKE", "after": "叮叮噹噹，管家醒了，大門打開了。"}, {"text": "雲朵裡面黑漆漆的，什麼也看不見。嚕嚕撞到了一根柱子，哎喲！你拿出口袋裡的螢火蟲燈籠。嚕嚕說：「燈籠放高一點，才找得到棉花糖。」", "action": "ARM_UP", "after": "燈亮了，棉花糖雲就在前面。"}, {"text": "棉花糖雲被你們嚇了一大跳，嚇得滾來滾去，撞得雲朵咚咚響。嚕嚕笑了，說：「這一次，真的要慢慢來，不急不急。」你們要輕輕地安撫它。", "action": "ARM_DOWN", "after": "棉花糖雲不滾了，軟綿綿地靠過來。"}, {"text": "嚕嚕舔了一大口棉花糖，眼睛亮亮的。他大叫：「比我想的還要甜！我真的飛上來了！」青蛙從風箏上探出頭，呱呱叫著要慶祝。", "action": "JUMP", "after": "雲朵跟著你們輕輕彈了起來。"}, {"text": "太陽慢慢下山了，天空變成橘色。風箏載著你們飛回草地。嚕嚕說：「慢慢來，不急不急，明天我還要飛！」你笑著跟他揮揮手，回家吃晚餐了。", "action": null}]};
+function loadSample(){$('json').value=JSON.stringify(SAMPLE);loadStory();}
 async function generate(){
   const idea=$('idea').value.trim();
   if(!idea){msg('請先寫下故事點子。',true);return;}
@@ -387,7 +390,7 @@ function ui(){
 }
 $('btnConn').onclick=connect;$('btnDisc').onclick=disconnect;
 $('mChild').onclick=()=>setMode('child');$('mSenior').onclick=()=>setMode('senior');
-$('btnLoad').onclick=loadStory;$('btnGen').onclick=generate;$('btnStart').onclick=start;$('btnPause').onclick=pause;$('btnStop').onclick=stop;
+$('btnLoad').onclick=loadStory;$('btnGen').onclick=generate;$('btnSample').onclick=loadSample;$('btnStart').onclick=start;$('btnPause').onclick=pause;$('btnStop').onclick=stop;
 $('btnSim').onclick=()=>{ // 沒有裝置時測試：計次按一下算一次；計時動作會持續送訊號
   const c=S.cur;if(!c)return;
   if(c.kind==='count'){onAction(c.action);return;}
