@@ -1027,7 +1027,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 16.11 — 動作失敗語音與修正提醒
+   FRONTEND 16.12 — 裝置旋律與提示音
 
    新架構：
 
@@ -1243,6 +1243,7 @@ function showActionFeedback(text,kind,role='child'){
         failureVoiceAt[role]=now;
     }
     playFeedbackTone(kind);
+    if(kind==='interrupted')void (role==='family'?sendFamily('ACTION_FAIL'):sendBLE('ACTION_FAIL'));
     if(kind!=='complete')void announcePrompt(text,{key:kind==='tick'?'progress':kind==='interrupted'?role+'-interrupted':kind,roles:[role]});
 }
 // 短回饋即時使用裝置語音，與故事共用播放鎖，不中斷故事或累積過期秒數。
@@ -1299,6 +1300,7 @@ function tickSpokenGuidance(){
         message=tasks.map(role=>(role==='child'?'孩子':'家人')+'的動作是，'+getActionNarration(coopStates[role].data)).join('。');
     }else{if(now<actionNextReminderAt)return;message='準備好了再慢慢做。'+currentActionNarration;}
     actionNextReminderAt=now+ACTION_IDLE_REPEAT_MS;
+    for(const role of reminderRoles)void (role==='family'?sendFamily('ACTION_REMIND'):sendBLE('ACTION_REMIND'));
     void announcePrompt(message,{key:'idle',roles:reminderRoles});
 }
 setInterval(tickSpokenGuidance,1000);
