@@ -111,7 +111,14 @@ const ACTIONS={
   ARM_DOWN:['time',(n,g)=>g?`手慢慢往下彎，保持 ${n} 秒。`:`手臂往下壓，手腕向下彎，保持 ${n} 秒。`],
   RUN:['time',n=>`原地踏步，膝蓋抬高，踏 ${n} 秒。`]
 };
-const SENIOR_STEPS=['ARM_UP','SWIPE_RIGHT','ARM_DOWN','SWIPE_LEFT','ARM_UP','SWIPE_RIGHT','ARM_DOWN','SWIPE_LEFT','ARM_UP','SWIPE_RIGHT','ARM_DOWN','SWIPE_LEFT'];
+function seniorPlan(){ // 每次隨機排列：上、下、左、右各 3 次，不連續重複
+  const a=[];['ARM_UP','ARM_DOWN','SWIPE_LEFT','SWIPE_RIGHT'].forEach(x=>a.push(x,x,x));
+  for(let t=0;t<300;t++){
+    for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    if(!a.some((x,i)=>i&&x===a[i-1]))break;
+  }
+  return a;
+}
 const BAD_WORDS=/抬起|舉高|壓低|揮|搖|跳|踏|手腕|請你|用力/;
 const HOLD_GAP=1200;
 
@@ -278,7 +285,7 @@ async function runSteps(steps,token){
 }
 function seniorSteps(){
   const steps=[{text:'今天做一些輕柔的手部活動。請坐穩，雙腳平放，手肘靠好。不舒服就休息。'}];
-  SENIOR_STEPS.forEach((a,i)=>{
+  seniorPlan().forEach((a,i)=>{
     steps.push({action:a});
     if(i===5)steps.push({text:'中間休息一下，自然呼吸。'});
   });
