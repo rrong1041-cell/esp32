@@ -38,7 +38,7 @@ progress{width:100%;height:16px;accent-color:var(--ok)}
 </head>
 <body>
 <h1>聲動奇境</h1>
-<p class="sub">聽故事、做動作，故事才會繼續。</p>
+<p class="sub">聽故事、站起來動一動，故事才會繼續。</p>
 
 <div class="box">
   <div class="row">
@@ -96,19 +96,24 @@ progress{width:100%;height:16px;accent-color:var(--ok)}
 <script>
 const SVC='4fa8691a-136d-4560-84ed-01354051b785', CHR='beb5483e-36e1-4688-b7f5-ea07361b26a8';
 const $=id=>document.getElementById(id);
-const LEVELS={easy:{count:2,sec:2,jump:1},normal:{count:3,sec:3,jump:2},hard:{count:4,sec:4,jump:2}};
-const ACTIONS={
-  SWIPE_LEFT:['count',n=>`向左揮手 ${n} 次，每次回到中間。`],
-  SWIPE_RIGHT:['count',n=>`向右揮手 ${n} 次，每次回到中間。`],
-  JUMP:['count',n=>`原地輕輕小跳 ${n} 次。`],
-  SHAKE:['time',n=>`輕輕搖動手腕 ${n} 秒。`],
-  ARM_UP:['time',n=>`把手抬高，保持 ${n} 秒。`],
-  ARM_DOWN:['time',n=>`手腕往下彎，保持 ${n} 秒。`]
-};
-const SENIOR_STEPS=['ARM_UP','SWIPE_RIGHT','ARM_DOWN','SWIPE_LEFT','ARM_UP','SWIPE_LEFT','ARM_DOWN','SWIPE_RIGHT'];
-const BAD_WORDS=/抬起|舉高|壓低|揮|搖|跳|手腕|請你|用力/;
-const HOLD_GAP=1200;
 const WORKER_URL='https://lucky-waterfall-f8a2.shopcom2009.workers.dev';
+// 兒童站著做，次數和秒數要夠多才有運動量；長輩坐著，幅度小、次數適中。
+const LEVELS={
+  child:{easy:{count:6,sec:6,jump:3,run:10},normal:{count:8,sec:8,jump:5,run:15},hard:{count:12,sec:10,jump:8,run:20}},
+  senior:{easy:{count:4,sec:4},normal:{count:6,sec:6},hard:{count:8,sec:8}}
+};
+const ACTIONS={
+  SWIPE_LEFT:['count',(n,g)=>g?`手慢慢向左移，再回到中間，做 ${n} 次。`:`站著，手臂大大地向左揮 ${n} 次，每次回到中間。`],
+  SWIPE_RIGHT:['count',(n,g)=>g?`手慢慢向右移，再回到中間，做 ${n} 次。`:`站著，手臂大大地向右揮 ${n} 次，每次回到中間。`],
+  JUMP:['count',n=>`原地小跳 ${n} 次。`],
+  SHAKE:['time',n=>`用力搖動雙手，搖 ${n} 秒。`],
+  ARM_UP:['time',(n,g)=>g?`手慢慢往上翹，保持 ${n} 秒。`:`雙手高高舉起，保持 ${n} 秒。`],
+  ARM_DOWN:['time',(n,g)=>g?`手慢慢往下彎，保持 ${n} 秒。`:`手臂往下壓，手腕向下彎，保持 ${n} 秒。`],
+  RUN:['time',n=>`原地踏步，膝蓋抬高，踏 ${n} 秒。`]
+};
+const SENIOR_STEPS=['ARM_UP','SWIPE_RIGHT','ARM_DOWN','SWIPE_LEFT','ARM_UP','SWIPE_RIGHT','ARM_DOWN','SWIPE_LEFT','ARM_UP','SWIPE_RIGHT','ARM_DOWN','SWIPE_LEFT'];
+const BAD_WORDS=/抬起|舉高|壓低|揮|搖|跳|踏|手腕|請你|用力/;
+const HOLD_GAP=1200;
 
 const S={mode:'child',story:null,run:0,paused:false,cur:null,ch:null,dev:null,queue:Promise.resolve(),lastFail:0};
 
@@ -119,7 +124,7 @@ function feedback(t,bad){$('fb').textContent=t;$('fb').className=bad?'bad':'';}
 
 /* ---------- 朗讀 ---------- */
 function pickVoice(){const v=speechSynthesis.getVoices();return v.find(x=>/zh.?TW/i.test(x.lang))||v.find(x=>/^zh/i.test(x.lang))||null;}
-function speak(text){
+function deviceSpeak(text){
   return new Promise(res=>{
     if(!('speechSynthesis' in window)){setTimeout(res,Math.min(8000,text.length*200));return;}
     speechSynthesis.cancel();
@@ -129,6 +134,42 @@ function speak(text){
     const t=setTimeout(end,Math.max(5000,text.length*500));
     u.onend=end;u.onerror=end;speechSynthesis.speak(u);
   });
+}
+
+const player=new Audio(),clips=new Map();let endClip=null,cloudFails=0,ac=null;
+const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+function primeAudio(){try{player.src=SILENT;player.play().catch(()=>{});if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();ac.resume();}catch(_){}}
+function beep(f=880,d=.12){try{if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;g.gain.value=.25;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d);}catch(_){}}
+function fetchClip(text){
+  if(!clips.has(text)){
+    const p=fetch(WORKER_URL+'/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})})
+      .then(r=>{if(!r.ok||!/audio/.test(r.headers.get('Content-Type')||''))throw new Error('tts');return r.blob();})
+      .then(b=>URL.createObjectURL(b));
+    p.catch(()=>clips.delete(text));clips.set(text,p);
+  }
+  return clips.get(text);
+}
+function prefetch(...texts){if(cloudFails<2)texts.filter(Boolean).forEach(t=>fetchClip(t).catch(()=>{}));}
+function stopAudio(){player.pause();if(endClip)endClip(true);}
+function playClip(url){
+  return new Promise(res=>{
+    const done=ok=>{clearTimeout(t);player.onended=player.onerror=null;endClip=null;res(ok);};
+    const t=setTimeout(()=>done(false),60000);
+    endClip=done;player.onended=()=>done(true);player.onerror=()=>done(false);
+    player.src=url;player.playbackRate=Number($('rate').value);
+    player.play().catch(()=>done(false));
+  });
+}
+async function speak(text){
+  stopAudio();
+  if(cloudFails<2){
+    try{
+      const url=await Promise.race([fetchClip(text),new Promise((_,rej)=>setTimeout(()=>rej(new Error('slow')),10000))]);
+      if(await playClip(url)){cloudFails=0;return;}
+    }catch(_){}
+    if(++cloudFails>=2)msg('雲端語音連不上，改用裝置聲音。',true);
+  }
+  return deviceSpeak(text);
 }
 
 /* ---------- 藍牙 ---------- */
@@ -171,12 +212,13 @@ function onAction(v){
   if(v!==c.action){failOnce();return;}
   const now=performance.now();
   if(c.kind==='count'){
-    c.count++;feedback(`成功 ${c.count} / ${c.n} 次`);
+    c.count++;beep(880);feedback(`成功 ${c.count} / ${c.n} 次`);
     if(c.count<c.n)send('ACTION_TICK');
     if(c.count>=c.n)c.finish();
   }else{
     if(c.last&&now-c.last<HOLD_GAP)c.acc+=now-c.last; // 累積時間，中斷後不歸零
     c.last=now;
+    const sec=Math.floor(c.acc/1000);if(sec>c.lastSec){c.lastSec=sec;beep(660,.08);}
     if(c.acc>=c.n*1000)c.finish();
   }
   render();
@@ -188,13 +230,16 @@ function render(){
 }
 setInterval(()=>{const c=S.cur;if(c&&c.last&&performance.now()-c.last>HOLD_GAP)c.last=null;render();},200);
 
+function planTask(action,level){
+  const g=S.mode==='senior',L=LEVELS[g?'senior':'child'][level],[kind,say]=ACTIONS[action];
+  const n=action==='JUMP'?L.jump:action==='RUN'?L.run:kind==='count'?L.count:L.sec;
+  return {kind,n,text:(g?'慢慢來。':'')+say(n,g)};
+}
 function waitAction(action,level){
-  const L=LEVELS[level],[kind,say]=ACTIONS[action];
-  const n=kind==='count'?(action==='JUMP'?L.jump:L.count):L.sec;
-  const text=(S.mode==='senior'?'慢慢來。':'')+say(n);
+  const {kind,n,text}=planTask(action,level);
   return new Promise(async resolve=>{
     let remind;
-    const c={action,kind,n,count:0,acc:0,last:null,text,
+    const c={action,kind,n,count:0,acc:0,last:null,lastSec:0,text,
       finish(){clearInterval(remind);S.cur=null;resolve(true);}};
     c.cancel=()=>{clearInterval(remind);S.cur=null;resolve(false);};
     $('taskText').textContent=text;$('task').style.display='block';feedback('');render();
@@ -202,7 +247,7 @@ function waitAction(action,level){
     if(S.cur===null&&S.run===0)return;
     S.cur=c;render();
     send((kind==='time'?'TIMED:':'EXPECT:')+action);
-    remind=setInterval(()=>{if(!S.paused&&S.cur===c&&!speechSynthesis.speaking)speak('準備好了再做。'+text);},25000);
+    remind=setInterval(()=>{if(!S.paused&&S.cur===c&&!speechSynthesis.speaking&&player.paused)speak('準備好了再做。'+text);},25000);
   });
 }
 
@@ -210,7 +255,12 @@ function waitAction(action,level){
 const gate=()=>new Promise(r=>{(function w(){S.paused?setTimeout(w,300):r();})();});
 
 async function runSteps(steps,token){
-  for(const s of steps){
+  const lv=$('level').value;
+  const ahead=x=>x&&[x.text,x.action&&planTask(x.action,lv).text];
+  prefetch(...(ahead(steps[0])||[]),...(ahead(steps[1])||[]));
+  for(let i=0;i<steps.length;i++){
+    const s=steps[i];
+    prefetch(...(ahead(steps[i+1])||[]),...(ahead(steps[i+2])||[]),s.action&&(S.mode==='senior'?'完成了。慢慢把手放回原位。':'成功了！'+(s.after||'')));
     await gate();if(token!==S.run)return;
     if(s.text){log(s.text);await speak(s.text);}
     await gate();if(token!==S.run)return;
@@ -230,18 +280,19 @@ function seniorSteps(){
   const steps=[{text:'今天做一些輕柔的手部活動。請坐穩，雙腳平放，手肘靠好。不舒服就休息。'}];
   SENIOR_STEPS.forEach((a,i)=>{
     steps.push({action:a});
-    if(i===3)steps.push({text:'中間休息一下，自然呼吸。'});
+    if(i===5)steps.push({text:'中間休息一下，自然呼吸。'});
   });
   steps.push({text:'全部完成了，辛苦了。把手放在腿上，慢慢放鬆。'});
   return steps;
 }
 async function start(){
   if(S.run)return;
+  primeAudio();
   let steps;
   if(S.mode==='senior')steps=seniorSteps();
   else{
     if(!S.story){msg('請先貼上並載入故事。',true);return;}
-    steps=S.story.scenes.map(s=>({text:s.text,action:s.action,after:s.after}));
+    steps=[{text:'先站起來，前後左右留一點空間，我們要出發囉！'},...S.story.scenes.map(s=>({text:s.text,action:s.action,after:s.after}))];
   }
   $('log').replaceChildren();S.paused=false;
   const token=++S.run;ui();msg(S.mode==='senior'?'活動進行中':'故事進行中');
@@ -256,12 +307,12 @@ async function finish(){
 }
 function stop(){
   S.run=0;if(S.cur)S.cur.cancel();S.cur=null;S.paused=false;
-  speechSynthesis.cancel();send('PAUSE');send('GAME_IDLE');
+  speechSynthesis.cancel();stopAudio();send('PAUSE');send('GAME_IDLE');
   $('task').style.display='none';msg('已結束。');ui();
 }
 function pause(){
   S.paused=!S.paused;
-  if(S.paused){speechSynthesis.cancel();send('PAUSE');msg('休息中。準備好了按「繼續」。');}
+  if(S.paused){speechSynthesis.cancel();stopAudio();send('PAUSE');msg('休息中。準備好了按「繼續」。');}
   else{msg('繼續進行。');if(S.cur){send((S.cur.kind==='time'?'TIMED:':'EXPECT:')+S.cur.action);speak(S.cur.text);}}
   ui();
 }
@@ -283,7 +334,7 @@ function parseStory(raw){
     return {text,action,after:String(s.after||'').trim()};
   });
   if(!moves)throw new Error('故事裡沒有任何動作。');
-  if(jumps>1)warns.push('小跳出現多次');
+  if(jumps>3)warns.push('小跳出現太多次');
   return {title:String(d.title||'未命名故事'),scenes,warns,moves};
 }
 function loadStory(){
