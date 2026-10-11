@@ -1130,7 +1130,7 @@ const BLE_CONFIG = {
 
 const WORKER_URL =
     'https://lucky-waterfall-f8a2.shopcom2009.workers.dev';
-const EXPECTED_FISH_VOICE_ID = '4c3f5ee88f7b4554af62799b44de168';
+// 聲線不再寫死在網頁。由 Worker /fish-voice-status 回報目前使用的 ID。
 const FISH_AUDIO_EDITION = 'fish-s2.1-tw-v2';
 
 
@@ -2199,7 +2199,9 @@ function refreshNarrationControls(){
     restart.disabled=!active && (busy || replayInProgress || !currentStory || storyPreview);
     stop.disabled=!active;
     status.textContent=active?(narrationPausedByUser?'已暫停。按「繼續」會從原位置播放。':
-      activeCloudAudio?'Fish Audio 朗讀中，可暫停並保留播放位置。':'正在準備或朗讀故事，可以暫停。'):
+      activeCloudAudio?'Fish Audio 朗讀中，可暫停並保留播放位置。':
+      narrationSourceLock==='device'?'⚠ 已切換成裝置備用聲音（'+(fishLastFallbackReason||'Fish Audio 暫時未啟用')+'）。按「重播」可嘗試恢復 Fish。':
+      '正在準備 Fish Audio 配音，可以暫停。'):
       currentStory?'這一幕的朗讀已結束，可按「重播」再聽一次。':'故事準備好後，可重播、暫停與繼續朗讀。';
     const icon=$('btnSpeak')?.querySelector('i');
     if(icon){icon.className=active?(narrationPausedByUser?'fa-solid fa-play':'fa-solid fa-pause'):'fa-solid fa-rotate-left';}
@@ -2718,12 +2720,32 @@ function syncNarrationSourceLock(){
 }
 let cloudSpeechCooldownUntil=0;
 let fishVoiceStatusPromise=null;
-// Read-only check: identify the Worker-side voice without generating paid audio.
+let fishVoiceStatusCheckedAt=0;
+let currentFishVoiceId='';
+let fishLastFallbackReason='';
+// Refresh server voice state periodically and after transient failures.
+// This endpoint does not spend Fish Audio credits or expose the API key.
 function getFishVoiceStatus(){
-    if(!fishVoiceStatusPromise){
+    if(!fishVoiceStatusPromise || Date.now()-fishVoiceStatusCheckedAt>60000){
+        fishVoiceStatusCheckedAt=Date.now();
         fishVoiceStatusPromise=fetch(WORKER_URL.replace(/\/+$/,'')+'/fish-voice-status',{cache:'no-store'})
-            .then(async response=>response.ok?await response.json():null)
-            .catch(()=>null);
+            .then(async response=>{
+                if(!response.ok)throw new Error('voice-status HTTP '+response.status);
+                const status=await response.json();
+                if(!status || !/^[a-zA-Z0-9-]{8,120}$/.test(String(status.voiceId||'')))throw new Error('Worker 未回傳有效聲線 ID');
+                if(currentFishVoiceId && currentFishVoiceId!==status.voiceId){
+                    cloudSpeechCooldownUntil=0;
+                    cloudAudioCache.clear();
+                    if(narrationSourceLock==='device' && workerVoiceQuotaUntil<=Date.now())narrationSourceLock=null;
+                }
+                currentFishVoiceId=status.voiceId;
+                return status;
+            })
+            .catch(error=>{
+                console.warn('無法取得 Fish Audio 聲線設定：',String(error?.message||''));
+                fishVoiceStatusPromise=null; // 允許下次重新嘗試
+                return null;
+            });
     }
     return fishVoiceStatusPromise;
 }
@@ -2792,25 +2814,29 @@ async function playFixedVoice(text,token){
     if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
     const status=await getFishVoiceStatus();
     if(token!==speechToken)return 'cancelled';
-    if(status){
-        if(status.voiceId!==EXPECTED_FISH_VOICE_ID){
-            const message='Worker 正在使用其他聲線。請將 Cloudflare FISH_VOICE_ID 設為 '+EXPECTED_FISH_VOICE_ID;
-            updateVoiceStatus(message);showToast('Fish Audio 聲線 ID 不一致，請檢查 Cloudflare 變數。');
-            return null;
-        }
-        if(!status.fishApiConfigured || !status.storyDbConfigured || !status.storyVoiceEnabled){
-            updateVoiceStatus('Worker 的 Fish Audio 或 STORY_DB 尚未就緒，將使用裝置備用聲音。');
-            return null;
-        }
+    if(!status){
+        fishLastFallbackReason='無法連線到 Worker 聲線狀態頁';
+        updateVoiceStatus('Fish Audio：'+fishLastFallbackReason+'。將使用裝置備用聲音。');
+        return null;
     }
+    if(!status.fishApiConfigured || !status.storyDbConfigured || !status.storyVoiceEnabled){
+        fishLastFallbackReason='Worker 配音服務或 STORY_DB 未就緒';
+        updateVoiceStatus('Fish Audio：'+fishLastFallbackReason+'。將使用裝置備用聲音。');
+        return null;
+    }
+    const voiceId=String(status.voiceId).trim();
+    fishLastFallbackReason='';
     const age=Number(selectedChildAge)||6;
     const pace=currentMode==='senior'?.9:age<=6?.94:1;
     const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
-    const key=JSON.stringify([FISH_AUDIO_EDITION,EXPECTED_FISH_VOICE_ID,WORKER_URL,text,rate]);
+    const key=JSON.stringify([FISH_AUDIO_EDITION,voiceId,WORKER_URL,text,rate]);
     let bytes=cloudAudioCache.get(key);
     if(!bytes)bytes=await savedAudio('get',key);
     if(token!==speechToken)return 'cancelled';
-    if(!bytes && Date.now()<cloudSpeechCooldownUntil)return null;
+    if(!bytes && Date.now()<cloudSpeechCooldownUntil){
+        fishLastFallbackReason='配音暫時冷卻中，稍後可重試';
+        return null;
+    }
     if(!bytes){
         const controller=new AbortController();cloudSpeechController=controller;
         let timer,failureReason='Fish Audio 配音暫時無法使用';
@@ -2855,7 +2881,7 @@ async function playFixedVoice(text,token){
         if(cloudSpeechController===controller){cloudSpeechController=null;finishSpeech=null;$('speechPreparation').classList.add('hidden');$('btnUseDeviceSpeechNow').onclick=null;}
         clearTimeout(timer);
         if(result==='cancelled' || token!==speechToken)return 'cancelled';
-        if(!result){cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus(failureReason+'，已改用裝置朗讀。');showToast(failureReason+'；將使用裝置聲音。');return null;}
+        if(!result){fishLastFallbackReason=failureReason;cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus(failureReason+'，已改用裝置朗讀。');showToast(failureReason+'；將使用裝置聲音。');return null;}
         bytes=result;cloudAudioCache.set(key,bytes);
         void savedAudio('put',key,bytes);
         while(cloudAudioCache.size>50)cloudAudioCache.delete(cloudAudioCache.keys().next().value);
@@ -2894,7 +2920,7 @@ async function playFixedVoice(text,token){
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
         audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),7500);
         progressPoll=setInterval(watch,1000);
-        updateVoiceStatus('正在使用 Fish Audio 日系聲線朗讀中文。配音音檔會保存供重聽。');
+        fishLastFallbackReason='';updateVoiceStatus('正在使用 Fish Audio 朗讀中文（聲線 ID 尾碼：'+voiceId.slice(-6)+'）。');
         // 17.4: Let the media element play directly. A suspended Web Audio context or a
         // partially created MediaElementSource can otherwise silence an otherwise valid file.
         try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
@@ -2926,9 +2952,10 @@ async function playNarrationChunk(text,token){
             updateVoiceStatus('Worker 音檔暫時無法播放。本篇冒險將固定使用裝置朗讀。');
             showToast('配音失敗；本篇冒險將固定使用裝置聲音，不再反覆換人。');
         }else{
-            updateVoiceStatus('本篇冒險固定使用裝置備用聲音，避免反覆換人。');
+            updateVoiceStatus('本篇冒險使用裝置備用聲音（'+(fishLastFallbackReason||'Fish Audio 未能啟用')+'）。可按「重播」重試 Fish Audio。');
         }
     }
+    refreshNarrationControls(); // 手機故事頁直接顯示切換成內建語音的原因
     if(!('speechSynthesis' in window))return 'unsupported';
     let outcome=await speakChunk(text,token);
     if(token!==speechToken || outcome==='cancelled')return 'cancelled';
@@ -2954,7 +2981,7 @@ function speakChunk(text,token){
         }
         const voice=narrationDeviceVoice,emotion=getSentenceEmotion(text);
         if(voice)utterance.voice=voice;
-        updateVoiceStatus(voice?'正在使用裝置備用聲音：'+voice.name+'（'+voice.lang+'）。':'正在'+getDeviceVoiceLabel()+'的預設中文聲音。');
+        updateVoiceStatus((voice?'正在使用裝置備用聲音：'+voice.name+'（'+voice.lang+'）。':'正在'+getDeviceVoiceLabel()+'的預設中文聲音。')+(fishLastFallbackReason?' Fish Audio 未播放原因：'+fishLastFallbackReason:'') );
         utterance.lang=voice?.lang || 'zh-TW';utterance.rate=emotion.rate;utterance.pitch=emotion.pitch;
         utterance.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
         let ended=false,timer;
@@ -5862,13 +5889,16 @@ async function buildStoryAudio(){
     if(!storyPreview || busy || audioBuildController || !adventure?.libraryId)return;
     const controller=new AbortController();audioBuildController=controller;const version=adventureVersion,story=adventure,clips=collectStoryAudio();refreshCoopUI();
     try{
+        const fishStatus=await getFishVoiceStatus();
+        if(!fishStatus?.fishApiConfigured || !fishStatus?.storyDbConfigured || !fishStatus?.storyVoiceEnabled)throw new Error('Fish Audio 尚未就緒，無法保存配音');
+        const voiceId=String(fishStatus.voiceId);
         for(let i=0;i<clips.length;i++){
             $('audioBuildStatus').textContent='正在製作並保存配音 '+(i+1)+'/'+clips.length+'，完成後再開始遊玩。';
             await storyAudioRequest(controller,{libraryId:story.libraryId,text:clips[i]});
             if(version!==adventureVersion)return;
         }
         await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
-        if(version!==adventureVersion)return;story.audioReady=true;story.audioVoiceEdition=FISH_AUDIO_EDITION;story.audioVoiceReference=EXPECTED_FISH_VOICE_ID;story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        if(version!==adventureVersion)return;story.audioReady=true;story.audioVoiceEdition=FISH_AUDIO_EDITION;story.audioVoiceReference=voiceId;story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
         $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
     }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
     finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
