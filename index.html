@@ -729,7 +729,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 劇情導演新版 17.7</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><label class="flex items-center gap-2 text-sm text-cyan-200 mt-2"><input type="checkbox" id="progressiveToggle">🚀 快速開演：先規劃整篇、生成前4幕，遊玩時接續生成</label><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 劇情導演版・朗讀 17.10</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><label class="flex items-center gap-2 text-sm text-cyan-200 mt-2"><input type="checkbox" id="progressiveToggle">🚀 快速開演：先規劃整篇、生成前4幕，遊玩時接續生成</label><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -915,8 +915,8 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 <label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Fish Audio 中文配音（額度用完時使用裝置備用聲音）</label>
 <p id="workerVoicePolicyStatus" class="text-xs text-slate-300 mb-3" role="status">自動優先使用 Worker 配音。</p>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
-<p class="text-xs text-slate-400 mb-3">提示音已加大：成功一聲，計時每秒一聲，完成兩聲。成功、中斷與校正提示會即時朗讀；20 秒沒有相符動作會提醒，之後每隔 30 秒重講。計時每秒使用短提示音，不逐秒朗讀；語音提示優先使用與故事相同的 Worker 配音，會使用配音額度，失敗時切換裝置聲音。</p>
-<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。額度用完時會自動改用裝置朗讀，重置後再恢復 Worker；不同裝置的聲線可能不同。語速與音量可調整，音高與語氣只影響裝置朗讀。</p>
+<p class="text-xs text-slate-400 mb-3">提示音已加大：成功一聲，計時每秒一聲，完成兩聲。中斷與校正會用簡短語音提醒，完成與計次則以提示音為主；20 秒沒有相符動作會提醒，之後每隔 30 秒重講。計時每秒使用短提示音，不逐秒朗讀；語音提示優先使用與故事相同的 Worker 配音，會使用配音額度，失敗時切換裝置聲音。</p>
+<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。額度用完時會自動改用裝置朗讀，重置後再恢復 Worker；不同裝置的聲線可能不同。Fish Audio 使用原始 1.0 倍速，音量可調整；語速、音高與語氣只影響裝置備用朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -1131,7 +1131,7 @@ const BLE_CONFIG = {
 const WORKER_URL =
     'https://lucky-waterfall-f8a2.shopcom2009.workers.dev';
 // 聲線不再寫死在網頁。由 Worker /fish-voice-status 回報目前使用的 ID。
-const FISH_AUDIO_EDITION = 'fish-s2.1-tw-v2';
+const FISH_AUDIO_EDITION = 'fish-s2.1-tw-v3-natural';
 
 
 let bleDevice = null;
@@ -1322,7 +1322,10 @@ function showActionFeedback(text,kind,role='child'){
     playFeedbackTone(kind);
     if(kind==='interrupted')void (role==='family'?sendFamily('ACTION_FAIL'):sendBLE('ACTION_FAIL'));
     if(kind==='timer' || kind==='timerStart')void (role==='family'?sendFamily('ACTION_TICK'):sendBLE('ACTION_TICK'));
-    if(!['complete','timer','timerStart'].includes(kind))void announcePrompt(text,{key:kind==='tick'?'progress':kind==='interrupted'?role+'-interrupted':kind,roles:[role]});
+    if(!['complete','timer','timerStart','tick'].includes(kind)){
+        const spoken=kind==='interrupted' ? ((role==='family'?'家人，':'')+'先回到中間，停穩後再試一次。') : text;
+        void announcePrompt(spoken,{key:kind==='tick'?'progress':kind==='interrupted'?role+'-interrupted':kind,roles:[role]});
+    }
 }
 // 語音提示沿用故事配音；每秒計時只用短音，避免排隊朗讀過期秒數。
 let promptQueue=[],promptSpeechBusy=false,activePrompt=null;
@@ -1346,7 +1349,7 @@ async function drainPrompts(){
             if(document.hidden || replayInProgress || (adventurePaused && !item.options.allowPaused) || (busy && !item.options.essential))break;
             promptQueue.shift();
             activePrompt=item;
-            try{await speak(item.text,{recover:false,allowPaused:item.options.allowPaused});}catch(_){/* 失敗不阻擋動作與下一個提示。 */}finally{if(activePrompt===item)activePrompt=null;item.resolve();}
+            try{await speak(item.text,{recover:false,allowPaused:item.options.allowPaused,kind:'prompt'});}catch(_){/* 失敗不阻擋動作與下一個提示。 */}finally{if(activePrompt===item)activePrompt=null;item.resolve();}
         }
     }finally{promptSpeechBusy=false;}
 }
@@ -1375,8 +1378,8 @@ function tickSpokenGuidance(){
         if(!tasks.length)return;
         reminderRoles=tasks;
         for(const role of tasks)coopStates[role].nextReminderAt=now+ACTION_IDLE_REPEAT_MS;
-        message=tasks.map(role=>(role==='child'?'孩子':'家人')+'的動作是，'+getActionNarration(coopStates[role].data)).join('。');
-    }else{if(now<actionNextReminderAt)return;message='準備好了再慢慢做。'+currentActionNarration;}
+        message=tasks.map(role=>(role==='child'?'孩子，':'家人，')+getActionSpokenNarration(coopStates[role].data)).join(' ');
+    }else{if(now<actionNextReminderAt)return;message='準備好了，我們再試一次。'+getActionSpokenNarration(actionSteps[currentActionStepIndex]);}
     actionNextReminderAt=now+ACTION_IDLE_REPEAT_MS;
     for(const role of reminderRoles)void (role==='family'?sendFamily('ACTION_REMIND'):sendBLE('ACTION_REMIND'));
     void announcePrompt(message,{key:'idle',roles:reminderRoles});
@@ -1606,7 +1609,7 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     waitingForAction = false;
     expectedAction = '';
     currentAction = step.action;
-    currentActionNarration = getActionNarration(step);
+    currentActionNarration = getActionSpokenNarration(step);
     currentActionPurpose = step.actionPurpose || (currentMode==='senior'?'以舒適幅度完成這個操作。':'完成這個動作，故事就會繼續。');
     currentStepStory = currentMode==='senior'?'手肘靠在桌上或扶手上。手掌朝下，手腕先放平。':distinctNarrative(step.storyBefore, currentStory);
     resetActionProgress(step);
@@ -1619,10 +1622,10 @@ async function prepareCurrentAction(speakIt = true, version = actVersion) {
     }
     await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
-    if (speakIt) await speak(currentActionNarration);
+    if (speakIt) await speak(currentActionNarration,{kind:'prompt'});
     await waitForAdventureResume(version);
     if (version !== actVersion || stepVersion !== actionStepVersion) return;
-    if(step.familyAction && speakIt)await speak('家人的任務。'+getActionNarration(step.familyAction));
+    if(step.familyAction && speakIt)await speak('家人的任務。'+getActionSpokenNarration(step.familyAction),{kind:'prompt'});
     await waitForAdventureResume(version);
     if(version!==actVersion || stepVersion!==actionStepVersion)return;
     showAction(step);
@@ -1981,6 +1984,29 @@ function seniorActionTitle(data){
     const names={ARM_UP:'手慢慢往上翹',ARM_DOWN:'手慢慢往下彎',SWIPE_LEFT:'手慢慢往左移',SWIPE_RIGHT:'手慢慢往右移',TILT_LEFT:'手慢慢向左側傾',TILT_RIGHT:'手慢慢向右側傾',SHAKE:'手輕輕來回動',HOLD_UP:'保持先前記住的姿勢'};
     return (names[action]||'手部活動')+'・'+(actionHoldSeconds>0?'累積 '+actionHoldSeconds+' 秒':actionTargetCount+' 次');
 }
+function getActionSpokenNarration(data){
+    if(!data || typeof data!=='object')return '準備好後，依畫面提示做動作。';
+    const action=String(data.action||'').trim().toUpperCase();
+    const names={
+      SWIPE_LEFT:'把手往左揮動',SWIPE_RIGHT:'把手往右揮動',
+      JUMP:'輕輕跳躍',SHAKE:'輕輕搖動手腕',RUN:'安全地原地踏步',
+      ARM_UP:'慢慢抬起手臂',ARM_DOWN:'把手腕向下傾斜',
+      TILT_LEFT:'把手腕向左傾斜',TILT_RIGHT:'把手腕向右傾斜',
+      HOLD_UP:'保持剛才設定的姿勢',
+      TURN_LEFT:'把手放在胸前，慢慢向左轉身',TURN_RIGHT:'把手放在胸前，慢慢向右轉身'
+    };
+    const name=names[action];
+    if(!name)return '請依照畫面提示，慢慢完成動作。';
+    const count=Number(data.targetCount),seconds=Number(data.holdSeconds);
+    const countOnly=['SWIPE_LEFT','SWIPE_RIGHT','JUMP','TILT_LEFT','TILT_RIGHT','TURN_LEFT','TURN_RIGHT'].includes(action);
+    if(!countOnly && Number.isFinite(seconds) && seconds>0){
+       return name+'，持續'+(seconds===2?'兩':String(seconds))+'秒。';
+    }
+    if(Number.isInteger(count) && count>=1){
+       return name+(count===2?'兩':String(count))+'次。';
+    }
+    return name+'。';
+}
 function getActionMovementNarration(data) {
     data = normalizeSwipeTask(data);
 
@@ -2004,7 +2030,7 @@ function getActionMovementNarration(data) {
         if(cues[action])return cues[action]+(isTimed?`偵測到動作累積 ${seconds} 秒就完成，可以停一下。`:`做 ${hasCount?Math.floor(count):1} 次，不用趕。`);
     }
     const movements = {
-        SWIPE_LEFT:'反覆向左揮動', SWIPE_RIGHT:'反覆向右揮動',
+        SWIPE_LEFT:'向左揮動', SWIPE_RIGHT:'向右揮動',
         SHAKE:'輕輕來回搖動', RUN:'安全原地踏步',
         ARM_UP:'抬高手臂並保持', ARM_DOWN:'手腕向下傾斜並保持',
         HOLD_UP:'保持已設定的撐住姿勢',
@@ -2633,11 +2659,11 @@ function splitSpeechText(text){
 // the Cloudflare TTS request, or the cloud audio cache keys.
 function narrationClipPause(lastChunk){
     const last=String(lastChunk||'').trim();
-    if(/[。！？!?][」』”"']?$/.test(last))return 420;
-    if(/[」』”"']$/.test(last))return 380;
-    if(/[；;：:]$/.test(last))return 310;
-    if(/[，、,]$/.test(last))return 240;
-    return 190;
+    if(/[。！？!?][」』”"']?$/.test(last))return 120;
+    if(/[」』”"']$/.test(last))return 110;
+    if(/[；;：:]$/.test(last))return 100;
+    if(/[，、,]$/.test(last))return 80;
+    return 60;
 }
 function speechDelay(ms){
     return new Promise(resolve=>{
@@ -2809,7 +2835,7 @@ function attachVoiceLeveling(audio,volume){
         throw error;
     }
 }
-async function playFixedVoice(text,token){
+async function playFixedVoice(text,token,kind='story'){
     syncWorkerVoicePreference();
     if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
     const status=await getFishVoiceStatus();
@@ -2826,10 +2852,8 @@ async function playFixedVoice(text,token){
     }
     const voiceId=String(status.voiceId).trim();
     fishLastFallbackReason='';
-    const age=Number(selectedChildAge)||6;
-    const pace=currentMode==='senior'?.9:age<=6?.94:1;
-    const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
-    const key=JSON.stringify([FISH_AUDIO_EDITION,voiceId,WORKER_URL,text,rate]);
+    const rate=1.0; // Fish narration should play at its native speed for natural cadence.
+    const key=JSON.stringify([FISH_AUDIO_EDITION,voiceId,WORKER_URL,text,kind]);
     let bytes=cloudAudioCache.get(key);
     if(!bytes)bytes=await savedAudio('get',key);
     if(token!==speechToken)return 'cancelled';
@@ -2856,7 +2880,7 @@ async function playFixedVoice(text,token){
                     let retryable=false;
                     try{
                         const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-fish-story',{
-                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,savedOnly:false})});
+                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,savedOnly:false,kind})});
                         if(!response.ok){
                             const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
                             if(response.status===429)pauseWorkerVoiceForQuota();
@@ -2930,13 +2954,13 @@ async function playFixedVoice(text,token){
     }
     return playback;
 }
-async function playNarrationChunk(text,token){
+async function playNarrationChunk(text,token,kind='story'){
     syncNarrationSourceLock();
     // Once a cloud clip fails, do not alternate Cloudflare and device voices
     // every sentence. The lock resets only when loading a different story.
     let fixed=null;
     if(narrationSourceLock!=='device'){
-        try{fixed=await playFixedVoice(text,token);}catch(error){
+        try{fixed=await playFixedVoice(text,token,kind);}catch(error){
             console.warn('Worker audio playback failed:',error);fixed='error';
         }
     }
@@ -3054,7 +3078,7 @@ async function speak(text,options={}){
             const supported='speechSynthesis' in window;
             // Volume zero is an explicit user's choice to read silently.
             if(Number(voiceSettings.volume)===0){updateVoiceStatus('已靜音，使用文字模式。');return;}
-            const outcome=options.deviceOnly ? (supported ? await speakChunk(chunks[index],token) : 'unsupported') : await playNarrationChunk(chunks[index],token);
+            const outcome=options.deviceOnly ? (supported ? await speakChunk(chunks[index],token) : 'unsupported') : await playNarrationChunk(chunks[index],token,options.kind==='prompt'?'prompt':'story');
             if(sceneVersion!==actVersion)return;
             if(adventurePaused && !options.allowPaused){
                 if(options.recover===false)return;
@@ -4130,7 +4154,7 @@ function showAction(data) {
 
 
     currentActionNarration =
-        getActionNarration(
+        getActionSpokenNarration(
             data
         );
 
@@ -4171,12 +4195,12 @@ function showAction(data) {
         +
         ' '
         +
-        (currentMode==='senior'?seniorActionTitle(data):(getActionContext(data) || currentActionNarration));
+        (currentMode==='senior'?seniorActionTitle(data):getActionMovementNarration(data));
 
 
     $('actionSubText').textContent=currentMode==='senior'
         ? '💡 手肘靠好，手掌朝下。'+currentActionNarration+' 不舒服就停下休息。'
-        : '💡 '+(getActionContext(data)?'做法：'+getActionMovementNarration(data):currentActionPurpose)+(['TURN_LEFT','TURN_RIGHT'].includes(action)?' 先停穩，把戴裝置的手放胸前，手臂跟身體一起慢慢轉，再停穩。腕部辨識可能誤判，請留意周圍空間。':'');
+        : '💡 '+(getActionContext(data)?'故事任務：'+getActionContext(data)+'。 ':'')+(['TURN_LEFT','TURN_RIGHT'].includes(action)?'先停穩，將手放胸前，跟著身體慢慢轉動，注意周圍空間。':'準備好再做，不用趕。');
 
     if(!isCooperation())void sendBLE(controllerLearning || adventurePaused ? 'PAUSE' : (actionHoldSeconds > 0 ? 'TIMED:' : 'EXPECT:') + action);
     setupCoop(data);
@@ -4212,7 +4236,7 @@ function lockAction() {
     $('actionSubText').textContent =
         '🔊 正在播放劇情，請先聽完……';
     const step=actionSteps[currentActionStepIndex];
-    if(step)$('promptText').textContent=getActionIcon(step.action)+' '+getActionNarration(step);
+    if(step)$('promptText').textContent=getActionIcon(step.action)+' '+getActionMovementNarration(step);
 
 }
 
@@ -5700,7 +5724,7 @@ document.addEventListener(
                         await speak(isStoryFirstPlayback()?currentStoryNarration:[currentStory, currentStepStory].filter(Boolean).join('。'));
                         if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
                         if (wasWaiting && step) {
-                            if (!replayCancelRequested && !isStoryFirstPlayback()) await speak(getActionNarration(step));
+                            if (!replayCancelRequested && !isStoryFirstPlayback()) await speak(getActionSpokenNarration(step),{kind:'prompt'});
                             if (replayVersion !== actVersion || replayStepVersion !== actionStepVersion) return;
                             showAction(step);
                         }
@@ -5867,7 +5891,7 @@ async function checkCoopComplete(){
 function collectStoryAudio(){
     if(!adventure)return [];
     const texts=[3,4].includes(adventure.narrativeLayoutVersion)?storyFirstAudioRuns(adventure):[adventure.opening,adventure.ending];
-    for(const act of adventure.acts||[]){if(![3,4].includes(adventure.narrativeLayoutVersion))texts.push(act.story);for(const step of getActActions(act)){if(![3,4].includes(adventure.narrativeLayoutVersion))texts.push(step.storyBefore,step.storyAfter);texts.push(getActionNarration(step));if(step.familyAction)texts.push('家人的任務。'+getActionNarration(step.familyAction));}}
+    for(const act of adventure.acts||[]){if(![3,4].includes(adventure.narrativeLayoutVersion))texts.push(act.story);for(const step of getActActions(act)){if(![3,4].includes(adventure.narrativeLayoutVersion))texts.push(step.storyBefore,step.storyAfter);texts.push(getActionSpokenNarration(step));if(step.familyAction)texts.push('家人的任務。'+getActionSpokenNarration(step.familyAction));}}
     return [...new Set(texts.filter(Boolean).flatMap(splitSpeechText))];
 }
 async function startPreview(manual=false){
