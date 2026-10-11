@@ -686,7 +686,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險穩定版 17.1</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險穩定版 17.2</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -767,10 +767,16 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 <button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
 <p class="text-sm text-slate-300">勾選會保存新內容；取消勾選只遊玩本次，不加入保存內容。已保存的內容仍可重玩。</p>
 </div>
-<div id="legacyPreparationControls" class="hidden" aria-label="完整故事開始選項">
+<div id="legacyPreparationControls" hidden inert aria-hidden="true" style="display:none">
 <div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
 </div>
 <p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
+<details id="generationFailureDetails" hidden class="my-3 rounded-xl border border-slate-600 p-3 text-slate-200">
+<summary class="cursor-pointer">查看失敗原因</summary>
+<textarea id="generationFailureText" readonly rows="7" aria-label="本次生成的錯誤資訊" class="mt-3 w-full bg-slate-900 p-3 text-sm rounded-lg"></textarea>
+<button id="btnCopyGenerationFailure" type="button" class="mt-2 px-4 py-2 rounded-lg bg-slate-700">複製錯誤資訊</button>
+<p id="generationCopyStatus" role="status" class="text-sm mt-2"></p>
+</details>
 <div id="seniorStoryControls" class="hidden space-y-2">
 <button id="btnPauseStory" disabled class="w-full bg-emerald-950 border border-emerald-400/50 text-emerald-100 text-lg font-bold px-4 py-3 rounded-xl">⏸ 休息一下</button>
 <p id="pauseStoryHint" class="text-base text-slate-300 leading-relaxed">可以隨時休息，已偵測到的秒數與次數會保留。</p>
@@ -1039,7 +1045,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 17.4 — 修復完整版故事只有標題無法開始
+   FRONTEND 17.2 — 故事格式相容與可複製的失敗原因
 
    新架構：
 
@@ -2506,17 +2512,6 @@ function splitSpeechText(text){
     }
     return paragraphs;
 }
-// 17.4: Make room for natural paragraph and dialogue boundaries.
-// This changes ONLY silence between existing audio clips, not the story text,
-// the Cloudflare TTS request, or the cloud audio cache keys.
-function narrationClipPause(lastChunk){
-    const last=String(lastChunk||'').trim();
-    if(/[。！？!?][」』”"']?$/.test(last))return 420;
-    if(/[」』”"']$/.test(last))return 380;
-    if(/[；;：:]$/.test(last))return 310;
-    if(/[，、,]$/.test(last))return 240;
-    return 190;
-}
 function speechDelay(ms){
     return new Promise(resolve=>{
         let timer;
@@ -2581,20 +2576,6 @@ function pauseWorkerVoiceForQuota(){
     workerVoiceQuotaUntil=(Math.floor(Date.now()/86400000)+1)*86400000;
     try{localStorage.setItem(workerVoiceQuotaKey(),String(workerVoiceQuotaUntil));}catch(_){}
     syncWorkerVoicePreference();
-}
-// 17.3: Keep narration consistent across one adventure.
-// Identity changes automatically when a newly generated/saved story is loaded.
-let narrationAdventureRef = null;
-let narrationSourceLock = null; // null, 'cloud', or 'device'
-let narrationDeviceVoice = undefined; // undefined = not chosen yet; null = OS default
-let narrationDeviceVoiceURI = '';
-function syncNarrationSourceLock(){
-    if(narrationAdventureRef!==adventure){
-        narrationAdventureRef=adventure;
-        narrationSourceLock=null;
-        narrationDeviceVoice=undefined;
-        narrationDeviceVoiceURI='';
-    }
 }
 let cloudSpeechCooldownUntil=0;
 let cloudSpeechController=null;
@@ -2739,12 +2720,10 @@ async function playFixedVoice(text,token){
             }
         };
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
-        audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),7500);
+        audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),5000);
         progressPoll=setInterval(watch,1000);
         updateVoiceStatus('正在使用 Cloudflare 固定中文配音。已取得的音檔會保存供重聽。');
-        // 17.4: Let the media element play directly. A suspended Web Audio context or a
-        // partially created MediaElementSource can otherwise silence an otherwise valid file.
-        try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
+        try{voiceGraph=attachVoiceLeveling(audio,audio.volume);if(voiceGraph)updateVoiceStatus('正在播放 Worker 配音，已啟用人聲音量平衡。');const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
     });
     if(['error','timeout'].includes(playback)){
         cloudAudioCache.delete(key);void savedAudio('delete',key);
@@ -2752,29 +2731,17 @@ async function playFixedVoice(text,token){
     return playback;
 }
 async function playNarrationChunk(text,token){
-    syncNarrationSourceLock();
-    // Once a cloud clip fails, do not alternate Cloudflare and device voices
-    // every sentence. The lock resets only when loading a different story.
-    let fixed=null;
-    if(narrationSourceLock!=='device'){
-        try{fixed=await playFixedVoice(text,token);}catch(error){
-            console.warn('Worker audio playback failed:',error);fixed='error';
-        }
+    let fixed;
+    try{fixed=await playFixedVoice(text,token);}catch(error){
+        console.warn('Worker audio playback failed:',error);fixed='error';
     }
     if(token!==speechToken || fixed==='cancelled')return 'cancelled';
-    if(fixed==='end'){
-        narrationSourceLock='cloud';
-        return 'end';
-    }
-    if(narrationSourceLock!=='device'){
-        narrationSourceLock='device';
-        if(fixed!==null){
-            cloudSpeechCooldownUntil=Date.now()+300000;
-            updateVoiceStatus('Worker 音檔暫時無法播放。本篇冒險將固定使用裝置朗讀。');
-            showToast('配音失敗；本篇冒險將固定使用裝置聲音，不再反覆換人。');
-        }else{
-            updateVoiceStatus('本篇冒險固定使用裝置備用聲音，避免反覆換人。');
-        }
+    if(fixed==='end')return 'end';
+    if(fixed!==null){
+        // 播放階段失敗也需要備援，不能只處理下載失敗。
+        cloudSpeechCooldownUntil=Date.now()+300000;
+        updateVoiceStatus('Worker 音檔暫時無法播放，正在改用裝置朗讀同一段。');
+        showToast('配音播放失敗，已自動切換裝置朗讀。');
     }
     if(!('speechSynthesis' in window))return 'unsupported';
     let outcome=await speakChunk(text,token);
@@ -2792,14 +2759,7 @@ async function playNarrationChunk(text,token){
 function speakChunk(text,token){
     return new Promise(resolve=>{
         const utterance=new SpeechSynthesisUtterance(text);activeSpeechUtterance=utterance;
-        syncNarrationSourceLock();
-        // Pin an explicit fallback voice for the whole adventure. A late
-        // voiceschanged event must not silently switch the narrator.
-        if(narrationDeviceVoice===undefined || narrationDeviceVoiceURI!==voiceSettings.voiceURI){
-            narrationDeviceVoice=chooseSpeechVoice();
-            narrationDeviceVoiceURI=voiceSettings.voiceURI;
-        }
-        const voice=narrationDeviceVoice,emotion=getSentenceEmotion(text);
+        const voice=chooseSpeechVoice(),emotion=getSentenceEmotion(text);
         if(voice)utterance.voice=voice;
         updateVoiceStatus(voice?'正在使用裝置備用聲音：'+voice.name+'（'+voice.lang+'）。':'正在'+getDeviceVoiceLabel()+'的預設中文聲音。');
         utterance.lang=voice?.lang || 'zh-TW';utterance.rate=emotion.rate;utterance.pitch=emotion.pitch;
@@ -2889,7 +2849,7 @@ async function speak(text,options={}){
                 continue;
             }
             index++;
-            if(index<chunks.length)await speechDelay(narrationClipPause(chunks[index-1]));
+            if(index<chunks.length)await speechDelay(isStoryFirstPlayback()?100:/[。！？!?]$/.test(chunks[index-1])?300:160);
         }
     }finally{if(token===speechToken){speechPlaying=false;refreshActionSpeechControls();}}
 }
@@ -3218,6 +3178,10 @@ function resetAdventure() {
     handResumePending=false;cancelHandTransfer();
     cancelPrompts();actionNextReminderAt=Infinity;
     $('generationStatus').textContent='';
+    $('generationFailureDetails').hidden=true;
+    $('generationFailureDetails').open=false;
+    $('generationFailureText').value='';
+    $('generationCopyStatus').textContent='';
     audioBuildController?.abort();storyPreview=false;fullManualTest=false;stopCoop();
     adventurePaused=false;storyFinished=false;releasePauseWaiters();
     if(generationController){generationController.abort();generationController=null;}
@@ -3477,7 +3441,8 @@ async function parseAIResponse(res) {
     if (!res.ok || raw.ok === false) {
         if(typeof raw.code==='string' && raw.code.startsWith('STORY_')){
             const error=new Error(raw.error || '這次故事尚未完成，請稍後再試。');
-            error.code=raw.code;error.workerDetail=raw.detail;error.httpStatus=res.status;throw error;
+            error.code=raw.code;error.workerDetail=raw.detail;error.httpStatus=res.status;
+            error.workerVersion=raw.version;error.workerDiagnostics=raw.diagnostics;throw error;
         }
 
         const detail =
@@ -4313,6 +4278,36 @@ function saveFullStory(story,key,id){try{const rows=readLocalLibrary().filter(ro
 function getStoryClientId(){let id=readSavedJSON('story-client-id',null);if(typeof id!=='string' || !/^[a-zA-Z0-9-]{16,80}$/.test(id)){id=typeof crypto!=='undefined' && crypto.randomUUID?crypto.randomUUID():'browser-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);try{localStorage.setItem('story-client-id',JSON.stringify(id));}catch(_){}}return id;}
 $('btnReplaySaved').addEventListener('click',()=>generateStory(true));
 
+function showGenerationFailure(error){
+    const detail=typeof error.workerDetail==='string'?error.workerDetail:'';
+    const lines=['網頁：17.2','Worker：'+(error.workerVersion||'未取得'),
+        '錯誤：'+(error.code||error.name||'未分類'),
+        ...(error.httpStatus?['HTTP：'+error.httpStatus]:[]),error.message,
+        ...(detail?['檢查原因：'+detail]:[])];
+    const diagnostic=error.workerDiagnostics;
+    if(diagnostic && typeof diagnostic==='object'){
+        for(const [key,label] of [['sceneCount','故事段數'],['activityCount','互動數'],['aiCalls','AI請求次數'],['elapsedMs','等候毫秒']]){
+            if(Number.isFinite(diagnostic[key]))lines.push(label+'：'+diagnostic[key]);
+        }
+    }
+    $('generationFailureText').value=lines.join('\n');
+    $('generationFailureDetails').hidden=false;
+    // Show the first actual check, with all checks available below. No raw HTML.
+    const first=detail.split('；')[0].slice(0,180);
+    const names={SWIPE_LEFT:'向左揮手',SWIPE_RIGHT:'向右揮手',ARM_UP:'抬手',ARM_DOWN:'手腕向下',SHAKE:'搖手腕',RUN:'踏步',storyDesign:'故事摘要',scenes:'故事段落'};
+    return first?' 原因：'+first.replace(/SWIPE_LEFT|SWIPE_RIGHT|ARM_UP|ARM_DOWN|SHAKE|RUN|storyDesign|scenes/g,key=>names[key])+'。':'';
+}
+$('btnCopyGenerationFailure').addEventListener('click',async()=>{
+    const field=$('generationFailureText');
+    try{
+        await navigator.clipboard.writeText(field.value);
+        $('generationCopyStatus').textContent='已複製，可貼回對話讓我查看。';
+    }catch(error){
+        field.focus();field.select();
+        $('generationCopyStatus').textContent='已選取錯誤資訊，請長按複製，或按 Ctrl+C。';
+    }
+});
+
 async function generateStory(preferSaved=false) {
     // DOM click events are objects, not a request to replay saved content.
     preferSaved = preferSaved === true;
@@ -4473,7 +4468,7 @@ async function generateStory(preferSaved=false) {
             );
         if(currentMode==='child' && storyEdition==='full' && adventure.storyEdition!=='full'){
             adventure=null;
-            throw new Error('完整版網頁已就緒，但Worker仍是舊版。請同步更新Worker至6.5.1或更新版本，再生成完整故事。');
+            throw new Error('完整版網頁已就緒，但Worker仍是舊版。請同步更新Worker至6.5.2或更新版本，再生成完整故事。');
         }
 
 
@@ -4657,16 +4652,8 @@ async function generateStory(preferSaved=false) {
 
         if (requestVersion !== adventureVersion) return;
         const generationError=e.name==='AbortError'?'這次AI回應超過等候上限，已停止等待。可稍後重試，或播放已保存內容。':e.message;
-        // 將 Worker 已回傳的故事驗證原因顯示出來，避免只看到通用失敗訊息。
-        // 不增加 AI 呼叫、不動故事、BLE 或 TTS；使用 textContent 安全呈現文字。
-        const workerDiagnostic = typeof e.workerDetail === 'string'
-            ? e.workerDetail.trim()
-            : '';
-        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+generationError
-            +(workerDiagnostic ? '\n\n【詳細原因】\n' + workerDiagnostic : '')
-            +(preferSaved || e.code || e.name==='AbortError'?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
-        $('generationStatus').style.whiteSpace = 'pre-wrap';
-        if (workerDiagnostic) console.info('聲動奇境 Worker 故事驗證詳細原因：', workerDiagnostic);
+        const failureReason=showGenerationFailure(e);
+        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+generationError+failureReason+(preferSaved || e.code || e.name==='AbortError'?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
         console.error(
             e
         );
@@ -5402,9 +5389,6 @@ function resetCoopCommands(){coopCommands.child={};coopCommands.family={};}
 function isCooperation(){return currentMode==='child' && $('playStyle').value==='coop';}
 function familyPosture(){return $('familyPosture').value==='seated'?'seated':'general';}
 function refreshCoopUI(){
-    // 完整故事生成成功後，必須顯示開始與手動測試按鈕。
-    // 舊版誤將整個控制區永久設為 hidden/inert/display:none，造成只有標題沒有內容。
-    $('legacyPreparationControls').classList.toggle('hidden', !storyPreview);
     const active=isCooperation();$('btnConnect').textContent=active?'連接孩子的裝置':'連接故事裝置';$('btnDisconnect').textContent=active?'中斷孩子連線':'中斷連線';$('coopOptions').classList.toggle('hidden',!active);$('familyBLEPanel').classList.toggle('hidden',!active);
     $('playStylePanel').classList.toggle('hidden',currentMode==='senior');
     for(const id of ['playStyle','familyPosture'])$(id).disabled=busy || (!!acts.length && !storyFinished && !storyPreview);
