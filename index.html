@@ -1039,7 +1039,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 17.2 — 修復完整版故事只有標題無法開始
+   FRONTEND 17.4 — 修復完整版故事只有標題無法開始
 
    新架構：
 
@@ -2506,6 +2506,17 @@ function splitSpeechText(text){
     }
     return paragraphs;
 }
+// 17.4: Make room for natural paragraph and dialogue boundaries.
+// This changes ONLY silence between existing audio clips, not the story text,
+// the Cloudflare TTS request, or the cloud audio cache keys.
+function narrationClipPause(lastChunk){
+    const last=String(lastChunk||'').trim();
+    if(/[。！？!?][」』”"']?$/.test(last))return 420;
+    if(/[」』”"']$/.test(last))return 380;
+    if(/[；;：:]$/.test(last))return 310;
+    if(/[，、,]$/.test(last))return 240;
+    return 190;
+}
 function speechDelay(ms){
     return new Promise(resolve=>{
         let timer;
@@ -2570,6 +2581,20 @@ function pauseWorkerVoiceForQuota(){
     workerVoiceQuotaUntil=(Math.floor(Date.now()/86400000)+1)*86400000;
     try{localStorage.setItem(workerVoiceQuotaKey(),String(workerVoiceQuotaUntil));}catch(_){}
     syncWorkerVoicePreference();
+}
+// 17.3: Keep narration consistent across one adventure.
+// Identity changes automatically when a newly generated/saved story is loaded.
+let narrationAdventureRef = null;
+let narrationSourceLock = null; // null, 'cloud', or 'device'
+let narrationDeviceVoice = undefined; // undefined = not chosen yet; null = OS default
+let narrationDeviceVoiceURI = '';
+function syncNarrationSourceLock(){
+    if(narrationAdventureRef!==adventure){
+        narrationAdventureRef=adventure;
+        narrationSourceLock=null;
+        narrationDeviceVoice=undefined;
+        narrationDeviceVoiceURI='';
+    }
 }
 let cloudSpeechCooldownUntil=0;
 let cloudSpeechController=null;
@@ -2714,10 +2739,12 @@ async function playFixedVoice(text,token){
             }
         };
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
-        audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),5000);
+        audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),7500);
         progressPoll=setInterval(watch,1000);
         updateVoiceStatus('正在使用 Cloudflare 固定中文配音。已取得的音檔會保存供重聽。');
-        try{voiceGraph=attachVoiceLeveling(audio,audio.volume);if(voiceGraph)updateVoiceStatus('正在播放 Worker 配音，已啟用人聲音量平衡。');const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
+        // 17.4: Let the media element play directly. A suspended Web Audio context or a
+        // partially created MediaElementSource can otherwise silence an otherwise valid file.
+        try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
     });
     if(['error','timeout'].includes(playback)){
         cloudAudioCache.delete(key);void savedAudio('delete',key);
@@ -2725,17 +2752,29 @@ async function playFixedVoice(text,token){
     return playback;
 }
 async function playNarrationChunk(text,token){
-    let fixed;
-    try{fixed=await playFixedVoice(text,token);}catch(error){
-        console.warn('Worker audio playback failed:',error);fixed='error';
+    syncNarrationSourceLock();
+    // Once a cloud clip fails, do not alternate Cloudflare and device voices
+    // every sentence. The lock resets only when loading a different story.
+    let fixed=null;
+    if(narrationSourceLock!=='device'){
+        try{fixed=await playFixedVoice(text,token);}catch(error){
+            console.warn('Worker audio playback failed:',error);fixed='error';
+        }
     }
     if(token!==speechToken || fixed==='cancelled')return 'cancelled';
-    if(fixed==='end')return 'end';
-    if(fixed!==null){
-        // 播放階段失敗也需要備援，不能只處理下載失敗。
-        cloudSpeechCooldownUntil=Date.now()+300000;
-        updateVoiceStatus('Worker 音檔暫時無法播放，正在改用裝置朗讀同一段。');
-        showToast('配音播放失敗，已自動切換裝置朗讀。');
+    if(fixed==='end'){
+        narrationSourceLock='cloud';
+        return 'end';
+    }
+    if(narrationSourceLock!=='device'){
+        narrationSourceLock='device';
+        if(fixed!==null){
+            cloudSpeechCooldownUntil=Date.now()+300000;
+            updateVoiceStatus('Worker 音檔暫時無法播放。本篇冒險將固定使用裝置朗讀。');
+            showToast('配音失敗；本篇冒險將固定使用裝置聲音，不再反覆換人。');
+        }else{
+            updateVoiceStatus('本篇冒險固定使用裝置備用聲音，避免反覆換人。');
+        }
     }
     if(!('speechSynthesis' in window))return 'unsupported';
     let outcome=await speakChunk(text,token);
@@ -2753,7 +2792,14 @@ async function playNarrationChunk(text,token){
 function speakChunk(text,token){
     return new Promise(resolve=>{
         const utterance=new SpeechSynthesisUtterance(text);activeSpeechUtterance=utterance;
-        const voice=chooseSpeechVoice(),emotion=getSentenceEmotion(text);
+        syncNarrationSourceLock();
+        // Pin an explicit fallback voice for the whole adventure. A late
+        // voiceschanged event must not silently switch the narrator.
+        if(narrationDeviceVoice===undefined || narrationDeviceVoiceURI!==voiceSettings.voiceURI){
+            narrationDeviceVoice=chooseSpeechVoice();
+            narrationDeviceVoiceURI=voiceSettings.voiceURI;
+        }
+        const voice=narrationDeviceVoice,emotion=getSentenceEmotion(text);
         if(voice)utterance.voice=voice;
         updateVoiceStatus(voice?'正在使用裝置備用聲音：'+voice.name+'（'+voice.lang+'）。':'正在'+getDeviceVoiceLabel()+'的預設中文聲音。');
         utterance.lang=voice?.lang || 'zh-TW';utterance.rate=emotion.rate;utterance.pitch=emotion.pitch;
@@ -2843,7 +2889,7 @@ async function speak(text,options={}){
                 continue;
             }
             index++;
-            if(index<chunks.length)await speechDelay(isStoryFirstPlayback()?100:/[。！？!?]$/.test(chunks[index-1])?300:160);
+            if(index<chunks.length)await speechDelay(narrationClipPause(chunks[index-1]));
         }
     }finally{if(token===speechToken){speechPlaying=false;refreshActionSpeechControls();}}
 }
