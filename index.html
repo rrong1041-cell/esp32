@@ -19,7 +19,7 @@ rel="stylesheet">
 
 <script>
 
-tailwind.config = {
+if (typeof tailwind !== 'undefined') tailwind.config = {
 
     theme: {
 
@@ -410,6 +410,45 @@ body.mode-senior .glow-button {
 
 }
 
+
+/* ===== 17.7 Aurora: quieter controls, clearer story and accessible focus ===== */
+:root{color-scheme:dark}
+body:not(.mode-senior){background:radial-gradient(ellipse at 24% 0%,#40236c 0%,transparent 38%),radial-gradient(ellipse at 93% 12%,#124060 0%,transparent 33%),#0a1024}
+main.max-w-5xl{max-width:75rem}
+main > section{backdrop-filter:blur(18px);background:rgba(13,19,40,.86)!important;box-shadow:0 18px 58px rgba(0,0,0,.28)}
+main > section:nth-child(2){border-color:rgba(139,92,246,.44)}
+#storyScroll{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#7560a5 transparent;max-height:min(58vh,630px)}
+#storyDisplay{font-size:1.09rem;line-height:1.95;letter-spacing:.022em}
+#storyDisplay p{line-height:1.95}
+#storyDisplay > *{animation:storyAppear .28s ease-out}
+#actionPrompt{border-radius:20px!important;background:linear-gradient(145deg,rgba(76,29,101,.5),rgba(9,38,59,.58))!important;border-color:rgba(217,114,239,.54)!important}
+#promptText{font-size:1.2rem;line-height:1.75}
+#actionProgressPanel{background:rgba(15,23,42,.56);border-radius:16px;padding:14px}
+#btnGenerate{min-height:58px}
+#themeButtonsContainer button{min-height:48px;border-radius:14px!important;line-height:1.55;font-size:.83rem!important;transition:transform .16s,box-shadow .16s,border .16s}
+#themeButtonsContainer button.active{box-shadow:inset 0 0 0 1px rgba(192,132,252,.55),0 7px 22px rgba(109,40,217,.21)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #67e8f9;outline-offset:3px}
+button:disabled{cursor:not-allowed}
+.story-hud{padding:14px 16px;margin-bottom:14px;border-radius:16px;background:linear-gradient(120deg,rgba(84,45,145,.3),rgba(14,116,144,.16));border:1px solid rgba(190,165,255,.3)}
+.story-hud-line{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#e9d5ff;font-weight:700;font-size:.85rem}
+#storyHudCounter{color:#a5f3fc;white-space:nowrap;font-size:.76rem}
+.story-hud-track{height:6px;border-radius:20px;background:#28334b;margin-top:10px;overflow:hidden}
+#storyHudProgress{width:0;height:100%;background:linear-gradient(90deg,#a78bfa,#67e8f9);transition:width .3s}
+.narration-toolbar{margin-top:14px;border:1px solid rgba(125,211,252,.33);border-radius:19px;padding:14px;background:linear-gradient(125deg,rgba(9,40,65,.62),rgba(43,25,79,.5))}
+.narration-heading{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:.92rem;color:#cffafe;font-weight:700}
+.narration-voice-name{font-size:.73rem;color:#c4b5fd;font-weight:500}
+.narration-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:11px 0}
+.narration-actions button{min-height:44px;padding:9px 5px;border-radius:12px;border:1px solid rgba(165,180,252,.3);background:rgba(30,41,59,.75);color:#f1f5f9;font-size:.85rem;font-weight:700}
+.narration-actions button:not(:disabled):hover{background:rgba(67,56,128,.82)}
+.narration-actions button:disabled{opacity:.39}
+.narration-actions button[data-paused="true"]{background:rgba(6,95,70,.65);border-color:rgba(52,211,153,.55)}
+.narration-state{font-size:.77rem;color:#bacbdd;line-height:1.6;min-height:20px}
+body.mode-senior .narration-actions button{min-height:56px;font-size:1.02rem}
+body.mode-senior .narration-state{font-size:1rem}
+@keyframes storyAppear{from{opacity:.68;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:680px){main > section{padding:17px!important}#storyScroll{max-height:52vh}#storyDisplay{font-size:1.08rem}#themeButtonsContainer{grid-template-columns:repeat(2,minmax(0,1fr))!important}.narration-actions{gap:6px}.narration-actions button{font-size:.8rem}.narration-voice-name{display:none}}
+@media(prefers-reduced-motion:reduce){#storyDisplay > *{animation:none}#storyHudProgress{transition:none}.action-big{animation:none!important}*{scroll-behavior:auto!important}}
+
 </style>
 
 </head>
@@ -477,7 +516,7 @@ id="mainTitle">
 </header>
 
 <main
-class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-5 my-auto">
 
 <section
 class="md:col-span-1 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/20 shadow-2xl flex flex-col justify-between gap-6">
@@ -582,6 +621,10 @@ class="md:col-span-2 bg-slate-900/80 p-6 rounded-3xl border border-purple-500/25
 <div
 class="relative flex-1 bg-slate-950/70 rounded-2xl p-6 border border-slate-800 flex flex-col justify-between min-h-[300px]">
 
+<div id="storyChapterHUD" class="story-hud" aria-live="polite">
+  <div class="story-hud-line"><span id="storyHudTitle">✨ 冒險即將開始</span><span id="storyHudCounter">尚未開始</span></div>
+  <div class="story-hud-track"><div id="storyHudProgress"></div></div>
+</div>
 <div
 class="overflow-y-auto max-h-[420px] pr-2 space-y-4"
 id="storyScroll">
@@ -625,7 +668,7 @@ class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
 </div>
 
 <div id="speechPreparation" class="hidden mt-3 p-3 rounded-xl bg-slate-900 border border-cyan-400/40">
-<p class="text-cyan-100" role="status">正在準備故事聲音，最多等待 8 秒；逾時會自動使用裝置朗讀。</p>
+<p class="text-cyan-100" role="status">正在準備 Fish Audio 配音；若連線等待過久，可以改用裝置朗讀。</p>
 <button id="btnUseDeviceSpeechNow" type="button" class="mt-2 bg-cyan-700 text-white font-bold rounded-xl px-4 py-2">立即用裝置朗讀</button>
 </div>
 <div id="speechRecovery" class="hidden mt-3 p-4 rounded-xl border border-amber-400/50 bg-slate-900">
@@ -686,7 +729,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 17.5 快速開演測試版</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><label class="flex items-center gap-2 text-sm text-cyan-200 mt-2"><input type="checkbox" id="progressiveToggle">🚀 快速開演（測試版）：先寫完整規劃與前4段，遊玩時接續生成</label><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 劇情導演新版 17.7</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><label class="flex items-center gap-2 text-sm text-cyan-200 mt-2"><input type="checkbox" id="progressiveToggle">🚀 快速開演：先規劃整篇、生成前4幕，遊玩時接續生成</label><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -815,6 +858,17 @@ title="聲音設定">
 
 </button>
 
+</div>
+
+<!-- Fish 17.7: three separate, accessible controls; no more stop==pause confusion -->
+<div id="narrationToolbar" class="narration-toolbar" aria-label="故事朗讀控制">
+  <div class="narration-heading"><span>🎙️ 故事配音</span><span class="narration-voice-name">Fish Audio · 日系女聲</span></div>
+  <div class="narration-actions">
+    <button type="button" id="btnNarrationPause" disabled aria-label="暫停或繼續朗讀">⏸ 暫停</button>
+    <button type="button" id="btnNarrationRestart" disabled aria-label="重播目前段落">↺ 重播</button>
+    <button type="button" id="btnNarrationStop" disabled aria-label="跳過目前的朗讀">⏭ 跳過朗讀</button>
+  </div>
+  <p id="narrationControlStatus" class="narration-state" role="status" aria-live="polite">故事準備好後可重聽，也可以暫停並從原位置繼續。</p>
 </div>
 
 </div>
@@ -1522,6 +1576,7 @@ async function playStoryFirstRun(speakIt=true,continuation='') {
     currentActIndex=run.endIndex;
     currentRound=currentActIndex+1;maxRound=acts.length;
     const act=acts[currentActIndex];
+    setStoryChapterHUD(act?.title||adventure?.title||'故事繼續',currentRound,maxRound);
     currentStory=String(act.story||'').trim();
     currentStoryNarration=run.text;
     actionSteps=getActActions(act);currentActionStepIndex=0;
@@ -1796,6 +1851,7 @@ function refreshStoryControls(){
     $('btnSpeak').setAttribute('title',currentMode==='senior'?'重聽目前活動說明':'重聽目前故事');
     $('btnPauseStory').textContent=adventurePaused?'▶ 我休息好了，繼續活動':'⏸ 休息一下';
     $('btnManualAction').disabled=adventurePaused || controllerLearning || !waitingForAction;
+    refreshNarrationControls();
 }
 function releasePauseWaiters(){const waiting=pauseWaiters;pauseWaiters=[];waiting.forEach(resolve=>resolve());}
 function waitForAdventureResume(version){
@@ -2114,6 +2170,56 @@ let availableVoices = [];
 let selectedVoice = null;
 
 let speechToken = 0;
+let narrationPausedByUser = false;
+let narrationPauseWaiters = [];
+let cloudPlaybackWatchdog = null;
+let devicePlaybackWatchdog = null;
+function releaseNarrationPauseWaiters(){const waiting=narrationPauseWaiters.splice(0);waiting.forEach(resolve=>resolve());}
+function waitForNarrationResume(token){
+    return narrationPausedByUser && token===speechToken
+        ? new Promise(resolve=>narrationPauseWaiters.push(resolve))
+        : Promise.resolve();
+}
+function setStoryChapterHUD(title='',index=0,total=0){
+    const titleEl=$('storyHudTitle'),countEl=$('storyHudCounter'),bar=$('storyHudProgress');
+    if(!titleEl||!countEl||!bar)return;
+    titleEl.textContent=title||'✨ 冒險即將開始';
+    countEl.textContent=total>0?`第 ${Math.min(index,total)} / ${total} 幕`:'尚未開始';
+    bar.style.width=total>0?Math.min(100,Math.round(index*100/total))+'%':'0%';
+}
+function refreshNarrationControls(){
+    const pause=$('btnNarrationPause'),restart=$('btnNarrationRestart'),stop=$('btnNarrationStop'),status=$('narrationControlStatus');
+    if(!pause||!restart||!stop||!status)return;
+    const active=!!speechPlaying;
+    pause.disabled=!active;
+    pause.textContent=narrationPausedByUser?'▶ 繼續':'⏸ 暫停';
+    pause.dataset.paused=String(narrationPausedByUser);
+    restart.disabled=!active && (busy || replayInProgress || !currentStory || storyPreview);
+    stop.disabled=!active;
+    status.textContent=active?(narrationPausedByUser?'已暫停。按「繼續」會從原位置播放。':
+      activeCloudAudio?'Fish Audio 朗讀中，可暫停並保留播放位置。':'正在準備或朗讀故事，可以暫停。'):
+      currentStory?'這一幕的朗讀已結束，可按「重播」再聽一次。':'故事準備好後，可重播、暫停與繼續朗讀。';
+    const icon=$('btnSpeak')?.querySelector('i');
+    if(icon){icon.className=active?(narrationPausedByUser?'fa-solid fa-play':'fa-solid fa-pause'):'fa-solid fa-rotate-left';}
+}
+function pauseNarration(){
+    if(!speechPlaying||narrationPausedByUser)return;
+    narrationPausedByUser=true;
+    cloudPlaybackWatchdog?.pause();
+    devicePlaybackWatchdog?.pause();
+    try{activeCloudAudio?.pause();}catch(_){}
+    try{if(activeSpeechUtterance && 'speechSynthesis' in window)speechSynthesis.pause();}catch(_){}
+    refreshNarrationControls();
+}
+function resumeNarration(){
+    if(!narrationPausedByUser)return;
+    narrationPausedByUser=false;
+    cloudPlaybackWatchdog?.resume();
+    devicePlaybackWatchdog?.resume();
+    try{if(activeSpeechUtterance && 'speechSynthesis' in window)speechSynthesis.resume();}catch(_){}
+    releaseNarrationPauseWaiters();
+    refreshNarrationControls();
+}
 let activeSpeechUtterance = null;
 
 let voiceSettings = {
@@ -2730,6 +2836,8 @@ async function playFixedVoice(text,token){
         while(cloudAudioCache.size>50)cloudAudioCache.delete(cloudAudioCache.keys().next().value);
     }
     if(token!==speechToken)return 'cancelled';
+    await waitForNarrationResume(token);
+    if(token!==speechToken)return 'cancelled';
     const playback=await new Promise(resolve=>{
         const url=URL.createObjectURL(bytes),audio=new Audio(url);activeCloudAudio=audio;
         audio.playbackRate=rate;
@@ -2739,16 +2847,24 @@ async function playFixedVoice(text,token){
         const finish=(outcome='cancelled')=>{
             if(ended)return;ended=true;clearTimeout(timer);clearInterval(progressPoll);audio.onended=audio.onerror=audio.onplaying=audio.ontimeupdate=null;
             audio.pause();voiceGraph?.disconnect();voiceGraph=null;audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);
-            if(activeCloudAudio===audio)activeCloudAudio=null;if(finishSpeech===finish)finishSpeech=null;resolve(outcome);
+            if(activeCloudAudio===audio)activeCloudAudio=null;
+            if(cloudPlaybackWatchdog?.audio===audio)cloudPlaybackWatchdog=null;
+            if(finishSpeech===finish)finishSpeech=null;resolve(outcome);
         };
         const watch=()=>{
             if(ended)return;
+            if(narrationPausedByUser || audio.paused){clearTimeout(timer);return;}
             const position=Number(audio.currentTime),duration=Number(audio.duration);
             if(audio.ended || (Number.isFinite(duration) && duration>0 && position>=duration)){finish('end');return;}
             // Repeated timeupdate/playing events do not prove that sound advanced.
             if(Number.isFinite(position) && position>lastPosition+.01){
                 lastPosition=position;clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),10000);
             }
+        };
+        cloudPlaybackWatchdog={audio,
+            pause(){clearTimeout(timer);},
+            resume(){if(ended)return;clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),10000);
+              try{const p=audio.play();p?.catch(()=>finish('error'));}catch(_){finish('error');}}
         };
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
         audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),7500);
@@ -2821,12 +2937,15 @@ function speakChunk(text,token){
             if(ended)return;ended=true;clearTimeout(timer);
             utterance.onend=utterance.onerror=utterance.onstart=utterance.onboundary=null;
             if(activeSpeechUtterance===utterance)activeSpeechUtterance=null;
+            if(devicePlaybackWatchdog?.utterance===utterance)devicePlaybackWatchdog=null;
             if(finishSpeech===finish)finishSpeech=null;
             resolve(outcome);
         };
-        const watch=ms=>{clearTimeout(timer);timer=setTimeout(()=>{
+        const watch=ms=>{clearTimeout(timer);if(narrationPausedByUser)return;timer=setTimeout(()=>{
             finish('timeout');if(token===speechToken){try{speechSynthesis.cancel();}catch(_) {}}
         },ms);};
+        devicePlaybackWatchdog={utterance,pause(){clearTimeout(timer);},
+           resume(){if(!ended)watch(Math.max(20000,text.length*700/emotion.rate));}};
         finishSpeech=finish;
         utterance.onend=()=>finish('end');
         utterance.onerror=()=>finish('error');
@@ -2841,6 +2960,10 @@ function speakChunk(text,token){
 function stopSpeech() {
 
     speechToken++;
+    narrationPausedByUser=false;
+    releaseNarrationPauseWaiters();
+    cloudPlaybackWatchdog?.pause();
+    devicePlaybackWatchdog?.pause();
     if (finishSpeech) { const finish=finishSpeech;finishSpeech=null;finish(); }
 
     try {
@@ -2854,6 +2977,7 @@ function stopSpeech() {
     speechPlaying =
         false;
     refreshActionSpeechControls();
+    refreshNarrationControls();
 
 }
 
@@ -2864,9 +2988,11 @@ async function speak(text,options={}){
     if(sceneVersion!==actVersion || !text)return;
     if(skipSceneSpeechVersion===sceneVersion && options.recover!==false)return;
     const chunks=splitSpeechText(text);if(!chunks.length)return;
-    stopSpeech();let token=speechToken;speechPlaying=true;refreshActionSpeechControls();
+    stopSpeech();let token=speechToken;speechPlaying=true;refreshActionSpeechControls();refreshNarrationControls();
     try{
         for(let index=0;index<chunks.length;){
+            await waitForNarrationResume(token);
+            if(token!==speechToken || sceneVersion!==actVersion)return;
             if(adventurePaused && !options.allowPaused && sceneVersion===actVersion){
                 await waitForAdventureResume(sceneVersion);
                 if(sceneVersion!==actVersion)return;
@@ -2903,7 +3029,7 @@ async function speak(text,options={}){
             index++;
             if(index<chunks.length)await speechDelay(narrationClipPause(chunks[index-1]));
         }
-    }finally{if(token===speechToken){speechPlaying=false;refreshActionSpeechControls();}}
+    }finally{if(token===speechToken){speechPlaying=false;refreshActionSpeechControls();refreshNarrationControls();}}
 }
 
 /* =====================================================
@@ -3309,6 +3435,8 @@ function resetAdventure() {
     $('btnSpeak').disabled =
         true;
     refreshStoryControls();
+    setStoryChapterHUD();
+    refreshNarrationControls();
 
 }
 
@@ -3762,7 +3890,7 @@ async function showCurrentAct(
 
     maxRound =
         acts.length;
-
+    setStoryChapterHUD(act?.title||adventure?.title||'冒險',currentRound,maxRound);
 
     currentStory =
         String(
@@ -4342,7 +4470,9 @@ function clearProgressState(){
 }
 function progressPayload(state){
     return {...state.requestData,plan:state.plan,meta:{title:adventure.title,companion:adventure.companion,storyDesign:adventure.storyDesign},
-      nextIndex:state.nextIndex,previous:acts.slice(-3).map(act=>({index:act.index,title:act.title,story:act.story,outcome:getActActions(act).at(-1)?.storyAfter||''}))};
+      nextIndex:state.nextIndex,
+      previous:acts.slice(-5).map(act=>({index:act.index,title:act.title,story:act.story,outcome:getActActions(act).at(-1)?.storyAfter||''})),
+      priorBeats:acts.slice(0,-5).slice(-14).map(act=>({index:act.index,title:act.title,outcome:getActActions(act).at(-1)?.storyAfter||act.story?.slice(-80)||''}))};
 }
 async function progressApi(endpoint,payload,controller,ms=65000){
     const timer=setTimeout(()=>controller.abort(),ms);
@@ -5483,15 +5613,10 @@ document.addEventListener(
 
                 async () => {
                     if(storyPreview){await startPreview();return;}
-                    if (
-                        speechPlaying
-                    ) {
-
-                        if (replayInProgress) replayCancelRequested = true;
-                        stopSpeech();
-
+                    if (speechPlaying) {
+                        if(narrationPausedByUser)resumeNarration();
+                        else pauseNarration();
                         return;
-
                     }
 
 
@@ -5511,6 +5636,7 @@ document.addEventListener(
                     const step = actionSteps[currentActionStepIndex];
                     replayInProgress = true;
                     replayCancelRequested = false;
+                    refreshNarrationControls();
                     lockAction();
                     try {
                         await speak(isStoryFirstPlayback()?currentStoryNarration:[currentStory, currentStepStory].filter(Boolean).join('。'));
@@ -5525,7 +5651,7 @@ document.addEventListener(
                     } finally {
                         if (replayVersion === actVersion && replayStepVersion===actionStepVersion){
                             if(wasWaiting && step && !waitingForAction)showAction(step);
-                            replayInProgress = false;refreshActionSpeechControls();resetCoopCommands();void syncCoopDevices();
+                            replayInProgress = false;refreshActionSpeechControls();refreshNarrationControls();resetCoopCommands();void syncCoopDevices();
                         }
                     }
 
@@ -5731,6 +5857,31 @@ function initializeCooperationUI(){
     $('btnManualFamily').addEventListener('click',()=>{primeFeedbackAudio();if(!coopStates || !waitingForAction){familyNotice('請先選合作模式並生成故事，等家人任務出現後再模擬。');return;}if(busy || adventurePaused || controllerLearning || familyLearning || document.hidden || !coopRoleEnabled('family')){familyNotice('目前還沒輪到家人動作，或活動正在暫停／設定；請依畫面提示等待。');return;}void handleCoopAction('family',coopStates.family.action,'manual');});
     $('btnStartPreview').addEventListener('click',()=>startPreview());$('btnTestCoop').addEventListener('click',()=>startPreview(true));$('btnBuildAudio').addEventListener('click',buildStoryAudio);$('btnCancelAudio').addEventListener('click',()=>audioBuildController?.abort());refreshCoopUI();
 }
+
+document.addEventListener('DOMContentLoaded',()=>{
+    $('btnNarrationPause')?.addEventListener('click',()=>{
+        primeFeedbackAudio();
+        if(narrationPausedByUser)resumeNarration();else pauseNarration();
+    });
+    $('btnNarrationStop')?.addEventListener('click',()=>{
+        if(!speechPlaying)return;
+        replayCancelRequested=true;
+        stopSpeech();
+        showToast('已跳過目前朗讀，故事文字和動作仍會繼續。');
+    });
+    $('btnNarrationRestart')?.addEventListener('click',()=>{
+        if(speechPlaying){
+            if(activeCloudAudio){
+                try{activeCloudAudio.currentTime=0;}catch(_){showToast('音檔尚未準備好，請稍後再試。');return;}
+                if(narrationPausedByUser)resumeNarration();
+                showToast('已從目前這段音檔開頭重播。');
+            }else showToast('語音正在準備或使用裝置朗讀；請等結束後重聽本幕。');
+        }else if(currentStory && !busy && !replayInProgress){
+            $('btnSpeak').disabled=false;$('btnSpeak').click();
+        }
+    });
+    refreshNarrationControls();
+});
 
 </script>
 
