@@ -1130,6 +1130,8 @@ const BLE_CONFIG = {
 
 const WORKER_URL =
     'https://lucky-waterfall-f8a2.shopcom2009.workers.dev';
+const EXPECTED_FISH_VOICE_ID = 'c5c17c9709384ba9a4b294662a2af0b1';
+const FISH_AUDIO_EDITION = 'fish-s2.1-tw-v2';
 
 
 let bleDevice = null;
@@ -2715,6 +2717,16 @@ function syncNarrationSourceLock(){
     }
 }
 let cloudSpeechCooldownUntil=0;
+let fishVoiceStatusPromise=null;
+// Read-only check: identify the Worker-side voice without generating paid audio.
+function getFishVoiceStatus(){
+    if(!fishVoiceStatusPromise){
+        fishVoiceStatusPromise=fetch(WORKER_URL.replace(/\/+$/,'')+'/fish-voice-status',{cache:'no-store'})
+            .then(async response=>response.ok?await response.json():null)
+            .catch(()=>null);
+    }
+    return fishVoiceStatusPromise;
+}
 let cloudSpeechController=null;
 let activeCloudAudio=null;
 const cloudAudioCache=new Map();
@@ -2778,10 +2790,23 @@ function attachVoiceLeveling(audio,volume){
 async function playFixedVoice(text,token){
     syncWorkerVoicePreference();
     if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
+    const status=await getFishVoiceStatus();
+    if(token!==speechToken)return 'cancelled';
+    if(status){
+        if(status.voiceId!==EXPECTED_FISH_VOICE_ID){
+            const message='Worker 正在使用其他聲線。請將 Cloudflare FISH_VOICE_ID 設為 '+EXPECTED_FISH_VOICE_ID;
+            updateVoiceStatus(message);showToast('Fish Audio 聲線 ID 不一致，請檢查 Cloudflare 變數。');
+            return null;
+        }
+        if(!status.fishApiConfigured || !status.storyDbConfigured || !status.storyVoiceEnabled){
+            updateVoiceStatus('Worker 的 Fish Audio 或 STORY_DB 尚未就緒，將使用裝置備用聲音。');
+            return null;
+        }
+    }
     const age=Number(selectedChildAge)||6;
     const pace=currentMode==='senior'?.9:age<=6?.94:1;
     const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
-    const key=JSON.stringify(['fish-s2.1-tw-v1','c5c17c9709384ba9a4b294662a2af0b1',WORKER_URL,text,rate]);
+    const key=JSON.stringify([FISH_AUDIO_EDITION,EXPECTED_FISH_VOICE_ID,WORKER_URL,text,rate]);
     let bytes=cloudAudioCache.get(key);
     if(!bytes)bytes=await savedAudio('get',key);
     if(token!==speechToken)return 'cancelled';
@@ -2805,7 +2830,7 @@ async function playFixedVoice(text,token){
                     let retryable=false;
                     try{
                         const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-fish-story',{
-                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,savedOnly:adventure?.audioReady===true && adventure?.audioVoiceEdition==='fish-s2.1-tw-v1' && (currentMode!=='child' || adventure?.audioLayoutVersion===([3,4].includes(adventure?.narrativeLayoutVersion)?adventure.narrativeLayoutVersion:2))})});
+                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,savedOnly:false})});
                         if(!response.ok){
                             const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
                             if(response.status===429)pauseWorkerVoiceForQuota();
@@ -5630,6 +5655,12 @@ document.addEventListener(
 
 
                     if (busy || replayInProgress) return;
+                    // Explicit replay may retry Fish after a temporary failure.
+                    // Quota lock still takes priority and is not bypassed.
+                    if(narrationSourceLock==='device' && workerVoiceQuotaUntil<=Date.now()){
+                        narrationSourceLock=null;
+                        cloudSpeechCooldownUntil=0;
+                    }
                     const replayVersion = actVersion;
                     const replayStepVersion = actionStepVersion;
                     const wasWaiting = waitingForAction;
@@ -5837,7 +5868,7 @@ async function buildStoryAudio(){
             if(version!==adventureVersion)return;
         }
         await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
-        if(version!==adventureVersion)return;story.audioReady=true;story.audioVoiceEdition='fish-s2.1-tw-v1';story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        if(version!==adventureVersion)return;story.audioReady=true;story.audioVoiceEdition=FISH_AUDIO_EDITION;story.audioVoiceReference=EXPECTED_FISH_VOICE_ID;story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
         $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
     }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
     finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
