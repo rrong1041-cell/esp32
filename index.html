@@ -4611,7 +4611,16 @@ async function generateStory(preferSaved=false) {
 
         if (requestVersion !== adventureVersion) return;
         const generationError=e.name==='AbortError'?'這次AI回應超過等候上限，已停止等待。可稍後重試，或播放已保存內容。':e.message;
-        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+generationError+(preferSaved || e.code || e.name==='AbortError'?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
+        // 將 Worker 已回傳的故事驗證原因顯示出來，避免只看到通用失敗訊息。
+        // 不增加 AI 呼叫、不動故事、BLE 或 TTS；使用 textContent 安全呈現文字。
+        const workerDiagnostic = typeof e.workerDetail === 'string'
+            ? e.workerDetail.trim()
+            : '';
+        $('generationStatus').textContent=(preferSaved?'載入保存內容失敗：':'新增內容失敗：')+generationError
+            +(workerDiagnostic ? '\n\n【詳細原因】\n' + workerDiagnostic : '')
+            +(preferSaved || e.code || e.name==='AbortError'?'':'。本次沒有自動載入舊故事，可按「播放已保存內容」重玩，或稍後再試。');
+        $('generationStatus').style.whiteSpace = 'pre-wrap';
+        if (workerDiagnostic) console.info('聲動奇境 Worker 故事驗證詳細原因：', workerDiagnostic);
         console.error(
             e
         );
