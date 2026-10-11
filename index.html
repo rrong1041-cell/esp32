@@ -858,7 +858,7 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
-<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Worker 中文配音（額度用完時暫停，失敗時使用備用聲音）</label>
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Fish Audio 中文配音（額度用完時使用裝置備用聲音）</label>
 <p id="workerVoicePolicyStatus" class="text-xs text-slate-300 mb-3" role="status">自動優先使用 Worker 配音。</p>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">提示音已加大：成功一聲，計時每秒一聲，完成兩聲。成功、中斷與校正提示會即時朗讀；20 秒沒有相符動作會提醒，之後每隔 30 秒重講。計時每秒使用短提示音，不逐秒朗讀；語音提示優先使用與故事相同的 Worker 配音，會使用配音額度，失敗時切換裝置聲音。</p>
@@ -2496,7 +2496,7 @@ function getSentenceEmotion(text){
 }
 function splitSpeechText(text){
     const clean=removeEmoji(String(text)).replace(/\s+/g,' ').trim();
-    const clipLimit=currentMode==='child' && adventure?.narrativeLayoutVersion===4?160:currentMode==='child' && adventure?.narrativeLayoutVersion===3?240:65;
+    const clipLimit=440; // Fish Audio: scene-sized continuous phrasing; keeps each API call under 500 chars
     const sentences=clean.match(/[^。！？!?；;]+[。！？!?；;]*|[。！？!?；;]+/g)||[];
     const result=[];
     for(const sentence of sentences){
@@ -2509,7 +2509,7 @@ function splitSpeechText(text){
         }
         if(part.trim())result.push(part.trim());
     }
-    if(currentMode!=='child')return result;
+    // Senior narration also benefits from complete sentences in a single Fish request.
     // Keep several short sentences together so the narrator can carry the dialogue and intonation.
     const paragraphs=[];
     for(const part of result){
@@ -2675,20 +2675,20 @@ async function playFixedVoice(text,token){
     const age=Number(selectedChildAge)||6;
     const pace=currentMode==='senior'?.9:age<=6?.94:1;
     const rate=Math.max(.7,Math.min(1.15,(Number(voiceSettings.rate)||.94)*pace));
-    const key=JSON.stringify(['melotts-v1',WORKER_URL,text,rate]);
+    const key=JSON.stringify(['fish-s2.1-tw-v1','c5c17c9709384ba9a4b294662a2af0b1',WORKER_URL,text,rate]);
     let bytes=cloudAudioCache.get(key);
     if(!bytes)bytes=await savedAudio('get',key);
     if(token!==speechToken)return 'cancelled';
     if(!bytes && Date.now()<cloudSpeechCooldownUntil)return null;
     if(!bytes){
         const controller=new AbortController();cloudSpeechController=controller;
-        let timer,failureReason='Cloudflare 配音暫時無法使用';
+        let timer,failureReason='Fish Audio 配音暫時無法使用';
         const cancelled=new Promise(resolve=>{
             const finish=()=>{controller.abort();resolve('cancelled');};finishSpeech=finish;
         });
         const boundedWait=new Promise(resolve=>{
             const fallback=reason=>{failureReason=reason;controller.abort();resolve(null);};
-            timer=setTimeout(()=>fallback('配音準備超過 8 秒'),8000);
+            timer=setTimeout(()=>fallback('Fish Audio 配音等待超過 50 秒'),50000);
             $('speechPreparation').classList.remove('hidden');
             $('btnUseDeviceSpeechNow').onclick=()=>{primeSpeech();fallback('已選擇立即使用裝置朗讀');};
         });
@@ -2698,8 +2698,8 @@ async function playFixedVoice(text,token){
                     if(controller.signal.aborted || token!==speechToken)return null;
                     let retryable=false;
                     try{
-                        const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-cloudflare',{
-                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,rate,savedOnly:adventure?.audioReady===true && (currentMode!=='child' || adventure?.audioLayoutVersion===([3,4].includes(adventure?.narrativeLayoutVersion)?adventure.narrativeLayoutVersion:2))})});
+                        const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-fish-story',{
+                            method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,savedOnly:adventure?.audioReady===true && adventure?.audioVoiceEdition==='fish-s2.1-tw-v1' && (currentMode!=='child' || adventure?.audioLayoutVersion===([3,4].includes(adventure?.narrativeLayoutVersion)?adventure.narrativeLayoutVersion:2))})});
                         if(!response.ok){
                             const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
                             if(response.status===429)pauseWorkerVoiceForQuota();
@@ -2753,7 +2753,7 @@ async function playFixedVoice(text,token){
         finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
         audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),7500);
         progressPoll=setInterval(watch,1000);
-        updateVoiceStatus('正在使用 Cloudflare 固定中文配音。已取得的音檔會保存供重聽。');
+        updateVoiceStatus('正在使用 Fish Audio 日系聲線朗讀中文。配音音檔會保存供重聽。');
         // 17.4: Let the media element play directly. A suspended Web Audio context or a
         // partially created MediaElementSource can otherwise silence an otherwise valid file.
         try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
@@ -5711,7 +5711,7 @@ async function buildStoryAudio(){
             if(version!==adventureVersion)return;
         }
         await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
-        if(version!==adventureVersion)return;story.audioReady=true;story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        if(version!==adventureVersion)return;story.audioReady=true;story.audioVoiceEdition='fish-s2.1-tw-v1';story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
         $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
     }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
     finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
