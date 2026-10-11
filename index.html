@@ -767,7 +767,7 @@ class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 
 <button id="btnReplaySaved" type="button" class="w-full bg-slate-800 border border-purple-400/50 text-purple-100 font-bold px-4 py-3 rounded-xl">📚 播放已保存內容</button>
 <p class="text-sm text-slate-300">勾選會保存新內容；取消勾選只遊玩本次，不加入保存內容。已保存的內容仍可重玩。</p>
 </div>
-<div id="legacyPreparationControls" hidden inert aria-hidden="true" style="display:none">
+<div id="legacyPreparationControls" class="hidden" aria-label="完整故事開始選項">
 <div class="space-y-2 mb-3"><button id="btnBuildAudio" disabled class="w-full bg-purple-700 rounded-xl p-3">🎙 製作並保存故事配音</button><button id="btnCancelAudio" class="hidden w-full bg-slate-800 rounded-xl p-2">停止製作配音</button><p id="audioBuildStatus" class="text-sm text-slate-300" role="status"></p><button id="btnStartPreview" disabled class="w-full bg-emerald-700 rounded-xl p-3">▶ 開始遊玩</button><button id="btnTestCoop" class="w-full bg-slate-800 rounded-xl p-2">手動測試遊玩（不連裝置）</button></div>
 </div>
 <p id="generationStatus" class="text-sm text-amber-200 my-2" role="status" aria-live="polite"></p>
@@ -1039,7 +1039,7 @@ class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 fo
 
 /* =====================================================
    聲動奇境 ✨ 智慧互動繪本
-   FRONTEND 17.1 — 完整冒險局部修正與生成等候上限
+   FRONTEND 17.2 — 修復完整版故事只有標題無法開始
 
    新架構：
 
@@ -5356,6 +5356,9 @@ function resetCoopCommands(){coopCommands.child={};coopCommands.family={};}
 function isCooperation(){return currentMode==='child' && $('playStyle').value==='coop';}
 function familyPosture(){return $('familyPosture').value==='seated'?'seated':'general';}
 function refreshCoopUI(){
+    // 完整故事生成成功後，必須顯示開始與手動測試按鈕。
+    // 舊版誤將整個控制區永久設為 hidden/inert/display:none，造成只有標題沒有內容。
+    $('legacyPreparationControls').classList.toggle('hidden', !storyPreview);
     const active=isCooperation();$('btnConnect').textContent=active?'連接孩子的裝置':'連接故事裝置';$('btnDisconnect').textContent=active?'中斷孩子連線':'中斷連線';$('coopOptions').classList.toggle('hidden',!active);$('familyBLEPanel').classList.toggle('hidden',!active);
     $('playStylePanel').classList.toggle('hidden',currentMode==='senior');
     for(const id of ['playStyle','familyPosture'])$(id).disabled=busy || (!!acts.length && !storyFinished && !storyPreview);
