@@ -4487,6 +4487,27 @@ function getRecentStories() {
     recentStoryMemory = mergeRecentStories([...recentStoryPersisted, ...recentStoryPending, ...recentStorySession]);
     return recentStoryMemory.map(item => ({...item, storyDesign: {...item.storyDesign}, variation: {...item.variation}}));
 }
+// Fast Start: remember the four-scene outline immediately, even if the child restarts
+// before scene 18. When the full story is completed, rememberStory replaces this
+// outline (same title/opening), so it doesn't occupy two history slots.
+function rememberProgressiveOutline(story, topic = '') {
+    if (!story || !Array.isArray(story.acts) || !story.acts.length) return;
+    const record=recentStoryRecord({
+        mode:'child',title:story.title,opening:story.acts[0].story,
+        ending:'',topic:story.requestedTopic || topic,
+        storyDesign:story.storyDesign,variation:story.variation,narrative:''
+    });
+    if (!record) return;
+    const items=mergeRecentStories([...getRecentStories(),record]);
+    try {
+        localStorage.setItem(RECENT_STORIES_KEY,JSON.stringify(items));
+        recentStoryPersisted=items;
+        recentStoryPending=[];
+    } catch (_) {
+        // Private browsing/storage limits: remember within the active page only.
+        recentStoryPending=mergeRecentStories([...recentStoryPending,record]);
+    }
+}
 function rememberStory(story, topic = '', persist = true) {
     if (!story || typeof story !== 'object') return;
     const storyActs = Array.isArray(story.acts) ? story.acts : [];
@@ -4820,6 +4841,7 @@ async function generateStory(preferSaved=false) {
                 plan:data.plan,nextIndex:data.nextIndex,version:requestVersion,
                 complete:false,inflight:null,controller:null,error:'',waitingIndex:null,waitingContinuation:'',
                 shouldSave,selection,saveDone:false,saving:false};
+            rememberProgressiveOutline(adventure, topic);
             progressNote('✓ 已取得完整故事規劃與前4段；後續將在遊玩時提前準備。');
         }
         acts =
