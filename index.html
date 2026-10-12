@@ -729,7 +729,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 劇情導演版・朗讀 17.10</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full">完整版 · 約14段互動</option><option value="short">短篇 · 8段互動</option></select><label class="flex items-center gap-2 text-sm text-cyan-200 mt-2"><input type="checkbox" id="progressiveToggle">🚀 快速開演：先規劃整篇、生成前4幕，遊玩時接續生成</label><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。保留每篇實際13～15段互動，選主題後生成新故事，已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 故事導演版・朗讀 17.12</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，選主題後生成新故事；已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -1848,7 +1848,7 @@ function refreshStoryControls(){
     $('seniorStoryControls').classList.toggle('hidden',!acts.length);
     $('childStoryLengthPanel').classList.toggle('hidden',currentMode==='senior');
     $('storyLength').disabled=busy || (!!acts.length && !storyFinished && !storyPreview);
-    $('progressiveToggle').disabled=busy || currentMode!=='child' || selectedStoryEdition()!=='full' || (!!acts.length && !storyFinished);
+
     $('btnPauseStory').disabled=!acts.length || storyFinished;
     $('seniorDifficultyHint').textContent=({easy:'簡單：持續動作 2～3 秒，計次動作 1 次。',normal:'普通：持續動作 2～4 秒，計次動作最多 2 次。',challenge:'挑戰：持續動作 2～6 秒，計次動作最多 3 次。'})[selectedDifficulty] || '';
     $('pauseStoryHint').textContent=currentMode==='child'?'可以隨時休息。已累計的次數會保留，持續動作恢復後重新計時。':adventurePaused?'活動已暫停。休息好了再按繼續；已偵測到的秒數與次數會保留。':'可以隨時休息，已偵測到的秒數與次數會保留。';
@@ -4557,7 +4557,7 @@ $('btnReplaySaved').addEventListener('click',()=>generateStory(true));
    A failed next batch NEVER pretends to be the ending.
 -------------------------------------------------------------- */
 let progressState=null;
-function progressiveEnabled(){return currentMode==='child' && selectedStoryEdition()==='full' && $('progressiveToggle')?.checked===true;}
+function progressiveEnabled(){return currentMode==='child' && selectedStoryEdition()==='full';}
 function progressNote(message){const status=$('progressNarrationStatus');if(status)status.textContent=message;}
 function clearProgressState(){
     if(progressState?.controller)progressState.controller.abort();
@@ -5953,8 +5953,9 @@ function familyNotice(message){$('familyStatus').textContent=message;showToast(m
 function initializeCooperationUI(){
     if(cooperationUIInitialized)return;
     cooperationUIInitialized=true;
+    $('storyLength').value='full'; // Default to full progressive adventure on every fresh page load.
     $('storyLength').addEventListener('change',()=>{resetAdventure();refreshStoryControls();});
-    $('progressiveToggle').addEventListener('change',()=>{if(!storyPreview && !acts.length)progressNote($('progressiveToggle').checked?'已選快速開演測試版；此選項僅用於完整版。':'');});
+
     $('btnRetryProgress').addEventListener('click',()=>{void progressRetry();});
     $('playStyle').addEventListener('change',()=>{resetAdventure();refreshCoopUI();});
     $('familyPosture').addEventListener('change',()=>{resetAdventure();void sendFamily(familyPosture()==='seated'?'MODE_SENIOR':'MODE_CHILD');refreshCoopUI();});
