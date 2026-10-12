@@ -710,6 +710,16 @@ class="text-sm text-slate-300 mt-2">
   <div id="actionSequenceText" class="text-sm font-bold text-purple-300"></div>
   <ol id="actionSequenceList" class="flex flex-wrap gap-2 mt-2 text-xs" aria-label="本幕動作順序"></ol>
 </div>
+<div id="gestureBranchPanel" class="hidden mt-4 p-4 rounded-xl border border-cyan-400/60 bg-slate-900" role="status" aria-live="polite">
+  <p class="text-xl font-black text-cyan-200">🧭 向左或向右揮手，決定冒險路線</p>
+  <p id="gestureBranchLeft" class="mt-3 text-base text-slate-200"></p>
+  <p id="gestureBranchRight" class="mt-2 text-base text-slate-200"></p>
+  <p id="gestureBranchStatus" class="mt-3 text-sm text-amber-200">故事朗讀結束後才開始偵測。</p>
+  <div id="gestureBranchManual" class="hidden mt-3 flex flex-wrap gap-2" aria-label="沒有連接裝置時的手動測試">
+    <button type="button" id="gestureBranchTestLeft" class="px-4 py-3 bg-cyan-700 text-white font-bold rounded-xl">⬅️ 模擬向左揮手</button>
+    <button type="button" id="gestureBranchTestRight" class="px-4 py-3 bg-purple-700 text-white font-bold rounded-xl">➡️ 模擬向右揮手</button>
+  </div>
+</div>
 <div id="actionProgressPanel" class="hidden mt-3">
   <div id="actionProgressText" class="text-base font-bold text-amber-300" role="status" aria-live="polite"></div>
   <progress id="actionProgressBar" class="w-full mt-2" max="1" value="0" aria-label="目前動作完成進度"></progress>
@@ -729,7 +739,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 故事導演版・朗讀 17.12</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，選主題後生成新故事；已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 揮手選路測試版・朗讀 17.13</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，選主題後生成新故事；已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -3299,6 +3309,12 @@ async function onBleEvent(event) {
     }
 
 
+    // Branch input has priority over ordinary motion tasks. When choosing a
+    // route, neither swipe can count toward the next 14-action challenge.
+    if(gestureBranchState?.ready && (value==='SWIPE_LEFT' || value==='SWIPE_RIGHT')){
+        resolveGestureBranch(value==='SWIPE_LEFT'?'left':'right','ble');return;
+    }
+    if(gestureBranchState)return;
     if (
         !waitingForAction ||
         busy
@@ -4405,8 +4421,15 @@ async function completeAction(received) {
     if(isStoryFirstPlayback()){
         if(resultStory)appendStory('📖 故事繼續',resultStory);
         renderActionSequence(true);
+        const branchNeeded=!!(progressState?.choicePending && acts[currentActIndex]?.branchChoice);
+        if(branchNeeded){
+            // The action result is narrated ONCE, before the spoken fork.
+            if(resultStory)await speak(resultStory);
+            if(version!==actVersion || stepVersion!==actionStepVersion)return;
+            if(!await askProgressGestureBranch(acts[currentActIndex]))return;
+        }
         currentActIndex++;
-        await showCurrentAct(true,resultStory);
+        await showCurrentAct(true,branchNeeded?'':resultStory);
         return;
     }
     if (resultStory) {
@@ -4557,9 +4580,78 @@ $('btnReplaySaved').addEventListener('click',()=>generateStory(true));
    A failed next batch NEVER pretends to be the ending.
 -------------------------------------------------------------- */
 let progressState=null;
+// Only active between an audible fork prompt and one SWIPE_LEFT/RIGHT choice.
+let gestureBranchState=null;
+function cancelGestureBranch(){
+    const branch=gestureBranchState;
+    gestureBranchState=null;
+    const panel=$('gestureBranchPanel');if(panel)panel.classList.add('hidden');
+    if(branch)branch.resolve(null);
+}
+function resolveGestureBranch(direction,source='ble'){
+    const branch=gestureBranchState;
+    if(!branch || !branch.ready || !['left','right'].includes(direction) ||
+       branch.adventureVersion!==adventureVersion || branch.actVersion!==actVersion || adventurePaused || document.hidden)return false;
+    branch.ready=false;
+    gestureBranchState=null;
+    $('gestureBranchStatus').textContent='✓ 已選擇'+(direction==='left'?'左邊':'右邊')+'，準備接續這條路的故事。';
+    void sendBLE('PAUSE');
+    void sendBLE('ACTION_OK');
+    const selected=branch.choices[direction],other=branch.choices[direction==='left'?'right':'left'];
+    branch.resolve({direction,selected,alternative:other});
+    return true;
+}
+async function askProgressGestureBranch(act){
+    const state=progressState;
+    const options=act?.branchChoice;
+    if(!state || !state.choicePending || state.branchDecision || !options?.left || !options?.right)return true;
+    const adventureAtStart=adventureVersion,actAtStart=actVersion;
+    busy=true;waitingForAction=false;expectedAction='';stopHold();
+    $('actionPrompt').classList.remove('hidden','action-locked');
+    $('actionPrompt').classList.add('action-ready');
+    $('actionProgressPanel').classList.add('hidden');
+    $('promptText').textContent='🧭 前面有兩條路，你來決定！';
+    $('actionSubText').textContent='先聽完左右選項，再用戴裝置的手向左或向右揮一次。';
+    $('gestureBranchPanel').classList.remove('hidden');
+    $('gestureBranchLeft').textContent='⬅️ 左邊：'+options.left;
+    $('gestureBranchRight').textContent='➡️ 右邊：'+options.right;
+    $('gestureBranchManual').classList.toggle('hidden',!!bleCharacteristic && !fullManualTest);
+    $('gestureBranchStatus').textContent='正在朗讀路線，暫時不接受揮手。';
+    const narration='前面有兩條路。向左揮手，'+options.left+'。向右揮手，'+options.right+'。準備好後，向你想走的方向揮一次手。';
+    appendStory('🧭 用揮手決定故事',`左邊：${options.left}。右邊：${options.right}。`);
+    await speak(narration,{kind:'prompt'});
+    if(progressState!==state || adventureAtStart!==adventureVersion || actAtStart!==actVersion)return false;
+    await waitForAdventureResume(actAtStart);
+    if(progressState!==state || adventureAtStart!==adventureVersion || actAtStart!==actVersion)return false;
+    const decision=await new Promise(resolve=>{
+        gestureBranchState={resolve,choices:options,ready:true,adventureVersion:adventureAtStart,actVersion:actAtStart};
+        // Speech finished. The child can now choose without touching the screen.
+        $('gestureBranchStatus').textContent=bleCharacteristic?'等待你的左右揮手；若右邊沒有反應，可能需要 ESP32 韌體支援雙向回報。':'未連接 ESP32，可用下方按鈕模擬測試。';
+        // Existing firmware may report both directions under an EXPECT command.
+        // We cannot claim universal firmware support for both directions without inspecting it.
+        if(bleCharacteristic)void sendBLE('EXPECT:SWIPE_LEFT');
+    });
+    $('gestureBranchPanel').classList.add('hidden');
+    if(!decision || progressState!==state || adventureAtStart!==adventureVersion)return false;
+    state.plan.branchDecision=decision;
+    state.branchDecision=decision;
+    adventure.branchDecision=decision;
+    state.choicePending=false;
+    state.error='';
+    progressNote('🧭 已向'+(decision.direction==='left'?'左':'右')+'選路。AI 正在依照你的決定接續生成。');
+    appendStory('✅ 已選擇路線',(decision.direction==='left'?'左邊：':'右邊：')+decision.selected);
+    // Allow /progress/next only after the player's actual choice is recorded.
+    void progressMaybePrefetch();
+    return true;
+}
+document.addEventListener('DOMContentLoaded',()=>{
+    $('gestureBranchTestLeft')?.addEventListener('click',()=>{primeFeedbackAudio();resolveGestureBranch('left','manual');});
+    $('gestureBranchTestRight')?.addEventListener('click',()=>{primeFeedbackAudio();resolveGestureBranch('right','manual');});
+});
 function progressiveEnabled(){return currentMode==='child' && selectedStoryEdition()==='full';}
 function progressNote(message){const status=$('progressNarrationStatus');if(status)status.textContent=message;}
 function clearProgressState(){
+    cancelGestureBranch();
     if(progressState?.controller)progressState.controller.abort();
     progressState=null;
     progressNote('');
@@ -4607,6 +4699,7 @@ async function progressSaveFinal(state){
 async function progressPrefetch(){
     const state=progressState;
     if(!state || state.complete)return true;
+    if(state.choicePending && !state.branchDecision)return false;
     if(state.inflight)return state.inflight;
     const version=state.version,expected=state.nextIndex;
     const controller=new AbortController();state.controller=controller;
@@ -4642,11 +4735,14 @@ async function progressPrefetch(){
 function progressMaybePrefetch(){
     const state=progressState;
     // Keep about eight scenes ahead instead of burning the whole AI quota up front.
-    if(state && !state.complete && !state.inflight && !state.error && state.nextIndex<=currentActIndex+9)void progressPrefetch();
+    if(state && !state.complete && !(state.choicePending && !state.branchDecision) && !state.inflight && !state.error && state.nextIndex<=currentActIndex+9)void progressPrefetch();
 }
 async function ensureProgressAct(index,continuation=''){
     const state=progressState;
     if(!state || index<acts.length || state.complete)return index<acts.length;
+    if(state.choicePending && !state.branchDecision){
+        progressNote('請先用左右揮手選擇第4幕的道路。');return false;
+    }
     if(!state.error)await progressPrefetch();
     if(progressState!==state)return false;
     if(index<acts.length)return true;
@@ -4839,6 +4935,7 @@ async function generateStory(preferSaved=false) {
             progressState={requestData:{mode:'child',topic,age:selectedChildAge,storyEdition:'full',
                 clientId:getStoryClientId(),difficulty:selectedDifficulty,playerMode:isCooperation()?'coop':'solo',familyPosture:familyPosture()},
                 plan:data.plan,nextIndex:data.nextIndex,version:requestVersion,
+                choicePending:!!adventure.acts?.[3]?.branchChoice,branchDecision:null,
                 complete:false,inflight:null,controller:null,error:'',waitingIndex:null,waitingContinuation:'',
                 shouldSave,selection,saveDone:false,saving:false};
             rememberProgressiveOutline(adventure, topic);
