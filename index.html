@@ -674,7 +674,8 @@ class="text-lg leading-relaxed text-slate-300 hidden space-y-4">
 <div id="speechRecovery" class="hidden mt-3 p-4 rounded-xl border border-amber-400/50 bg-slate-900">
 <p id="speechRecoveryText" class="text-amber-200" role="status" aria-live="polite"></p>
 <div class="flex flex-wrap gap-2 mt-3">
-<button id="btnRetrySpeech" type="button" class="bg-cyan-600 text-white font-bold rounded-xl px-4 py-3">重試朗讀</button>
+<button id="btnRetrySpeech" type="button" class="bg-cyan-600 text-white font-bold rounded-xl px-4 py-3">重試流螢</button>
+<button id="btnRecoveryDeviceSpeech" type="button" class="hidden bg-purple-700 text-white font-bold rounded-xl px-4 py-3">改用內建聲音（本次朗讀）</button>
 <button id="btnContinueText" type="button" class="bg-slate-700 text-white font-bold rounded-xl px-4 py-3">這段看文字繼續</button>
 </div></div>
 <div id="handReadyPanel" class="hidden mt-4 p-4 rounded-xl border border-cyan-500 bg-slate-900">
@@ -739,7 +740,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 揮手選路測試版・朗讀 17.13</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，選主題後生成新故事；已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 揮手選路測試版・iPhone 語音修正 17.14</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，選主題後生成新故事；已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -922,11 +923,11 @@ class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
 
 </div>
 
-<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Fish Audio 中文配音（額度用完時使用裝置備用聲音）</label>
+<label class="block text-sm text-cyan-200 mt-3 mb-3"><input id="fixedVoiceToggle" type="checkbox" checked disabled class="mr-2">使用 Fish Audio 中文配音（失敗時可重試或選擇內建聲音）</label>
 <p id="workerVoicePolicyStatus" class="text-xs text-slate-300 mb-3" role="status">自動優先使用 Worker 配音。</p>
 <button id="btnTestFeedback" type="button" class="w-full bg-slate-800 border border-cyan-400/50 text-cyan-100 font-bold px-4 py-2 rounded-xl mb-2">🔊 測試動作提示音</button>
 <p class="text-xs text-slate-400 mb-3">提示音已加大：成功一聲，計時每秒一聲，完成兩聲。中斷與校正會用簡短語音提醒，完成與計次則以提示音為主；20 秒沒有相符動作會提醒，之後每隔 30 秒重講。計時每秒使用短提示音，不逐秒朗讀；語音提示優先使用與故事相同的 Worker 配音，會使用配音額度，失敗時切換裝置聲音。</p>
-<p class="text-xs text-slate-400 mb-3">預設先使用 Worker 配音，失敗時使用下方選擇的裝置聲音。額度用完時會自動改用裝置朗讀，重置後再恢復 Worker；不同裝置的聲線可能不同。Fish Audio 使用原始 1.0 倍速，音量可調整；語速、音高與語氣只影響裝置備用朗讀。</p>
+<p class="text-xs text-slate-400 mb-3">預設使用流螢配音。失敗時會顯示原因，可重試流螢，或自行選擇本次使用內建聲音；下一次朗讀會再嘗試流螢。Fish Audio 使用原始 1.0 倍速，音量可調整；語速、音高與語氣只影響裝置備用朗讀。</p>
 <div
 id="voiceStatus"
 class="voice-status">
@@ -2235,8 +2236,9 @@ function refreshNarrationControls(){
     restart.disabled=!active && (busy || replayInProgress || !currentStory || storyPreview);
     stop.disabled=!active;
     status.textContent=active?(narrationPausedByUser?'已暫停。按「繼續」會從原位置播放。':
+      speechRecoveryChoice?'流螢尚未播完，請選擇重試或繼續方式。':
       activeCloudAudio?'Fish Audio 朗讀中，可暫停並保留播放位置。':
-      narrationSourceLock==='device'?'⚠ 已切換成裝置備用聲音（'+(fishLastFallbackReason||'Fish Audio 暫時未啟用')+'）。按「重播」可嘗試恢復 Fish。':
+      narrationSourceLock==='device'?'⚠ 本次已選擇裝置備用聲音（'+(fishLastFallbackReason||'Fish Audio 暫時未啟用')+'）。按「重播」可嘗試恢復 Fish。':
       '正在準備 Fish Audio 配音，可以暫停。'):
       currentStory?'這一幕的朗讀已結束，可按「重播」再聽一次。':'故事準備好後，可重播、暫停與繼續朗讀。';
     const icon=$('btnSpeak')?.querySelector('i');
@@ -2682,12 +2684,15 @@ function speechDelay(ms){
         finishSpeech=finish;timer=setTimeout(finish,ms);
     });
 }
-function waitForSpeechRecovery(reason){
+function waitForSpeechRecovery(reason,cloud=false){
     return new Promise(resolve=>{
         const panel=$('speechRecovery');panel.classList.remove('hidden');
-        $('speechRecoveryText').textContent=reason+' 目前這段尚未讀完，請重試，或選擇看文字繼續。';
+        $('speechRecoveryText').textContent=reason+' 目前這段尚未讀完。'+(cloud?'可重試流螢，或自行選擇內建聲音。':'請重試，或選擇看文字繼續。');
+        $('btnRetrySpeech').textContent=cloud?'重試流螢':'重試內建朗讀';
+        $('btnRecoveryDeviceSpeech').classList.toggle('hidden',!cloud);
         const finish=(choice='cancelled')=>{
             panel.classList.add('hidden');$('btnRetrySpeech').onclick=null;$('btnContinueText').onclick=null;
+            $('btnRecoveryDeviceSpeech').onclick=null;$('btnRecoveryDeviceSpeech').classList.add('hidden');
             if(speechRecoveryChoice===finish)speechRecoveryChoice=null;
             refreshActionSpeechControls();
             if(finishSpeech===finish)finishSpeech=null;resolve(choice);
@@ -2695,7 +2700,8 @@ function waitForSpeechRecovery(reason){
         speechRecoveryChoice=finish;
         refreshActionSpeechControls();
         finishSpeech=finish;
-        $('btnRetrySpeech').onclick=()=>{primeSpeech();finish('retry');};
+        $('btnRetrySpeech').onclick=()=>{primeSpeech();cloudSpeechCooldownUntil=0;fishVoiceStatusPromise=null;finish('retry');};
+        $('btnRecoveryDeviceSpeech').onclick=()=>{primeSpeech();finish('device');};
         $('btnContinueText').onclick=()=>finish('text');
     });
 }
@@ -2726,11 +2732,11 @@ function syncWorkerVoicePreference(){
         workerVoiceQuotaUntil=0;
         try{localStorage.removeItem(workerVoiceQuotaKey());}catch(_){}
     }
-    voiceSettings.fixedVoice=!paused;
+    voiceSettings.fixedVoice=true; // A quota/network error never silently selects the device narrator.
     const toggle=$('fixedVoiceToggle');
-    if(toggle){toggle.checked=!paused;toggle.disabled=true;}
+    if(toggle){toggle.checked=true;toggle.disabled=true;}
     const status=$('workerVoicePolicyStatus');
-    if(status)status.textContent=paused?'今日配音額度已用完，暫時使用裝置聲音；台灣時間早上 8 點後自動恢復。':'自動優先使用 Worker 配音；一般播放失敗會使用備用聲音，勾選狀態不變。';
+    if(status)status.textContent=paused?'最近收到配音限流回應；可稍後重試流螢，或自行選擇內建聲音。':'優先使用流螢；播放失敗時保留重試，不會自動換成內建聲音。';
     if(workerVoiceQuotaTimer){clearTimeout(workerVoiceQuotaTimer);workerVoiceQuotaTimer=null;}
     if(paused)workerVoiceQuotaTimer=setTimeout(()=>{workerVoiceQuotaTimer=null;syncWorkerVoicePreference();},Math.min(2147483647,workerVoiceQuotaUntil-Date.now()+50));
 }
@@ -2750,6 +2756,7 @@ function syncNarrationSourceLock(){
     if(narrationAdventureRef!==adventure){
         narrationAdventureRef=adventure;
         narrationSourceLock=null;
+        cloudSpeechCooldownUntil=0;
         narrationDeviceVoice=undefined;
         narrationDeviceVoiceURI='';
     }
@@ -2764,7 +2771,9 @@ let fishLastFallbackReason='';
 function getFishVoiceStatus(){
     if(!fishVoiceStatusPromise || Date.now()-fishVoiceStatusCheckedAt>60000){
         fishVoiceStatusCheckedAt=Date.now();
-        fishVoiceStatusPromise=fetch(WORKER_URL.replace(/\/+$/,'')+'/fish-voice-status',{cache:'no-store'})
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),10000);
+        fishVoiceStatusPromise=fetch(WORKER_URL.replace(/\/+$/,'')+'/fish-voice-status',{cache:'no-store',signal:controller.signal})
             .then(async response=>{
                 if(!response.ok)throw new Error('voice-status HTTP '+response.status);
                 const status=await response.json();
@@ -2778,15 +2787,44 @@ function getFishVoiceStatus(){
                 return status;
             })
             .catch(error=>{
-                console.warn('無法取得 Fish Audio 聲線設定：',String(error?.message||''));
+                fishLastFallbackReason=error?.name==='AbortError'?'聲線狀態請求逾時（10 秒）':'聲線狀態請求失敗：'+String(error?.message||error?.name||'網路中斷');
+                console.warn(fishLastFallbackReason);
                 fishVoiceStatusPromise=null; // 允許下次重新嘗試
                 return null;
-            });
+            }).finally(()=>clearTimeout(timer));
     }
     return fishVoiceStatusPromise;
 }
 let cloudSpeechController=null;
 let activeCloudAudio=null;
+// 17.14: Reuse the same media element after a real tap, including across scenes.
+let sharedNarrationAudio=null;
+let narrationAudioPriming=false;
+function getNarrationAudio(){
+    if(!sharedNarrationAudio){
+        sharedNarrationAudio=new Audio();
+        sharedNarrationAudio.preload='auto';
+        sharedNarrationAudio.setAttribute('playsinline','');
+    }
+    return sharedNarrationAudio;
+}
+function primeNarrationAudio(){
+    if(typeof Audio==='undefined' || activeCloudAudio || narrationAudioPriming)return;
+    const audio=getNarrationAudio();
+    if(audio.dataset.primed==='true')return;
+    narrationAudioPriming=true;
+    audio.src='data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YUAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    audio.volume=1;
+    try{
+        const played=audio.play();
+        Promise.resolve(played).then(()=>{audio.dataset.primed='true';},()=>{}).finally(()=>{
+            narrationAudioPriming=false;
+            if(!activeCloudAudio)audio.pause();
+        });
+    }catch(_){narrationAudioPriming=false;}
+}
+document.addEventListener('pointerdown',event=>{if(event.isTrusted)primeNarrationAudio();},{capture:true});
+document.addEventListener('keydown',event=>{if(event.isTrusted && (event.key==='Enter'||event.key===' '))primeNarrationAudio();},{capture:true});
 const cloudAudioCache=new Map();
 // Save up to 20 audio clips across page visits. Storage failure falls back to memory.
 function savedAudio(operation,key,blob){
@@ -2847,17 +2885,17 @@ function attachVoiceLeveling(audio,volume){
 }
 async function playFixedVoice(text,token,kind='story'){
     syncWorkerVoicePreference();
-    if(voiceSettings.fixedVoice===false || typeof Audio==='undefined')return null;
+    if(typeof Audio==='undefined'){fishLastFallbackReason='此瀏覽器無法建立音訊播放器';return 'error';}
     const status=await getFishVoiceStatus();
     if(token!==speechToken)return 'cancelled';
     if(!status){
-        fishLastFallbackReason='無法連線到 Worker 聲線狀態頁';
-        updateVoiceStatus('Fish Audio：'+fishLastFallbackReason+'。將使用裝置備用聲音。');
+        fishLastFallbackReason=fishLastFallbackReason||'無法連線到 Worker 聲線狀態頁';
+        updateVoiceStatus('Fish Audio：'+fishLastFallbackReason+'。請重試流螢或自行選擇內建聲音。');
         return null;
     }
     if(!status.fishApiConfigured || !status.storyDbConfigured || !status.storyVoiceEnabled){
         fishLastFallbackReason='Worker 配音服務或 STORY_DB 未就緒';
-        updateVoiceStatus('Fish Audio：'+fishLastFallbackReason+'。將使用裝置備用聲音。');
+        updateVoiceStatus('Fish Audio：'+fishLastFallbackReason+'。請重試流螢或自行選擇內建聲音。');
         return null;
     }
     const voiceId=String(status.voiceId).trim();
@@ -2881,7 +2919,7 @@ async function playFixedVoice(text,token,kind='story'){
             const fallback=reason=>{failureReason=reason;controller.abort();resolve(null);};
             timer=setTimeout(()=>fallback('Fish Audio 配音等待超過 50 秒'),50000);
             $('speechPreparation').classList.remove('hidden');
-            $('btnUseDeviceSpeechNow').onclick=()=>{primeSpeech();fallback('已選擇立即使用裝置朗讀');};
+            $('btnUseDeviceSpeechNow').onclick=()=>{primeSpeech();narrationSourceLock='device';fallback('已選擇立即使用裝置朗讀');};
         });
         const download=(async()=>{
             try{
@@ -2892,16 +2930,17 @@ async function playFixedVoice(text,token,kind='story'){
                         const response=await fetch(WORKER_URL.replace(/\/+$/,'')+'/tts-fish-story',{
                             method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({text,savedOnly:false,kind})});
                         if(!response.ok){
-                            const error=await response.json().catch(()=>({}));failureReason=String(error.error||failureReason);
-                            if(response.status===429)pauseWorkerVoiceForQuota();
+                            const error=await response.json().catch(()=>({}));failureReason='配音請求失敗（HTTP '+response.status+'）：'+String(error.error||'伺服器未提供詳細原因');
+                            // HTTP 429 may be a temporary rate limit; do not lock out the whole day.
                             retryable=[500,502,504].includes(response.status) || (response.status===503 && failureReason.includes('暫時'));
                         }else{
-                            if(!response.headers.get('Content-Type')?.includes('audio/'))return null;
-                            const blob=await response.blob();if(!blob.size || blob.size>2000000)return null;
+                            if(!response.headers.get('Content-Type')?.toLowerCase().includes('audio/')){failureReason='配音格式錯誤：伺服器未回傳音訊';return null;}
+                            const blob=await response.blob();if(!blob.size || blob.size>2000000){failureReason='配音檔案為空或超過大小限制';return null;}
                             return blob;
                         }
                     }catch(error){
                         if(controller.signal.aborted || token!==speechToken)return null;
+                        failureReason='配音下載失敗：'+String(error?.message||error?.name||'網路中斷');
                         retryable=true;
                     }
                     if(!retryable || attempt===1)return null;
@@ -2915,7 +2954,7 @@ async function playFixedVoice(text,token,kind='story'){
         if(cloudSpeechController===controller){cloudSpeechController=null;finishSpeech=null;$('speechPreparation').classList.add('hidden');$('btnUseDeviceSpeechNow').onclick=null;}
         clearTimeout(timer);
         if(result==='cancelled' || token!==speechToken)return 'cancelled';
-        if(!result){fishLastFallbackReason=failureReason;cloudSpeechCooldownUntil=Date.now()+300000;updateVoiceStatus(failureReason+'，已改用裝置朗讀。');showToast(failureReason+'；將使用裝置聲音。');return null;}
+        if(!result){fishLastFallbackReason=failureReason;updateVoiceStatus(failureReason+'。可重試流螢或自行選擇內建聲音。');return narrationSourceLock==='device'?'device-selected':'error';}
         bytes=result;cloudAudioCache.set(key,bytes);
         void savedAudio('put',key,bytes);
         while(cloudAudioCache.size>50)cloudAudioCache.delete(cloudAudioCache.keys().next().value);
@@ -2924,14 +2963,55 @@ async function playFixedVoice(text,token,kind='story'){
     await waitForNarrationResume(token);
     if(token!==speechToken)return 'cancelled';
     const playback=await new Promise(resolve=>{
-        const url=URL.createObjectURL(bytes),audio=new Audio(url);activeCloudAudio=audio;
+        const url=URL.createObjectURL(bytes),audio=getNarrationAudio();activeCloudAudio=audio;
+        audio.src=url;
         audio.playbackRate=rate;
         audio.preservesPitch=true;
         audio.volume=Math.min(1,Math.max(0,Number(voiceSettings.volume)||0));
         let ended=false,timer,progressPoll,voiceGraph=null,lastPosition=0;
+        let recoveryOpen=false;
+        const clearRecovery=()=>{
+            if(!recoveryOpen)return;recoveryOpen=false;
+            $('speechRecovery').classList.add('hidden');
+            $('btnRetrySpeech').onclick=$('btnContinueText').onclick=$('btnRecoveryDeviceSpeech').onclick=null;
+            $('btnRecoveryDeviceSpeech').classList.add('hidden');
+            if(speechRecoveryChoice===recover)speechRecoveryChoice=null;
+            refreshActionSpeechControls();
+        };
+        const recover=(choice='cancelled')=>{
+            clearRecovery();
+            if(choice==='retry'){startPlayback();return;}
+            finish(choice==='device'?'device-selected':choice==='text'?'skipped':'cancelled');
+        };
+        const showPlaybackRecovery=()=>{
+            if(ended || token!==speechToken)return;
+            clearTimeout(timer);recoveryOpen=true;speechRecoveryChoice=recover;
+            fishLastFallbackReason='手機瀏覽器阻擋播放，音檔已準備好';
+            updateVoiceStatus(fishLastFallbackReason+'，請點「播放流螢」。');
+            $('speechRecovery').classList.remove('hidden');
+            $('speechRecoveryText').textContent=fishLastFallbackReason+'。點一下即可重試播放，不會重新生成故事或配音。';
+            $('btnRetrySpeech').textContent='▶ 播放流螢';
+            $('btnRecoveryDeviceSpeech').classList.remove('hidden');
+            // play() runs directly inside the tap handler while user activation is valid.
+            $('btnRetrySpeech').onclick=()=>recover('retry');
+            $('btnRecoveryDeviceSpeech').onclick=()=>{primeSpeech();recover('device');};
+            $('btnContinueText').onclick=()=>recover('text');
+            refreshActionSpeechControls();refreshNarrationControls();
+        };
+        const startPlayback=()=>{
+            if(ended || token!==speechToken)return;
+            clearRecovery();
+            clearTimeout(timer);timer=setTimeout(()=>{fishLastFallbackReason='音檔播放逾時：15 秒內沒有開始或前進';finish('timeout');},15000);
+            const fail=error=>{
+                if(ended || token!==speechToken)return;
+                if(error?.name==='NotAllowedError'){showPlaybackRecovery();return;}
+                fishLastFallbackReason='音檔播放失敗：'+String(error?.name||error?.message||'未知錯誤');finish('error');
+            };
+            try{const played=audio.play();played?.catch(fail);}catch(error){fail(error);}
+        };
         const finish=(outcome='cancelled')=>{
-            if(ended)return;ended=true;clearTimeout(timer);clearInterval(progressPoll);audio.onended=audio.onerror=audio.onplaying=audio.ontimeupdate=null;
-            audio.pause();voiceGraph?.disconnect();voiceGraph=null;audio.removeAttribute('src');audio.load();URL.revokeObjectURL(url);
+            if(ended)return;ended=true;clearRecovery();clearTimeout(timer);clearInterval(progressPoll);audio.onended=audio.onerror=audio.onplaying=audio.ontimeupdate=null;
+            audio.pause();voiceGraph?.disconnect();voiceGraph=null;URL.revokeObjectURL(url);
             if(activeCloudAudio===audio)activeCloudAudio=null;
             if(cloudPlaybackWatchdog?.audio===audio)cloudPlaybackWatchdog=null;
             if(finishSpeech===finish)finishSpeech=null;resolve(outcome);
@@ -2943,53 +3023,45 @@ async function playFixedVoice(text,token,kind='story'){
             if(audio.ended || (Number.isFinite(duration) && duration>0 && position>=duration)){finish('end');return;}
             // Repeated timeupdate/playing events do not prove that sound advanced.
             if(Number.isFinite(position) && position>lastPosition+.01){
-                lastPosition=position;clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),10000);
+                lastPosition=position;clearTimeout(timer);timer=setTimeout(()=>{fishLastFallbackReason='音檔播放中斷：15 秒內沒有前進';finish('timeout');},15000);
             }
         };
         cloudPlaybackWatchdog={audio,
             pause(){clearTimeout(timer);},
-            resume(){if(ended)return;clearTimeout(timer);timer=setTimeout(()=>finish('timeout'),10000);
-              try{const p=audio.play();p?.catch(()=>finish('error'));}catch(_){finish('error');}}
+            resume(){if(!ended)startPlayback();}
         };
-        finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>finish('error');
-        audio.onplaying=audio.ontimeupdate=watch;timer=setTimeout(()=>finish('timeout'),7500);
+        finishSpeech=finish;audio.onended=()=>finish('end');audio.onerror=()=>{fishLastFallbackReason='音檔解碼或載入失敗（媒體錯誤 '+(audio.error?.code||'未知')+'）';finish('error');};
+        audio.onplaying=audio.ontimeupdate=watch;
         progressPoll=setInterval(watch,1000);
         fishLastFallbackReason='';updateVoiceStatus('正在使用 Fish Audio 朗讀中文（聲線 ID 尾碼：'+voiceId.slice(-6)+'）。');
         // 17.4: Let the media element play directly. A suspended Web Audio context or a
         // partially created MediaElementSource can otherwise silence an otherwise valid file.
-        try{const played=audio.play();played?.catch(error=>finish(error?.name==='NotAllowedError'?'blocked':'error'));}catch(error){finish(error?.name==='NotAllowedError'?'blocked':'error');}
+        startPlayback();
     });
-    if(['error','timeout'].includes(playback)){
+    if(playback==='error' && audioMediaDecodeFailure(fishLastFallbackReason)){
         cloudAudioCache.delete(key);void savedAudio('delete',key);
     }
     return playback;
 }
+function audioMediaDecodeFailure(reason){return reason.includes('解碼') || reason.includes('NotSupportedError');}
 async function playNarrationChunk(text,token,kind='story'){
     syncNarrationSourceLock();
-    // Once a cloud clip fails, do not alternate Cloudflare and device voices
-    // every sentence. The lock resets only when loading a different story.
-    let fixed=null;
-    if(narrationSourceLock!=='device'){
+    while(narrationSourceLock!=='device'){
+        let fixed;
         try{fixed=await playFixedVoice(text,token,kind);}catch(error){
-            console.warn('Worker audio playback failed:',error);fixed='error';
+            fishLastFallbackReason='配音處理失敗：'+String(error?.message||error?.name||'未知錯誤');fixed='error';
         }
+        if(token!==speechToken || fixed==='cancelled')return 'cancelled';
+        if(fixed==='end'){narrationSourceLock='cloud';return 'end';}
+        if(fixed==='skipped')return 'skipped';
+        if(fixed==='device-selected'){narrationSourceLock='device';break;}
+        const choice=await waitForSpeechRecovery(fishLastFallbackReason||'流螢配音暫時無法播放。',true);
+        if(token!==speechToken || choice==='cancelled')return 'cancelled';
+        if(choice==='text')return 'skipped';
+        if(choice==='device'){narrationSourceLock='device';break;}
+        cloudSpeechCooldownUntil=0;fishVoiceStatusPromise=null;
     }
-    if(token!==speechToken || fixed==='cancelled')return 'cancelled';
-    if(fixed==='end'){
-        narrationSourceLock='cloud';
-        return 'end';
-    }
-    if(narrationSourceLock!=='device'){
-        narrationSourceLock='device';
-        if(fixed!==null){
-            cloudSpeechCooldownUntil=Date.now()+300000;
-            updateVoiceStatus('Worker 音檔暫時無法播放。本篇冒險將固定使用裝置朗讀。');
-            showToast('配音失敗；本篇冒險將固定使用裝置聲音，不再反覆換人。');
-        }else{
-            updateVoiceStatus('本篇冒險使用裝置備用聲音（'+(fishLastFallbackReason||'Fish Audio 未能啟用')+'）。可按「重播」重試 Fish Audio。');
-        }
-    }
-    refreshNarrationControls(); // 手機故事頁直接顯示切換成內建語音的原因
+    refreshNarrationControls();
     if(!('speechSynthesis' in window))return 'unsupported';
     let outcome=await speakChunk(text,token);
     if(token!==speechToken || outcome==='cancelled')return 'cancelled';
@@ -3074,7 +3146,7 @@ async function speak(text,options={}){
     if(sceneVersion!==actVersion || !text)return;
     if(skipSceneSpeechVersion===sceneVersion && options.recover!==false)return;
     const chunks=splitSpeechText(text);if(!chunks.length)return;
-    stopSpeech();let token=speechToken;speechPlaying=true;refreshActionSpeechControls();refreshNarrationControls();
+    stopSpeech();syncNarrationSourceLock();narrationSourceLock=null;let token=speechToken;speechPlaying=true;refreshActionSpeechControls();refreshNarrationControls();
     try{
         for(let index=0;index<chunks.length;){
             await waitForNarrationResume(token);
@@ -3096,7 +3168,7 @@ async function speak(text,options={}){
                 if(sceneVersion!==actVersion)return;
                 token=speechToken;speechPlaying=true;continue;
             }
-            if(token!==speechToken || outcome==='cancelled')return;
+            if(token!==speechToken || outcome==='cancelled' || outcome==='skipped')return;
             if(outcome!=='end'){
                 if(options.recover===false)return;
                 try{if(supported)speechSynthesis.cancel();}catch(_) {}
@@ -5175,6 +5247,7 @@ async function generateStory(preferSaved=false) {
 ===================================================== */
 
 function primeSpeech() {
+    primeNarrationAudio();
     primeFeedbackAudio();
 
     if (
