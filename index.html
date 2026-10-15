@@ -740,7 +740,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">自由冒險版 17.15 · 揮手選路 · iPhone 語音修正</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，自由創造世界與角色，也可選擇風格後生成新故事；已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整故事導演版 17.16 · 自由冒險 · 揮手選路</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先寫完整故事因果，再生成前4幕；遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，自由創造世界與角色，也可選擇風格後生成新故事；已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -4631,7 +4631,7 @@ function clearProgressState(){
 function progressPayload(state){
     return {...state.requestData,plan:state.plan,meta:{title:adventure.title,companion:adventure.companion,storyDesign:adventure.storyDesign},
       nextIndex:state.nextIndex,
-      previous:acts.slice(-5).map(act=>({index:act.index,title:act.title,story:act.story,outcome:getActActions(act).at(-1)?.storyAfter||''})),
+      previous:acts.slice(-5).map(act=>({index:act.index,title:act.title,story:act.story,outcome:getActActions(act).at(-1)?.storyAfter||'',continuity:act.storyContinuity})),
       priorBeats:acts.slice(0,-5).slice(-14).map(act=>({index:act.index,title:act.title,outcome:getActActions(act).at(-1)?.storyAfter||act.story?.slice(-80)||''}))};
 }
 async function progressApi(endpoint,payload,controller,ms=65000){
@@ -4681,6 +4681,10 @@ async function progressPrefetch(){
             if(progressState!==state || version!==adventureVersion)return false;
             if(!Array.isArray(data.acts)||data.acts.length===0||data.acts[0].index!==expected||data.nextIndex!==expected+data.acts.length)
                 throw new Error('後續故事段落順序不正確');
+            if(state.plan?.formatVersion===3 && (!data.plan || data.plan.state?.through!==data.nextIndex-1 ||
+                data.plan.branchDecision?.direction!==state.branchDecision?.direction))
+                throw new Error('故事記憶或選路不同步，請重試下一段');
+            if(data.plan)state.plan=data.plan;
             acts.push(...data.acts);adventure.acts=acts;maxRound=18;
             state.nextIndex=data.nextIndex;
             state.complete=data.complete===true || state.nextIndex>18;
@@ -4770,7 +4774,7 @@ async function generateStory(preferSaved=false) {
     const useSaved=preferSaved;
     let localRow=useSaved && localRows.length?localRows[Math.floor(Math.random()*localRows.length)]:null;
     resetAdventure();
-    $('generationStatus').textContent=preferSaved?'正在尋找已保存內容，不會生成新故事。':useProgressive?'正在規劃整篇冒險，先產生前4段……':'正在生成新內容，請稍候……';
+    $('generationStatus').textContent=preferSaved?'正在尋找已保存內容，不會生成新故事。':useProgressive?'正在創作整篇故事，再準備前4幕……':'正在生成新內容，請稍候……';
 
     const requestVersion = adventureVersion;
     const requestController=new AbortController();generationController=requestController;
@@ -4809,7 +4813,7 @@ async function generateStory(preferSaved=false) {
 
             :
 
-        (useProgressive?'AI 正在準備開場……':'AI 正在創造完整冒險……');
+        (useProgressive?'AI 正在編寫整篇故事與開場……':'AI 正在創造完整冒險……');
 
 
     $('btnIcon').className =
@@ -4874,6 +4878,10 @@ async function generateStory(preferSaved=false) {
 
 
 
+        if(useProgressive && (data.plan?.formatVersion!==3 || data.story?.storyCraftVersion!==3)){
+            throw new Error('網頁已更新至17.16，但Worker尚未套用完整故事導演流程。請將Worker全文替換為7.0.0後部署，再生成新故事。');
+        }
+        if(data.version)console.info('聲動奇境生成版本：',data.version);
         if(!preferSaved && data.source==='library'){
             if(requestVersion!==adventureVersion)return;
             const reason=String(data.notice || '服務目前無法新增內容。').replace(/，改用已保存內容[。.]?/g,'。');
