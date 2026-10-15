@@ -740,7 +740,7 @@ class="text-sm text-slate-300 mt-2">
 <div class="space-y-2">
 
 <div id="playStylePanel" class="space-y-2 mb-3"><label>玩法 <select id="playStyle" class="bg-slate-800 rounded-xl p-2"><option value="coop">孩子＋家人合作</option><option value="solo">單人冒險</option></select></label><div id="coopOptions" class="hidden"><label>家人活動方式 <select id="familyPosture" class="bg-slate-800 rounded-xl p-2"><option value="general">一般活動</option><option value="seated">全程坐姿</option></select></label><p class="text-sm text-slate-300">兩人各戴一台裝置，共同完成故事裡的動作；故事角色由配音說話。</p></div></div>
-<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">完整冒險 · 揮手選路測試版・iPhone 語音修正 17.14</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，選主題後生成新故事；已保存內容可另外重播。</p></div>
+<div id="childStoryLengthPanel" class="space-y-2 mb-3"><p class="text-sm text-emerald-300">自由冒險版 17.15 · 揮手選路 · iPhone 語音修正</p><label for="storyLength">冒險長度</label><select id="storyLength" class="bg-slate-800 rounded-xl p-2"><option value="full" selected>完整版 · 約14段互動（預設）</option><option value="short">短篇 · 8段互動</option></select><p id="progressiveDefaultHint" class="text-sm text-cyan-200 mt-2">🚀 完整版預設快速開演：先規劃整篇、生成前4幕，遊玩時接續生成；不需勾選。</p><p class="text-sm text-slate-300">完整版以約10分鐘為目標，依朗讀和動作速度而定。全篇18幕、約14次互動，自由創造世界與角色，也可選擇風格後生成新故事；已保存內容可另外重播。</p></div>
 <div id="childAgePanel" class="space-y-2 mb-3">
 <div class="text-sm text-purple-300 font-bold">👧 孩子的年齡</div>
 <div class="grid grid-cols-4 gap-2" role="group" aria-label="孩子的年齡">
@@ -755,11 +755,11 @@ class="text-sm text-slate-300 mt-2">
 <div id="childThemeHeader" class="flex items-center justify-between">
 
 <div class="text-xs text-purple-300 font-bold">
-📚 選擇故事主題
+✨ 故事風格（可不選）
 </div>
 
 <div id="themeCount" class="text-xs text-slate-500">
-18 個冒險世界
+自由冒險＋4 種風格
 </div>
 
 </div>
@@ -807,8 +807,8 @@ class="difficulty-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 p
 <input
 type="text"
 id="customTopicInput"
-maxlength="200"
-placeholder="或者輸入你想聽的故事，例如：會飛的橘色章魚"
+maxlength="140"
+placeholder="孩子的想法（選填，最多140字），例如：我想和恐龍當朋友"
 class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500">
 
 </div>
@@ -1158,7 +1158,7 @@ let lastPhysicalButtonLock = null;
 let currentMode = 'child';
 
 let selectedTheme =
-    '勇敢的小騎士與巨龍';
+    '自由冒險';
 
 let selectedDifficulty = 'easy';
 let selectedChildAge = 6;
@@ -1235,7 +1235,7 @@ let controllerSetupTimer = null;
 let connectionPending = false;
 let generationController = null;
 let finishSpeech = null;
-const modeTopics = {child:{theme:'勇敢的小騎士與巨龍',custom:''},senior:{theme:'坐姿健康操',custom:''}};
+const modeTopics = {child:{theme:'自由冒險',custom:''},senior:{theme:'坐姿健康操',custom:''}};
 function stopControllerSetup() {
     controllerLearning=false;clearTimeout(controllerSetupTimer);controllerSetupTimer=null;
 }
@@ -1708,115 +1708,11 @@ const $ =
 ===================================================== */
 
 const CHILD_THEMES = [
-
-    {
-        name:'勇敢的小騎士與巨龍',
-        icon:'⚔️',
-        short:'騎士巨龍'
-    },
-
-    {
-        name:'神奇魔法森林的密道',
-        icon:'🌲',
-        short:'魔法森林'
-    },
-
-    {
-        name:'海底王國的寶藏探險',
-        icon:'🐬',
-        short:'海底王國'
-    },
-
-    {
-        name:'星際太空救援任務',
-        icon:'🚀',
-        short:'星際救援'
-    },
-
-    {
-        name:'神秘海圖與海盜寶藏',
-        icon:'🏴‍☠️',
-        short:'海盜寶藏'
-    },
-
-    {
-        name:'恐龍世界大冒險',
-        icon:'🦖',
-        short:'恐龍世界'
-    },
-
-    {
-        name:'魔法學院的失控魔法',
-        icon:'🧙',
-        short:'魔法學院'
-    },
-
-    {
-        name:'機器人城市大危機',
-        icon:'🤖',
-        short:'機器城市'
-    },
-
-    {
-        name:'神秘偵探事件',
-        icon:'🕵️',
-        short:'神秘偵探'
-    },
-
-    {
-        name:'城堡幽靈之謎',
-        icon:'👻',
-        short:'幽靈城堡'
-    },
-
-    {
-        name:'貓咪的宇宙旅行',
-        icon:'🐱',
-        short:'貓咪宇宙'
-    },
-
-    {
-        name:'火山島求生大冒險',
-        icon:'🌋',
-        short:'火山島'
-    },
-
-    {
-        name:'冰雪王國的冬日危機',
-        icon:'❄️',
-        short:'冰雪王國'
-    },
-
-    {
-        name:'神獸山脈的秘密',
-        icon:'🐉',
-        short:'神獸山脈'
-    },
-
-    {
-        name:'神奇時光列車',
-        icon:'🚂',
-        short:'時光列車'
-    },
-
-    {
-        name:'星空夢境大冒險',
-        icon:'🌌',
-        short:'星空夢境'
-    },
-
-    {
-        name:'沙漠失落城市',
-        icon:'🏜️',
-        short:'失落城市'
-    },
-
-    {
-        name:'海洋救援隊',
-        icon:'🌊',
-        short:'海洋救援'
-    }
-
+    {name:'自由冒險',icon:'✨',short:'自由冒險（預設）'},
+    {name:'故事風格：奇幻',icon:'🪄',short:'奇幻'},
+    {name:'故事風格：太空',icon:'🚀',short:'太空'},
+    {name:'故事風格：神祕',icon:'🔍',short:'神祕'},
+    {name:'故事風格：搞笑',icon:'😆',short:'搞笑'}
 ];
 
 const SENIOR_THEME =
@@ -3435,13 +3331,18 @@ async function syncControllerAction() {
    主題 UI
 ===================================================== */
 
+function selectedChildTopic() {
+    const idea=$('customTopicInput').value.trim();
+    // Keep style and child constraints together through generation, continuation and saving.
+    return idea ? `${selectedTheme}｜孩子的想法：${idea}` : selectedTheme;
+}
 function updateSelectedTopicLabel() {
     const senior=currentMode==='senior';
     for(const id of ['childThemeHeader','themeButtonsContainer','customTopicPanel','selectedTopicLabel'])$(id).classList.toggle('hidden',senior);
     $('customTopicInput').disabled=senior;
-    const topic=senior?SENIOR_THEME:$('customTopicInput').value.trim() || selectedTheme;
-    $('selectedTopicLabel').textContent='本次主題：'+topic+' · 每次生成全新情節';
-    $('themeCount').textContent=CHILD_THEMES.length+' 個冒險世界';
+    const topic=senior?SENIOR_THEME:selectedChildTopic();
+    $('selectedTopicLabel').textContent='本次冒險：'+topic+' · 世界與情節每次重新創作';
+    $('themeCount').textContent='自由冒險＋4 種風格';
 }
 function renderChildThemes() {
 
@@ -3460,7 +3361,7 @@ function renderChildThemes() {
                 );
 
             button.className =
-                theme.name === selectedTheme && !$('customTopicInput').value.trim()
+                theme.name === selectedTheme
 
                     ?
 
@@ -3494,8 +3395,6 @@ function renderChildThemes() {
                     selectedTheme =
                         theme.name;
 
-                    $('customTopicInput').value =
-                        '';
                     updateSelectedTopicLabel();
 
                 }
@@ -3723,7 +3622,7 @@ async function switchMode(
             '準備好開始冒險了嗎？';
 
         $('welcomeDesc').textContent =
-            '適合 5～8 歲：選擇喜歡的主題，跟著簡單的小故事動一動。';
+            '適合 5～8 歲：每次出發，遇見新的角色、世界與驚喜。';
 
         selectedTheme = modeTopics.child.theme;
 
@@ -3737,7 +3636,7 @@ async function switchMode(
             '開始精彩故事冒險';
 
         $('customTopicInput').placeholder =
-            '或者輸入你想聽的故事，例如：會飛的橘色章魚';
+            '孩子的想法（選填，最多140字），例如：我想和恐龍當朋友';
 
 
         if (
@@ -4849,7 +4748,7 @@ async function generateStory(preferSaved=false) {
         .trim();
 
 
-    const topic = currentMode==='senior' ? SENIOR_THEME : custom || selectedTheme;
+    const topic = currentMode==='senior' ? SENIOR_THEME : selectedChildTopic();
 
 
     if (!topic) {
@@ -5408,43 +5307,7 @@ document.addEventListener(
             );
 
 
-        /*
-         * 自訂主題
-         */
-
-        $('customTopicInput')
-            .addEventListener(
-
-                'input',
-
-                () => {
-
-                    const value =
-                        $('customTopicInput')
-                        .value
-                        .trim();
-
-
-                    if (!value) {renderChildThemes();return;}
-
-
-                    document
-                        .querySelectorAll(
-                            '.theme-btn'
-                        )
-                        .forEach(
-                            b => {
-
-                                b.className =
-                                    'theme-btn bg-slate-800 border border-slate-700 text-slate-300 py-2 px-2 rounded-xl text-xs font-semibold';
-
-                            }
-                        );
-
-                }
-
-            );
-
+        $('customTopicInput').addEventListener('input', renderChildThemes);
 
         /*
          * 長輩難度
@@ -6114,7 +5977,7 @@ async function buildStoryAudio(){
             if(version!==adventureVersion)return;
         }
         await storyAudioRequest(controller,{libraryId:story.libraryId,finish:true,clips});
-        if(version!==adventureVersion)return;story.audioReady=true;story.audioVoiceEdition=FISH_AUDIO_EDITION;story.audioVoiceReference=voiceId;story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:$('customTopicInput').value.trim()||selectedTheme),story.libraryId);
+        if(version!==adventureVersion)return;story.audioReady=true;story.audioVoiceEdition=FISH_AUDIO_EDITION;story.audioVoiceReference=voiceId;story.audioLayoutVersion=[3,4].includes(story.narrativeLayoutVersion)?story.narrativeLayoutVersion:currentMode==='child'?2:1;saveFullStory(story,librarySelection(currentMode==='senior'?SENIOR_THEME:selectedChildTopic()),story.libraryId);
         $('audioBuildStatus').textContent='✓ 故事配音已保存，可以開始遊玩；其他人重玩同一篇也會讀取音檔。';
     }catch(error){if(version===adventureVersion)$('audioBuildStatus').textContent=error.name==='AbortError'?'已停止製作。下次會重用已完成音檔；現在仍可用內建聲音遊玩。':error.message+'；可重試或使用內建聲音遊玩。';}
     finally{if(audioBuildController===controller)audioBuildController=null;refreshCoopUI();}
