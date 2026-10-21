@@ -716,9 +716,10 @@ class="text-sm text-slate-300 mt-2">
   <p id="gestureBranchLeft" class="mt-3 text-base text-slate-200"></p>
   <p id="gestureBranchRight" class="mt-2 text-base text-slate-200"></p>
   <p id="gestureBranchStatus" class="mt-3 text-sm text-amber-200">故事朗讀結束後才開始偵測。</p>
-  <div id="gestureBranchManual" class="hidden mt-3 flex flex-wrap gap-2" aria-label="沒有連接裝置時的手動測試">
-    <button type="button" id="gestureBranchTestLeft" class="px-4 py-3 bg-cyan-700 text-white font-bold rounded-xl">⬅️ 模擬向左揮手</button>
-    <button type="button" id="gestureBranchTestRight" class="px-4 py-3 bg-purple-700 text-white font-bold rounded-xl">➡️ 模擬向右揮手</button>
+  <div id="gestureBranchManual" class="mt-3 flex flex-wrap gap-2" aria-label="體感失效時的手動備用測試">
+     <p class="w-full text-xs text-amber-200">⚠️ 緊急備用：若裝置無法回報左右揮手，才按下方按鈕繼續。這是模擬選擇，不代表 ESP32 體感成功。</p>
+    <button type="button" id="gestureBranchTestLeft" class="px-4 py-3 bg-cyan-700 text-white font-bold rounded-xl">⬅️ 備用選左（模擬）</button>
+    <button type="button" id="gestureBranchTestRight" class="px-4 py-3 bg-purple-700 text-white font-bold rounded-xl">➡️ 備用選右（模擬）</button>
   </div>
 </div>
 <div id="actionProgressPanel" class="hidden mt-3">
@@ -4586,7 +4587,7 @@ async function askProgressGestureBranch(act){
     $('gestureBranchPanel').classList.remove('hidden');
     $('gestureBranchLeft').textContent='⬅️ 左邊：'+options.left;
     $('gestureBranchRight').textContent='➡️ 右邊：'+options.right;
-    $('gestureBranchManual').classList.toggle('hidden',!!bleCharacteristic && !fullManualTest);
+    $('gestureBranchManual').classList.remove('hidden'); // Emergency fallback stays available even when BLE is connected.
     $('gestureBranchStatus').textContent='正在朗讀路線，暫時不接受揮手。';
     const narration='前面有兩條路。向左揮手，'+options.left+'。向右揮手，'+options.right+'。準備好後，向你想走的方向揮一次手。';
     appendStory('🧭 用揮手決定故事',`左邊：${options.left}。右邊：${options.right}。`);
