@@ -14,7 +14,7 @@
 </head>
 <body>
 <div class="wrap">
-<header class="hero"><div class="logo"><span class="logo-dot">🌌</span><div><div class="eyebrow" id="eyebrow">THE STORY MOVES WITH YOU</div><h1>聲動奇境 <span style="color:#d2acff">✦</span></h1><p id="heroTagline">不只是聽故事。這一次，你就是故事裡的冒險家。</p></div></div><div class="small-tag" id="versionTag">🎙️ Next 1.3.1 · iPhone 朗讀修正</div></header>
+<header class="hero"><div class="logo"><span class="logo-dot">🌌</span><div><div class="eyebrow" id="eyebrow">THE STORY MOVES WITH YOU</div><h1>聲動奇境 <span style="color:#d2acff">✦</span></h1><p id="heroTagline">不只是聽故事。這一次，你就是故事裡的冒險家。</p></div></div><div class="small-tag" id="versionTag">🎙️ 比賽版 · RUN／長輩／合作修正版</div></header>
 <div class="layout">
 <aside class="panel side">
   <div class="section"><h2 id="sideTitle">✧ 你的冒險</h2>
@@ -22,7 +22,7 @@
     <label class="field" style="margin-top:14px">使用對象</label><div class="switches" id="modeGroup"><button class="switch active" data-mode="child">🧒 兒童</button><button class="switch" data-mode="senior">🌿 長輩</button></div>
     <div class="two" style="margin-top:12px" id="roleSettings"><label id="ageField"><span class="field">孩子年齡</span><select id="age"><option>5</option><option selected>6</option><option>7</option><option>8</option></select></label><label id="postureField" class="hide"><span class="field">合作夥伴姿勢</span><select id="posture"><option value="general">一般活動</option><option value="seated">坐姿活動</option></select></label></div>
   </div>
-  <div class="section" id="themePanel"><h2>✧ 想去哪個世界？</h2><div class="themes" id="themes"><button class="active" data-topic="自由冒險">✨ 自由</button><button data-topic="奇幻">🪄 奇幻</button><button data-topic="太空">🚀 太空</button><button data-topic="海洋">🐋 海洋</button><button data-topic="神祕">🔍 神祕</button><button data-topic="搞笑">🎭 搞笑</button></div><label class="field" for="topic" style="margin-top:12px">也可以自己想一個主題</label><input id="topic" placeholder="例如：一隻不會飛的龍" maxlength="110"><p class="tiny" style="margin:8px 0 0">主題提供靈感，不鎖死角色與劇情。</p></div><div class="section hide" id="seniorInfoPanel"><h2>🌿 AI 坐姿活動</h2><label class="field" for="seniorFocus">本次活動重點</label><select id="seniorFocus"><option value="relax">放鬆舒展</option><option value="arms">肩膀與手臂</option><option value="wrists">手腕與協調</option></select><p class="tiny" style="margin-top:10px">AI 產生本次活動的引導、提醒與鼓勵，不編寫冒險故事；ESP32 的動作類型和安全幅度由程式固定限制。</p><p class="tiny">請使用穩固、有靠背的椅子，雙腳平放、依能力在舒適範圍活動。如有疼痛、頭暈或不適請停止。這不是醫療復健處方。</p></div>
+  <div class="section" id="themePanel"><h2>✧ 想去哪個世界？</h2><div class="themes" id="themes"><button class="active" data-topic="自由冒險">✨ 自由</button><button data-topic="奇幻">🪄 奇幻</button><button data-topic="太空">🚀 太空</button><button data-topic="海洋">🐋 海洋</button><button data-topic="神祕">🔍 神祕</button><button data-topic="搞笑">🎭 搞笑</button></div><label class="field" for="topic" style="margin-top:12px">也可以自己想一個主題</label><input id="topic" placeholder="例如：一隻不會飛的龍" maxlength="110"><p class="tiny" style="margin:8px 0 0">主題提供靈感，不鎖死角色與劇情。</p></div><div class="section hide" id="seniorInfoPanel"><h2>🌿 AI 坐姿活動</h2><label class="field" for="seniorFocus">本次活動重點</label><select id="seniorFocus"><option value="relax">放鬆舒展</option><option value="arms">肩膀與手臂</option><option value="wrists">手腕與協調</option></select><p class="tiny" style="margin-top:10px">AI 產生坐姿指引，不編寫冒險故事；若 AI 無法回應，改用清楚標示的固定坐姿活動。ESP32 只辨識手持裝置動作，不代表能確認全身姿勢。</p><p class="tiny">請使用穩固、有靠背的椅子，雙腳平放、依能力在舒適範圍活動。如有疼痛、頭暈或不適請停止。這不是醫療復健處方。</p></div>
   <div class="section"><h2 id="voiceHeading">✧ 旁白設定</h2><label class="field" for="voice">朗讀方式</label><select id="voice"><option value="device">裝置中文語音 · 穩定省額度</option><option value="fish">Fish Audio · 雲端配音</option><option value="off">不朗讀 · 文字測試</option></select><p class="tiny" style="margin:8px 0 0">Fish Audio 需要 Worker 設定 Secret 與 D1。失敗會明確提示並改用裝置朗讀。</p></div>
   <div class="section"><h2>✧ ESP32 體感裝置</h2>
     <div class="connect-row"><span id="childStatus"><i class="dot"></i>玩家裝置：未連線</span><button class="btn teal" id="connectChild">連接</button></div>
@@ -38,7 +38,7 @@
 
 有的，是一個會因為你而改變的世界。選擇冒險，連接裝置，準備好一起出發吧！</p>
 <div class="message" id="systemMessage" role="status"></div>
-<section class="mission hide" id="mission"><h3 id="missionTitle">🎭 你的任務</h3><div class="why" id="missionWhy"></div><div class="how" id="missionHow"></div><div id="roleBars"></div><div class="feedback" id="motionFeedback">等待語音指引結束，再開始動作。</div><div class="bar-actions"><button class="btn teal" id="skipSpeech">⏩ 跳過朗讀，開始動作</button><button class="btn dark" id="replay">🔊 重聽提示</button><button class="btn warning" id="manualChild">🛟 手動完成孩子任務</button><button class="btn warning" id="manualFamily">🛟 手動完成家人任務</button></div><p class="tiny">手動按鈕是測試與斷線備援，不會假裝 ESP32 已經偵測成功。</p></section>
+<section class="mission hide" id="mission"><h3 id="missionTitle">🎭 你的任務</h3><div class="why" id="missionWhy"></div><div class="how" id="missionHow"></div><div id="roleBars"></div><div class="feedback" id="motionFeedback">等待語音指引結束，再開始動作。</div><div class="bar-actions"><button class="btn teal" id="skipSpeech">⏩ 跳過朗讀，開始動作</button><button class="btn dark" id="replay">🔊 重聽提示</button><button class="btn warning" id="manualChild">🛟 手動完成孩子任務</button><button class="btn warning" id="manualFamily">🛟 手動完成家人任務</button></div><p class="tiny">雙人合作建議使用兩台 ESP32；如果只有一台，家人任務可使用明確標示的手動備援。手動完成不代表感測器已辨識動作。</p></section>
 <section id="branch" class="mission hide"><h3>🧭 現在，由你決定冒險路線！</h3><p class="stage-sub">聽完路線，按左邊實體按鈕（GPIO0）走左路、右邊實體按鈕（GPIO1）走右路。無須揮手。</p><div class="choice-list"><button class="choice" id="branchLeft"><h3><span class="dir">⬅</span> 左邊</h3><p id="leftLabel"></p></button><button class="choice" id="branchRight"><h3><span class="dir">➡</span> 右邊</h3><p id="rightLabel"></p></button></div><p class="tiny">畫面按鈕是實體按鈕失效時的緊急備援。兩條路將影響後續續寫內容。</p></section>
 <div class="bar-actions" id="generalActions"><button id="nextRest" class="btn primary hide">▶ 繼續冒險</button><button id="stopSpeech" class="btn dark hide">⏹ 停止朗讀</button></div>
 <div id="fishTapPanel" class="announcement hide" role="status" aria-live="polite" style="border-color:#e9bd72;background:#392b40;color:#fff3d6">
@@ -100,7 +100,7 @@ function updateRoleUI(){
  $('connectChild').setAttribute('aria-label','連接'+primaryLabel+'裝置');
  hide('themePanel',!childMode);hide('seniorInfoPanel',childMode);
  txt('heroTagline',childMode?'不只是聽故事。這一次，你就是故事裡的冒險家。':'AI 幫你安排溫和的坐姿活動，不必聽冒險故事。');
- txt('versionTag',childMode?'🚀 Next 1.3.2 · 因果冒險引擎':'🌿 Next 1.3.2 · AI 坐姿活動');
+ txt('versionTag',childMode?'🚀 比賽版 · 兒童體感':'🌿 比賽版 · 長輩坐姿活動');
  txt('eyebrow',childMode?'THE STORY MOVES WITH YOU':'GENTLE MOVEMENT FOR YOU');
  document.querySelector('[data-player=solo]').textContent=childMode?'🌟 單人冒險':'🌿 單人活動';
  document.querySelector('[data-player=coop]').textContent=childMode?'🤝 雙人合作':'🤝 雙人陪同';
@@ -256,8 +256,15 @@ async function begin(){if(state.busy)return;
      state.scenes=d.scenes;state.nextIndex=totalSteps()+1;state.busy=false;
      txt('worldCaption','AI GENTLE MOVEMENT');txt('storyIcon','✦');
      msg('✅ AI 已準備坐姿活動。沒有生成冒險故事。');await openScene(1);
-   }catch(e){if(run===state.run){state.busy=false;setPhase('error','AI 活動產生失敗');txt('storyTitle','這次活動未能生成');
-     txt('storyText','AI 服務目前無法產生指引，沒有假裝使用 AI。請稍後重新嘗試。');msg('❌ '+e.message);}}
+   }catch(e){if(run===state.run){
+      state.busy=false;
+      state.plan={title:'坐姿舒展（離線備援）',world:'預先設計的溫和坐姿活動'};
+      state.scenes=seniorSession(state.player);
+      state.nextIndex=totalSteps()+1;
+      msg('⚠️ AI 活動暫時不可用，已切換到預先設計的坐姿活動（不是 AI 生成）。原因：'+e.message);
+      txt('worldCaption','OFFLINE GENTLE MOVEMENT');
+      await openScene(1);
+    }}
    finally{$('start').disabled=false}
    return;
  }
@@ -283,7 +290,7 @@ function startHoldLoop(){
       const p=state.progress[role];
       if(!p||p.done||!p.action.seconds||!p.last)continue;
       const now=performance.now();
-      if(now-p.last>1200&&!p.paused){
+      if(now-p.last>1500&&!p.paused){
         p.paused=true;p.started=0;
         txt('motionFeedback',state.mode==='senior'?'動作先暫停，準備好了再繼續。':'先喘口氣！準備好了再繼續，剛剛的進度還在！');
         changed=true;
@@ -314,8 +321,8 @@ function acceptMotion(role,signal,source='ble'){
     const now=performance.now();
     // Count verified pulse intervals only. A long gap contributes no time.
     // Original ESP32 RUN pulses are typically >=280 ms apart.
-    if(p.last&&now-p.last<=900){
-      p.elapsed=Math.min(p.action.seconds,(p.elapsed||0)+Math.min((now-p.last)/1000,0.55));
+    if(p.last&&!p.paused&&now-p.last<=1450){
+      p.elapsed=Math.min(p.action.seconds,(p.elapsed||0)+Math.min((now-p.last)/1000,0.58));
     }
     p.started=now;p.last=now;p.paused=false;
     txt('motionFeedback',p.action.during||'正在努力！世界正等著你的下一步……');
@@ -335,6 +342,12 @@ async function armBranch(){
   if(state.phase==='branch')msg('🧭 左邊實體按鈕選左路，右邊實體按鈕選右路。');
 }
 async function openBranch(){
+   if(!state.plan?.branch?.left?.label||!state.plan?.branch?.right?.label){
+     msg('本篇沒有完整左右選項，略過選路，繼續故事。');
+     state.choice={direction:'none',label:'未進行選路'};
+     await moveNext();
+     return;
+   }
   voiceCancel();
   state.branchChoosing=false;state.branchArmed=false;
   clearTimeout(state.branchArmTimer);
