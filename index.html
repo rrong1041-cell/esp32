@@ -251,10 +251,62 @@ async function proceedAfterRest(){if(state.phase!=='rest')return;hide('nextRest'
 function logEvent(index,what){const record={index,what:what.slice(0,170)};const last=state.log[state.log.length-1];if(last?.index===record.index&&last.what===record.what)return;state.log.push(record);if(state.log.length>12)state.log.shift()}
 async function onSuccess(){if(state.phase!=='action')return;const scene=currentScene();stopHoldLoop();setPhase('success',state.mode==='senior'?'🌿 活動完成':'✨ 冒險成功！');await pauseAll();txt('motionFeedback',state.mode==='senior'?'✅ 完成這項活動。請先休息，再進入下一項。':'✅ 成功！你的行動真的改變了故事。');const result=scene.action.result+(scene.family?' '+scene.family.result:'');txt('storyText',scene.scene+(state.mode==='senior'?'\n\n✓ 本項完成：\n':'\n\n✦ 你的行動帶來了結果：\n')+result);if(state.mode!=='senior')logEvent(state.index,scene.title+'：'+result);await speak(result);if(state.phase!=='success')return;if(state.mode==='senior'){setPhase('seniorStepDone','🌿 暫停休息');hide('nextRest',false);$('nextRest').textContent='▶ 下一項活動';msg('已完成第 '+state.index+' 項。可以休息，準備好再前進。');return}
  if(state.index===4){await openBranch();return}await moveNext()}
-function startHoldLoop(){stopHoldLoop();holdInterval=setInterval(()=>{if(state.phase!=='action'||!state.progress)return;let changed=false;for(const role of state.player==='coop'?['child','family']:['child']){const p=state.progress[role];if(!p||p.done||!p.action.seconds||!p.started)continue;const now=performance.now();if(now-p.last>1200){p.started=0;p.elapsed=0;state.attempts++;const scene=currentScene();txt('motionFeedback',state.mode==='senior'?'動作中斷，先放鬆，準備好再試。':(scene?.action?.fail?.[(state.attempts-1)%2]||'剛才的動作中斷了，角色正在等待你再次試試。'));changed=true;continue}p.elapsed=Math.min(p.action.seconds,(now-p.started)/1000);changed=true;if(p.elapsed>=p.action.seconds)markComplete(role)}if(changed)renderRoles()},150)}
+// v1.3.4: Timed motion accumulates only from verified BLE pulses; inactivity preserves progress.
+function startHoldLoop(){
+  stopHoldLoop();
+  holdInterval=setInterval(()=>{
+    if(state.phase!=='action'||!state.progress)return;
+    let changed=false;
+    for(const role of state.player==='coop'?['child','family']:['child']){
+      const p=state.progress[role];
+      if(!p||p.done||!p.action.seconds||!p.last)continue;
+      const now=performance.now();
+      if(now-p.last>1200&&!p.paused){
+        p.paused=true;p.started=0;
+        txt('motionFeedback',state.mode==='senior'?'動作先暫停，準備好了再繼續。':'先喘口氣！準備好了再繼續，剛剛的進度還在！');
+        changed=true;
+      }
+    }
+    if(changed)renderRoles();
+  },150);
+}
 function stopHoldLoop(){if(holdInterval)clearInterval(holdInterval);holdInterval=null}
 function markComplete(role){const p=state.progress?.[role];if(!p||p.done)return;p.done=true;p.elapsed=p.action.seconds||0;renderRoles();txt('motionFeedback',role==='child'?(state.mode==='senior'?'🌿 長輩的任務完成！':'🧒 孩子的任務完成！'):'🤝 家人的任務完成！');void send(role,'PAUSE');if(state.progress.child.done&&(!state.progress.family||state.progress.family.done))void onSuccess();else void syncDevices()}
-function acceptMotion(role,signal,source='ble'){if(state.phase==='branch'&&role==='child'&&['SWIPE_LEFT','SWIPE_RIGHT'].includes(signal)){void pickBranch(signal==='SWIPE_LEFT'?'left':'right','BLE');return}if(state.phase!=='action'||!state.progress)return;const p=state.progress[role];if(!p||p.done)return;if(signal==='HOLD_END'){if(p.action.seconds){p.started=0;p.elapsed=0;state.attempts++;renderRoles()}return}if(signal!==p.action.code){if(['SWIPE_LEFT','SWIPE_RIGHT','RUN','SHAKE','JUMP','ARM_UP','ARM_DOWN','HOLD_UP','TILT_LEFT','TILT_RIGHT'].includes(signal)&&source==='ble'){state.attempts++;if(state.attempts%3===1)txt('motionFeedback',p.action.fail[(Math.floor(state.attempts/3))%Math.max(1,p.action.fail.length)]||'方向不太對，試試任務提示中的動作。')}return}if(p.action.seconds){const now=performance.now();if(!p.started||now-p.last>1200)p.started=now;p.last=now;p.elapsed=Math.min(p.action.seconds,(now-p.started)/1000);txt('motionFeedback',p.action.during||'正在努力！世界正等著你的下一步……');if(p.elapsed>=p.action.seconds)markComplete(role)}else{p.count=Math.min(p.action.count,p.count+1);txt('motionFeedback',(p.action.during||'有反應了！再來！')+' · '+p.count+'/'+p.action.count);if(p.count>=p.action.count)markComplete(role);else void send(role,'ACTION_TICK')}renderRoles()}
+function acceptMotion(role,signal,source='ble'){
+  if(state.phase==='branch'&&role==='child'&&['SWIPE_LEFT','SWIPE_RIGHT'].includes(signal)){
+    void pickBranch(signal==='SWIPE_LEFT'?'left':'right','BLE');return;
+  }
+  if(state.phase!=='action'||!state.progress)return;
+  const p=state.progress[role];if(!p||p.done)return;
+  if(signal==='HOLD_END'){
+    if(p.action.seconds){p.paused=true;p.started=0;p.last=0;renderRoles();}
+    return;
+  }
+  if(signal!==p.action.code){
+    if(['SWIPE_LEFT','SWIPE_RIGHT','RUN','SHAKE','JUMP','ARM_UP','ARM_DOWN','HOLD_UP','TILT_LEFT','TILT_RIGHT'].includes(signal)&&source==='ble'){
+      state.attempts++;
+      if(state.attempts%3===1)txt('motionFeedback',p.action.fail[(Math.floor(state.attempts/3))%Math.max(1,p.action.fail.length)]||'方向不太對，試試任務提示中的動作。');
+    }
+    return;
+  }
+  if(p.action.seconds){
+    const now=performance.now();
+    // Count verified pulse intervals only. A long gap contributes no time.
+    // Original ESP32 RUN pulses are typically >=280 ms apart.
+    if(p.last&&now-p.last<=900){
+      p.elapsed=Math.min(p.action.seconds,(p.elapsed||0)+Math.min((now-p.last)/1000,0.55));
+    }
+    p.started=now;p.last=now;p.paused=false;
+    txt('motionFeedback',p.action.during||'正在努力！世界正等著你的下一步……');
+    if(p.elapsed>=p.action.seconds)markComplete(role);
+  }else{
+    p.count=Math.min(p.action.count,p.count+1);
+    txt('motionFeedback',(p.action.during||'有反應了！再來！')+' · '+p.count+'/'+p.action.count);
+    if(p.count>=p.action.count)markComplete(role);
+    else void send(role,'ACTION_TICK');
+  }
+  renderRoles();
+}
 $('manualChild').onclick=()=>manual('child');$('manualFamily').onclick=()=>manual('family');function manual(role){if(state.phase!=='action')return;const p=state.progress?.[role];if(!p)return;if(!confirm('這是「手動備援」，不代表 ESP32 真正偵測成功。確定要完成'+(role==='child'?(state.mode==='senior'?'長輩':'孩子'):'陪同者')+'的任務嗎？'))return;markComplete(role)}
 async function openBranch(){hide('mission',true);hide('branch',false);txt('leftLabel',state.plan.branch.left.label);txt('rightLabel',state.plan.branch.right.label);setPhase('branchBriefing','🧭 自由選路');msg('請向左或向右揮手決定分支。畫面選擇提供緊急備援。');await speak('接下來，這條路由你決定！向左，'+state.plan.branch.left.label+'。向右，'+state.plan.branch.right.label+'。選一條路吧！');if(state.phase!=='branchBriefing')return;if(document.hidden){msg('請回到網頁，使用「跳過朗讀」或重新進入選路。');return}await unlockBranch()}
 async function unlockBranch(){if(!['branchBriefing','branch'].includes(state.phase))return;voiceCancel();setPhase('branch','🧭 等待你的選擇');await send('child','EXPECT:SWIPE_LEFT');if(devices.family.connected)await send('family','PAUSE')}
