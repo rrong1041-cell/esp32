@@ -75,7 +75,7 @@ const SENIOR_ROUTINE=[
 function seniorSession(player){return SENIOR_ROUTINE.map((s,i)=>{const act=s.code?{code:s.code,label:s.title,count:s.seconds?1:s.count,seconds:s.seconds||0,purpose:s.purpose,cue:s.cue,during:s.during,result:s.result,fail:['放慢速度，試著在舒適範圍內再做一次。']}:null;return {index:i+1,title:s.title,scene:s.scene,action:act,family:player==='coop'&&act?{...act,purpose:'陪同長輩一起完成溫和的手臂活動',cue:'陪同者也依提示輕柔動作，與長輩一起完成。',result:'陪同者也完成活動。'}:null}})}
 function totalSteps(){return state.mode==='senior'?SENIOR_ROUTINE.length:18}
 
-const state={mode:'child',player:'solo',posture:'general',topic:'自由冒險',age:6,plan:null,scenes:[],index:0,nextIndex:5,choice:null,log:[],phase:'idle',busy:false,run:0,progress:null,attempts:0,voice:'device',handSide:'right',swapForScene:0,swapCalibrating:false,lastSwapScene:0};
+const state={mode:'child',player:'solo',posture:'general',topic:'自由冒險',age:6,plan:null,scenes:[],index:0,nextIndex:5,choice:null,log:[],phase:'idle',busy:false,run:0,progress:null,attempts:0,voice:'device',handSide:'right',swapForScene:0,swapCalibrating:false,lastSwapScene:0,branchChoosing:false};
 const devices={child:{device:null,characteristic:null,queue:Promise.resolve(),connected:false},family:{device:null,characteristic:null,queue:Promise.resolve(),connected:false}};
 let narrationToken=0,narrationFinish=null,activeAudio=null,holdInterval=null,narrationAbort=null,speechRequest=null;
 let pendingFishAudio=null;
@@ -240,7 +240,7 @@ function renderRoles(){
 }
 function resetProgress(scene){state.progress={child:{action:scene.action,count:0,elapsed:0,started:0,last:0,done:false},family:scene.family?{action:scene.family,count:0,elapsed:0,started:0,last:0,done:false}:null};state.attempts=0;$('roleBars').replaceChildren();renderRoles()}
 async function request(path,payload,timeoutMs=115000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs);try{const r=await fetch(apiURL()+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok){if(r.status===404||r.status===410)throw Error('目前網址可能是舊版 Worker，請把 Next 1.3 Worker 部署到程式設定的固定網址。');throw Error(d.error||`HTTP ${r.status}`)}return d}finally{clearTimeout(timer)}}
-function clearAdventure(){void send('child','SESSION_END');void send('family','SESSION_END');state.run++;voiceCancel();stopHoldLoop();state.plan=null;state.scenes=[];state.index=0;state.nextIndex=5;state.choice=null;state.log=[];state.progress=null;state.busy=false;state.phase='idle';state.handSide='right';state.swapForScene=0;state.swapCalibrating=false;state.lastSwapScene=0;hide('mission',true);hide('branch',true);hide('ending',true);hide('nextRest',true);txt('storyIcon','✦');updateRoleUI();setPhase('idle',state.mode==='senior'?'等待開始':'等待啟程');void pauseAll()}
+function clearAdventure(){void send('child','SESSION_END');void send('family','SESSION_END');state.run++;voiceCancel();stopHoldLoop();state.plan=null;state.scenes=[];state.index=0;state.nextIndex=5;state.choice=null;state.log=[];state.progress=null;state.busy=false;state.phase='idle';state.handSide='right';state.swapForScene=0;state.swapCalibrating=false;state.lastSwapScene=0;state.branchChoosing=false;hide('mission',true);hide('branch',true);hide('ending',true);hide('nextRest',true);txt('storyIcon','✦');updateRoleUI();setPhase('idle',state.mode==='senior'?'等待開始':'等待啟程');void pauseAll()}
 $('reset').onclick=()=>{if(state.plan&&!confirm('確定清除目前進度並重新開始嗎？'))return;clearAdventure()};$('restartEnding').onclick=()=>{primeFishAudio();clearAdventure();void begin()};
 async function begin(){if(state.busy)return;
  if(state.mode==='senior'){
@@ -330,10 +330,41 @@ function acceptMotion(role,signal,source='ble'){
   renderRoles();
 }
 $('manualChild').onclick=()=>manual('child');$('manualFamily').onclick=()=>manual('family');function manual(role){if(state.phase!=='action')return;const p=state.progress?.[role];if(!p)return;if(!confirm('這是「手動備援」，不代表 ESP32 真正偵測成功。確定要完成'+(role==='child'?(state.mode==='senior'?'長輩':'孩子'):'陪同者')+'的任務嗎？'))return;markComplete(role)}
-async function openBranch(){hide('mission',true);hide('branch',false);txt('leftLabel',state.plan.branch.left.label);txt('rightLabel',state.plan.branch.right.label);setPhase('branchBriefing','🧭 自由選路');msg('請向左或向右揮手決定分支。畫面選擇提供緊急備援。');await speak('接下來，這條路由你決定！向左，'+state.plan.branch.left.label+'。向右，'+state.plan.branch.right.label+'。選一條路吧！');if(state.phase!=='branchBriefing')return;if(document.hidden){msg('請回到網頁，使用「跳過朗讀」或重新進入選路。');return}await unlockBranch()}
-async function unlockBranch(){if(!['branchBriefing','branch'].includes(state.phase))return;voiceCancel();setPhase('branch','🧭 等待你的選擇');await send('child','EXPECT:SWIPE_LEFT');if(devices.family.connected)await send('family','PAUSE')}
-$('branchLeft').onclick=()=>void pickBranch('left','備用畫面按鈕');$('branchRight').onclick=()=>void pickBranch('right','備用畫面按鈕');
-async function pickBranch(direction,from){if(state.phase!=='branch')return;state.choice=direction;hide('branch',true);await pauseAll();msg('✅ 已選擇'+(direction==='left'?'左':'右')+'路（'+from+'），接下來的事件將沿著這條路發展。');logEvent(4,'玩家選擇'+(direction==='left'?'左':'右')+'路：'+state.plan.branch[direction].label);await moveNext()}
+// 1.4.1: Branch is interactive immediately; voice narration never blocks BLE or backup buttons.
+async function openBranch(){
+  voiceCancel();
+  state.branchChoosing=false;
+  hide('mission',true);hide('branch',false);
+  txt('leftLabel',state.plan.branch.left.label);txt('rightLabel',state.plan.branch.right.label);
+  setPhase('branch','🧭 可以立即選路');
+  msg('選路已啟動！向左或向右揮手；如果感測失靈，可按備用選路。朗讀期間也能選。');
+  // The v0.3.1 firmware emits BOTH swipe directions when EXPECT:SWIPE_LEFT.
+  await send('child','EXPECT:SWIPE_LEFT');
+  if(state.phase!=='branch')return;
+  if(devices.family.connected)await send('family','PAUSE');
+  if(state.phase!=='branch')return;
+  await speak('接下來，這條路由你決定！向左，'+state.plan.branch.left.label+'。向右，'+state.plan.branch.right.label+'。選一條路吧！');
+}
+async function unlockBranch(){
+  if(state.phase!=='branch' || state.branchChoosing)return;
+  voiceCancel();
+  await send('child','EXPECT:SWIPE_LEFT');
+  if(devices.family.connected)await send('family','PAUSE');
+}
+$('branchLeft').onclick=()=>void pickBranch('left','備用畫面按鈕');
+$('branchRight').onclick=()=>void pickBranch('right','備用畫面按鈕');
+async function pickBranch(direction,from){
+  if(!['branch','branchBriefing'].includes(state.phase)||state.branchChoosing)return;
+  state.branchChoosing=true;
+  setPhase('branchChoosing','🧭 路線已確認');
+  voiceCancel(); // Stop the instruction so no late narration keeps the UI locked.
+  state.choice=direction;
+  hide('branch',true);
+  await pauseAll();
+  msg('✅ 已選擇'+(direction==='left'?'左':'右')+'路（'+from+'），接下來的事件將沿著這條路發展。');
+  logEvent(4,'玩家選擇'+(direction==='left'?'左':'右')+'路：'+state.plan.branch[direction].label);
+  await moveNext();
+}
 // 手握控制器換手流程。換手後不要求回到空間中央，只校正姿勢。
 async function beginHandSwap(nextIndex){
  if(state.phase==='handSwap'||state.phase==='calibratingHand')return;
