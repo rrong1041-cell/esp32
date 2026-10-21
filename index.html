@@ -94,7 +94,7 @@ function updateRoleUI(){
  $('connectChild').setAttribute('aria-label','連接'+primaryLabel+'裝置');
  hide('themePanel',!childMode);hide('seniorInfoPanel',childMode);
  txt('heroTagline',childMode?'不只是聽故事。這一次，你就是故事裡的冒險家。':'AI 幫你安排溫和的坐姿活動，不必聽冒險故事。');
- txt('versionTag',childMode?'🚀 Next 1.3 · 因果冒險引擎':'🌿 Next 1.3 · AI 坐姿活動');
+ txt('versionTag',childMode?'🚀 Next 1.3.2 · 因果冒險引擎':'🌿 Next 1.3.2 · AI 坐姿活動');
  txt('eyebrow',childMode?'THE STORY MOVES WITH YOU':'GENTLE MOVEMENT FOR YOU');
  document.querySelector('[data-player=solo]').textContent=childMode?'🌟 單人冒險':'🌿 單人活動';
  document.querySelector('[data-player=coop]').textContent=childMode?'🤝 雙人合作':'🤝 雙人陪同';
@@ -123,7 +123,26 @@ $('themes').addEventListener('click',ev=>{const btn=ev.target.closest('[data-top
 $('voice').onchange=()=>{state.voice=$('voice').value;persistSettings()};state.voice=$('voice').value;
 $('age').onchange=()=>{state.age=Number($('age').value)};
 $('posture').onchange=()=>{if(!ensureIdle())return;state.posture=$('posture').value};
-function voiceCancel(){hide('stopSpeech',true);hide('fishTapPanel',true);pendingFishAudio=null;narrationToken++;if(narrationAbort){narrationAbort.abort();narrationAbort=null}if(activeAudio){activeAudio.pause();activeAudio.removeAttribute('src');activeAudio=null}if(window.speechSynthesis)window.speechSynthesis.cancel();if(narrationFinish){const end=narrationFinish;narrationFinish=null;end()}}
+// Next 1.3.2: Safari audio handoff. Reuse one player throughout the adventure.
+const fishPlayer=new Audio();
+fishPlayer.preload='auto';
+fishPlayer.playsInline=true;
+let fishPrimed=false;
+function primeFishAudio(){
+  if(state.voice!=='fish'||fishPrimed)return;
+  // Called synchronously from the player's tap (start/next), never after an await.
+  fishPrimed=true;
+  try{
+    fishPlayer.src='data:audio/wav;base64,UklGRqQMAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YYAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+    fishPlayer.muted=false;
+    const attempt=fishPlayer.play();
+    Promise.resolve(attempt).then(()=>{
+      if(fishPlayer.src.startsWith('data:'))fishPlayer.pause();
+    }).catch(()=>{fishPrimed=false;});
+  }catch(e){fishPrimed=false;console.info('Safari audio priming unavailable',e)}
+}
+document.addEventListener('click',e=>{if(e.target.closest('button') && state.voice==='fish' && !fishPrimed)primeFishAudio()}, {capture:true});
+function voiceCancel(){hide('stopSpeech',true);hide('fishTapPanel',true);pendingFishAudio=null;narrationToken++;if(narrationAbort){narrationAbort.abort();narrationAbort=null}if(activeAudio){activeAudio.pause();activeAudio.removeAttribute('src');activeAudio.load();activeAudio=null}if(window.speechSynthesis)window.speechSynthesis.cancel();if(narrationFinish){const end=narrationFinish;narrationFinish=null;end()}}
 function speakDevice(text,token){return new Promise(resolve=>{if(token!==narrationToken)return resolve();if(!('speechSynthesis' in window)){msg('瀏覽器不支援內建朗讀，請依文字繼續。');return resolve()};let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(watch);if(narrationFinish===finish)narrationFinish=null;resolve()};narrationFinish=finish;const utterance=new SpeechSynthesisUtterance(text);utterance.lang='zh-TW';utterance.rate=.94;utterance.pitch=1;const voices=window.speechSynthesis.getVoices();utterance.voice=voices.find(v=>v.lang==='zh-TW')||voices.find(v=>v.lang.startsWith('zh'))||null;utterance.onend=finish;utterance.onerror=finish;const watch=setTimeout(finish,45000);try{window.speechSynthesis.speak(utterance)}catch{finish()}})}
 function offerFishTap(message,token,audio){
   if(token!==narrationToken||audio!==activeAudio)return;
@@ -133,7 +152,7 @@ function offerFishTap(message,token,audio){
   hide('fishTapPanel',false);
   msg('🎙️ 音檔已下載。iPhone Safari 沒有自動開始播放，請按「點一下播放流螢」。');
 }
-$('fishTapPlay').addEventListener('click',()=>{
+$('fishTapPlay').addEventListener('click',()=>{fishPrimed=true;
   // Must call play() directly inside this click callback to preserve Safari's user gesture.
   const item=pendingFishAudio;
   if(!item||item.token!==narrationToken||item.audio!==activeAudio)return;
@@ -165,7 +184,7 @@ async function speak(text){text=String(text||'').trim();if(!text||state.voice===
    try{const r=await fetch(apiURL()+'/api/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:ctrl.signal});if(token!==narrationToken)return;if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||'HTTP '+r.status)}if(!r.headers.get('Content-Type')?.includes('audio/'))throw Error('Fish 沒有回傳音訊');const blob=await r.blob();if(blob.size<1000)throw Error('Fish 回傳的音檔太小，可能無法播放');const url=URL.createObjectURL(blob);try{
        await new Promise(resolve=>{
          if(token!==narrationToken)return resolve();
-         const audio=new Audio(url);audio.preload='auto';audio.playsInline=true;activeAudio=audio;
+         const audio=fishPlayer;audio.pause();audio.src=url;audio.preload='auto';audio.playsInline=true;activeAudio=audio;
          let finished=false,stallTimer,started=false;
          const done=()=>{if(finished)return;finished=true;clearTimeout(stallTimer);hide('fishTapPanel',true);if(pendingFishAudio?.audio===audio)pendingFishAudio=null;if(narrationFinish===done)narrationFinish=null;resolve()};
          narrationFinish=done;
@@ -184,7 +203,7 @@ async function speak(text){text=String(text||'').trim();if(!text||state.voice===
            });
          }catch(e){offerFishTap('Safari 無法自動播放：'+(e.message||String(e)),token,audio)}
        });
-     }finally{URL.revokeObjectURL(url);if(activeAudio?.src===url)activeAudio=null;hide('fishTapPanel',true);pendingFishAudio=null}return}
+     }finally{if(fishPlayer.src===url){fishPlayer.pause();fishPlayer.removeAttribute('src');fishPlayer.load()}URL.revokeObjectURL(url);if(activeAudio===fishPlayer)activeAudio=null;hide('fishTapPanel',true);pendingFishAudio=null}return}
    catch(e){if(token!==narrationToken)return;msg('Fish 音訊失敗：'+e.message+'。本段改用裝置語音。')}
    finally{clearTimeout(timer);if(narrationAbort===ctrl)narrationAbort=null}
  }
@@ -200,10 +219,10 @@ function renderRoles(){const root=$('roleBars');root.replaceChildren();if(!state
 function resetProgress(scene){state.progress={child:{action:scene.action,count:0,elapsed:0,started:0,last:0,done:false},family:scene.family?{action:scene.family,count:0,elapsed:0,started:0,last:0,done:false}:null};state.attempts=0;renderRoles()}
 async function request(path,payload,timeoutMs=115000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs);try{const r=await fetch(apiURL()+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok){if(r.status===404||r.status===410)throw Error('目前網址可能是舊版 Worker，請把 Next 1.3 Worker 部署到程式設定的固定網址。');throw Error(d.error||`HTTP ${r.status}`)}return d}finally{clearTimeout(timer)}}
 function clearAdventure(){state.run++;voiceCancel();stopHoldLoop();state.plan=null;state.scenes=[];state.index=0;state.nextIndex=5;state.choice=null;state.log=[];state.progress=null;state.busy=false;state.phase='idle';hide('mission',true);hide('branch',true);hide('ending',true);hide('nextRest',true);txt('storyIcon','✦');updateRoleUI();setPhase('idle',state.mode==='senior'?'等待開始':'等待啟程');void pauseAll()}
-$('reset').onclick=()=>{if(state.plan&&!confirm('確定清除目前進度並重新開始嗎？'))return;clearAdventure()};$('restartEnding').onclick=()=>{clearAdventure();void begin()};
+$('reset').onclick=()=>{if(state.plan&&!confirm('確定清除目前進度並重新開始嗎？'))return;clearAdventure()};$('restartEnding').onclick=()=>{primeFishAudio();clearAdventure();void begin()};
 async function begin(){if(state.busy)return;
  if(state.mode==='senior'){
-   clearAdventure();const run=state.run;state.busy=true;state.voice=$('voice').value;state.posture='seated';
+   clearAdventure();state.voice=$('voice').value;primeFishAudio();const run=state.run;state.busy=true;state.posture='seated';
    const focus=$('seniorFocus').value;
    setPhase('loading','AI 正在安排坐姿活動');txt('storyTitle','正在準備今日活動……');
    txt('storyText','AI 正在根據活動重點準備清楚的坐姿指引。ESP32 支援的動作、次數和休息安排由程式保護。');
@@ -220,8 +239,8 @@ async function begin(){if(state.busy)return;
    finally{$('start').disabled=false}
    return;
  }
- clearAdventure();const run=state.run;state.busy=true;state.age=state.mode==='child'?Number($('age').value):null;state.posture=state.mode==='senior'?'seated':state.player==='coop' ? $('posture').value : 'general';state.voice=$('voice').value;const topic=$('topic').value.trim()||state.topic;setPhase('loading','AI 正在創造世界');txt('storyTitle','世界正在誕生……');txt('storyText','AI 正在規劃故事目標、角色與結局，接著先寫出前四幕。');msg('正在連線 Workers AI。生成時間取決於模型負載，請稍候……');$('start').disabled=true;persistSettings();await pauseAll();try{const d=await request('/api/start',{mode:state.mode,player:state.player,posture:state.posture,...(state.mode==='child'?{age:state.age}:{}),topic});if(run!==state.run)return;state.plan=d.plan;state.scenes=d.scenes;state.nextIndex=d.nextIndex;txt('storyTitle',d.plan.title);txt('worldCaption',d.plan.world);txt('storyIcon','✦');state.busy=false;msg('✅ 主線已規劃完成，先從第一幕開始。');await openScene(1)}catch(e){if(run===state.run){state.busy=false;setPhase('error','生成失敗');txt('storyText','生成未完成，沒有使用假故事。請檢查 Worker Binding 或再試一次。');msg('❌ '+e.message);txt('storyTitle','這次生成遇到問題')}}finally{$('start').disabled=false}}
-$('start').onclick=()=>{if(state.plan&&!confirm('重新開始會清除目前進度，確定嗎？'))return;void begin()};
+ clearAdventure();state.voice=$('voice').value;primeFishAudio();const run=state.run;state.busy=true;state.age=state.mode==='child'?Number($('age').value):null;state.posture=state.mode==='senior'?'seated':state.player==='coop' ? $('posture').value : 'general';state.voice=$('voice').value;const topic=$('topic').value.trim()||state.topic;setPhase('loading','AI 正在創造世界');txt('storyTitle','世界正在誕生……');txt('storyText','AI 正在規劃故事目標、角色與結局，接著先寫出前四幕。');msg('正在連線 Workers AI。生成時間取決於模型負載，請稍候……');$('start').disabled=true;persistSettings();await pauseAll();try{const d=await request('/api/start',{mode:state.mode,player:state.player,posture:state.posture,...(state.mode==='child'?{age:state.age}:{}),topic});if(run!==state.run)return;state.plan=d.plan;state.scenes=d.scenes;state.nextIndex=d.nextIndex;txt('storyTitle',d.plan.title);txt('worldCaption',d.plan.world);txt('storyIcon','✦');state.busy=false;msg('✅ 主線已規劃完成，先從第一幕開始。');await openScene(1)}catch(e){if(run===state.run){state.busy=false;setPhase('error','生成失敗');txt('storyText','生成未完成，沒有使用假故事。請檢查 Worker Binding 或再試一次。');msg('❌ '+e.message);txt('storyTitle','這次生成遇到問題')}}finally{$('start').disabled=false}}
+$('start').onclick=()=>{state.voice=$('voice').value;primeFishAudio();if(state.plan&&!confirm('重新開始會清除目前進度，確定嗎？'))return;void begin()};
 async function openScene(index){const run=state.run;const scene=state.scenes.find(v=>v.index===index);if(!scene){msg('尚未取得第 '+index+' 幕，請重試續寫。');return}voiceCancel();stopHoldLoop();state.index=index;setPhase('briefing',state.mode==='senior'?'🌿 坐姿活動':(!scene.action?'📖 故事演出':'🎭 事件發生'));txt('storyTitle',scene.title);txt('storyText',scene.scene);hide('mission',true);hide('branch',true);hide('nextRest',true);hide('ending',true);msg(state.mode==='senior'?`正在第 ${index} 項坐姿活動 · ${state.plan.title}`:`正在第 ${index} 幕 · ${state.plan.title}`);await pauseAll();
  if(!scene.action){setPhase('rest',state.mode==='senior'?'🌿 休息與說明':'🌙 聆聽故事');hide('nextRest',false);$('nextRest').textContent=state.mode==='senior'?(index===totalSteps()?'✅ 完成活動':'▶ 下一項活動'):(index===18?'✨ 看故事結局':'▶ 前往下一幕');const beforeSpeech=narrationToken;await speak(scene.scene);if(run!==state.run||state.index!==index||state.phase!=='rest')return;if(state.mode!=='senior'&&state.voice!=='off'&&narrationToken===beforeSpeech+1){await proceedAfterRest()}return}
  resetProgress(scene);showActionPreview(scene);const narration=scene.scene+' '+scene.action.purpose+' '+scene.action.cue+(scene.family?' 家人的任務：'+scene.family.purpose+' '+scene.family.cue:'');await speak(narration);if(run!==state.run||state.index!==index||state.phase!=='briefing')return;if(document.hidden){msg('頁面正在背景執行，請回到網頁後按跳過朗讀以啟動動作。');return}await unlockAction()}
