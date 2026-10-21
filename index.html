@@ -218,7 +218,7 @@ function makeRole(r){const elem=document.createElement('div');elem.className='pr
 function renderRoles(){const root=$('roleBars');root.replaceChildren();if(!state.progress)return;for(const role of state.player==='coop'?['child','family']:['child']){const p=state.progress[role],el=makeRole(role);el.querySelector('.role-title').textContent=(role==='child'?(state.mode==='senior'?'🌿 長輩':'🧒 孩子'):(state.mode==='senior'?'🤝 陪同者':'🤝 家人'))+'：'+(p.action.label||p.action.code);el.querySelector('.how').textContent=p.action.cue;el.querySelector('.tiny').textContent=p.done?'✅ 完成':p.action.seconds?'保持 '+p.action.seconds+' 秒 · '+Math.min(p.elapsed||0,p.action.seconds).toFixed(1)+' 秒':`完成 ${p.count}/${p.action.count} 次`;const total=p.action.seconds||p.action.count;el.querySelector('.role-bar span').style.width=((p.done?1:p.action.seconds?(p.elapsed||0)/total:p.count/total)*100)+'%';root.appendChild(el)}}
 function resetProgress(scene){state.progress={child:{action:scene.action,count:0,elapsed:0,started:0,last:0,done:false},family:scene.family?{action:scene.family,count:0,elapsed:0,started:0,last:0,done:false}:null};state.attempts=0;renderRoles()}
 async function request(path,payload,timeoutMs=115000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs);try{const r=await fetch(apiURL()+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok){if(r.status===404||r.status===410)throw Error('目前網址可能是舊版 Worker，請把 Next 1.3 Worker 部署到程式設定的固定網址。');throw Error(d.error||`HTTP ${r.status}`)}return d}finally{clearTimeout(timer)}}
-function clearAdventure(){state.run++;voiceCancel();stopHoldLoop();state.plan=null;state.scenes=[];state.index=0;state.nextIndex=5;state.choice=null;state.log=[];state.progress=null;state.busy=false;state.phase='idle';hide('mission',true);hide('branch',true);hide('ending',true);hide('nextRest',true);txt('storyIcon','✦');updateRoleUI();setPhase('idle',state.mode==='senior'?'等待開始':'等待啟程');void pauseAll()}
+function clearAdventure(){void send('child','SESSION_END');void send('family','SESSION_END');state.run++;voiceCancel();stopHoldLoop();state.plan=null;state.scenes=[];state.index=0;state.nextIndex=5;state.choice=null;state.log=[];state.progress=null;state.busy=false;state.phase='idle';hide('mission',true);hide('branch',true);hide('ending',true);hide('nextRest',true);txt('storyIcon','✦');updateRoleUI();setPhase('idle',state.mode==='senior'?'等待開始':'等待啟程');void pauseAll()}
 $('reset').onclick=()=>{if(state.plan&&!confirm('確定清除目前進度並重新開始嗎？'))return;clearAdventure()};$('restartEnding').onclick=()=>{primeFishAudio();clearAdventure();void begin()};
 async function begin(){if(state.busy)return;
  if(state.mode==='senior'){
@@ -267,11 +267,43 @@ function statusDevices(){for(const role of ['child','family']){const d=devices[r
 async function send(role,command){const d=devices[role];if(!d.characteristic||!d.connected)return false;const ch=d.characteristic;const promise=d.queue.then(async()=>{if(ch!==d.characteristic||!d.connected)return false;await ch.writeValue(new TextEncoder().encode(command));return true});d.queue=promise.catch(()=>false);try{return await promise}catch(e){console.warn(role,command,e);return false}}
 async function pauseAll(){await Promise.all(['child','family'].map(role=>send(role,'PAUSE')))}
 async function syncDevices(){if(state.phase==='branch')return send('child','EXPECT:SWIPE_LEFT');for(const role of ['child','family']){const p=state.progress?.[role];const cmd=state.phase==='action'&&p&&!p.done?(p.action.seconds?'TIMED:':'EXPECT:')+p.action.code:'PAUSE';await send(role,cmd)}}
-async function connect(role){const d=devices[role];if(!navigator.bluetooth?.requestDevice){msg('目前瀏覽器沒有 Web Bluetooth。桌機建議 Chrome；iPhone 需要支援 BLE 的瀏覽器環境。');return}if(d.connected){d.device?.gatt?.disconnect();return}try{const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE.service]});const other=devices[role==='child'?'family':'child'];if(dev.id===other.device?.id)throw Error('不能讓兩個角色使用同一台裝置');const server=await dev.gatt.connect();const service=await server.getPrimaryService(BLE.service);const characteristic=await service.getCharacteristic(BLE.characteristic);d.device=dev;d.characteristic=characteristic;d.connected=true;d.queue=Promise.resolve();dev.addEventListener('gattserverdisconnected',()=>{if(d.device!==dev)return;d.connected=false;d.characteristic=null;statusDevices();msg('⚠️ '+(role==='child'?'孩子':'家人')+' ESP32 已斷線。可以重新連線或用手動備援，不會自動跳幕。')});await characteristic.startNotifications();characteristic.addEventListener('characteristicvaluechanged',e=>onBle(role,e));statusDevices();await send(role,role==='family'&&state.posture==='seated'?'MODE_SENIOR':state.mode==='senior'?'MODE_SENIOR':'MODE_CHILD');await send(role,'INFO');await send(role,'READY');await send(role,'GAME_ACTIVE');await syncDevices();msg('✅ '+(role==='child'?'孩子':'家人')+'裝置連線成功。先校正姿勢再開始動作。')}catch(e){if(d.device?.gatt?.connected)d.device.gatt.disconnect();d.connected=false;d.characteristic=null;statusDevices();msg('連線失敗：'+e.message)}}
+async function connect(role){const d=devices[role];if(!navigator.bluetooth?.requestDevice){msg('目前瀏覽器沒有 Web Bluetooth。桌機建議 Chrome；iPhone 需要支援 BLE 的瀏覽器環境。');return}if(d.connected){d.device?.gatt?.disconnect();return}try{const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE.service]});const other=devices[role==='child'?'family':'child'];if(dev.id===other.device?.id)throw Error('不能讓兩個角色使用同一台裝置');const server=await dev.gatt.connect();const service=await server.getPrimaryService(BLE.service);const characteristic=await service.getCharacteristic(BLE.characteristic);d.device=dev;d.characteristic=characteristic;d.connected=true;d.queue=Promise.resolve();dev.addEventListener('gattserverdisconnected',()=>{if(d.device!==dev)return;d.connected=false;d.characteristic=null;statusDevices();msg('⚠️ '+(role==='child'?'孩子':'家人')+' ESP32 已斷線。可以重新連線或用手動備援，不會自動跳幕。')});await characteristic.startNotifications();characteristic.addEventListener('characteristicvaluechanged',e=>onBle(role,e));statusDevices();await send(role,role==='family'&&state.posture==='seated'?'MODE_SENIOR':state.mode==='senior'?'MODE_SENIOR':'MODE_CHILD');await send(role,'INFO');await send(role,'READY');if(!state.plan)await send(role,'SESSION_END');await send(role,'GAME_ACTIVE');await syncDevices();msg('✅ '+(role==='child'?'孩子':'家人')+'裝置連線成功。先校正姿勢再開始動作。')}catch(e){if(d.device?.gatt?.connected)d.device.gatt.disconnect();d.connected=false;d.characteristic=null;statusDevices();msg('連線失敗：'+e.message)}}
 $('connectChild').onclick=()=>void connect('child');$('connectFamily').onclick=()=>void connect('family');
 $('calibrate').onclick=async()=>{for(const role of state.player==='coop'?['child','family']:['child'])await send(role,'CALIBRATE');msg('校正中，保持正常中立姿勢約 2 秒。完成後會恢復目前任務。')};
 $('invert').onclick=async()=>{for(const role of state.player==='coop'?['child','family']:['child'])await send(role,'INVERT_LR');msg('已送出反轉左右方向指令（實際結果取決於 ESP32 韌體）。')};
-function onBle(role,event){const d=devices[role];if(event.target!==d.characteristic)return;const raw=new TextDecoder().decode(event.target.value).trim().toUpperCase();if(!raw)return;console.log('[BLE]',role,raw);if(raw==='READY'||raw==='CALIBRATED'||raw==='SENSOR_READY'){void syncDevices();return}if(raw==='HOLD_END'){acceptMotion(role,raw);return}if(['CALIBRATING','HOLDPOSE_WAIT','HOLDPOSE_SAVED','SENSOR_ERROR','LR_INVERTED','LR_DEFAULT'].includes(raw)){if(raw==='CALIBRATED'||raw==='LR_INVERTED'||raw==='LR_DEFAULT')void syncDevices();return}if(raw.startsWith('FW:')||raw.startsWith('TURN:')||raw.startsWith('INFO:')||raw==='START'||raw==='GAME_ACTIVE')return;acceptMotion(role,raw,'ble')}
+// v0.3 實體按鈕：由主裝置決定遊玩模式，合作夥伴按鈕不替主裝置開始新故事。
+let lastHardwareStartAt=0;
+function handleHardwareButton(role,signal){
+  if(role!=='child')return;
+  if(signal==='MODE_CHILD'||signal==='MODE_SENIOR'){
+    if(state.plan||state.busy){msg('目前冒險／活動已開始，模式不能中途切換。');return;}
+    state.mode=signal==='MODE_SENIOR'?'senior':'child';
+    document.body.classList.toggle('senior',state.mode==='senior');
+    updateRoleUI();
+    msg(state.mode==='senior'?'🌿 已由裝置切換長輩模式。':'🎮 已由裝置切換兒童模式。');
+    return;
+  }
+  if(signal==='SESSION_READY'){
+    // Firmware long press alone must not silently erase the page's running story.
+    if(state.plan)msg('裝置已解除模式鎖定；網頁仍有故事進度。若要換模式，請按網站「重新開始」。');
+    return;
+  }
+  if(signal!=='START')return;
+  const now=Date.now();
+  if(now-lastHardwareStartAt<700)return;
+  lastHardwareStartAt=now;
+  if(!state.plan&&!state.busy&&state.phase==='idle'){
+    msg('▶ 裝置已按開始。正在準備內容；若 Safari 阻擋流螢，請點畫面上的播放按鈕。');
+    void begin();
+  }else if(state.phase==='rest'||state.phase==='seniorStepDone'){
+    $('nextRest').click();
+  }else if(state.phase==='continuationError'){
+    msg('續寫失敗時請先在畫面上確認是否重試，以免誤按。');
+  }else{
+    msg('已收到開始／確認按鈕；目前請先完成朗讀、體感動作或選路。');
+  }
+}
+function onBle(role,event){const d=devices[role];if(event.target!==d.characteristic)return;const raw=new TextDecoder().decode(event.target.value).trim().toUpperCase();if(!raw)return;console.log('[BLE]',role,raw);if(raw==='READY'||raw==='CALIBRATED'||raw==='SENSOR_READY'){void syncDevices();return}if(raw==='HOLD_END'){acceptMotion(role,raw);return}if(['CALIBRATING','HOLDPOSE_WAIT','HOLDPOSE_SAVED','SENSOR_ERROR','LR_INVERTED','LR_DEFAULT'].includes(raw)){if(raw==='CALIBRATED'||raw==='LR_INVERTED'||raw==='LR_DEFAULT')void syncDevices();return}if(['MODE_CHILD','MODE_SENIOR','START','SESSION_READY'].includes(raw)){handleHardwareButton(role,raw);return}if(raw.startsWith('FW:')||raw.startsWith('TURN:')||raw.startsWith('INFO:')||raw==='GAME_ACTIVE')return;acceptMotion(role,raw,'ble')}
 // Keep paused devices from accumulating counts while browsing in the background.
 document.addEventListener('visibilitychange',()=>{if(document.hidden){voiceCancel();stopHoldLoop();void pauseAll();if(state.phase==='action'||state.phase==='branch'){msg('頁面切到背景，體感暫停。回來後按「恢復體感」。');hide('nextRest',false);$('nextRest').textContent='▶ 恢復體感';/* Restore uses the permanent nextRest handler. */}}});
 window.addEventListener('pagehide',()=>{voiceCancel();stopHoldLoop()});
