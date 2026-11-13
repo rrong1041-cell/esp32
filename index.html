@@ -159,6 +159,35 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 #again:active{transform:translateY(5px);box-shadow:none}
 
 .mark,.ask,.field>span:first-child,.ages button,.seg button,#begin,.ghost,.past h2,.grown summary,#resume button,#again,#finale h2,.how li::before{font-family:var(--round);font-weight:800}
+
+/* ── RGB 電競燈：慢慢流動的彩虹，不閃爍 ── */
+:root{--rgb:linear-gradient(90deg,#FF2D55,#FF9F0A,#FFE60A,#30D158,#00E5FF,#3D5AFE,#BF5AF2,#FF2D55)}
+@keyframes rgbflow{from{background-position:0% 50%}to{background-position:300% 50%}}
+@keyframes rgbborder{from{background-position:0 0,0% 50%}to{background-position:0 0,300% 50%}}
+@keyframes rgbspin{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
+@keyframes rgbedge{0%,100%{border-color:#FF2D55}17%{border-color:#FF9F0A}33%{border-color:#30D158}50%{border-color:#00E5FF}67%{border-color:#3D5AFE}83%{border-color:#BF5AF2}}
+@keyframes rgbfill{0%,100%{background-color:#FF2D55}17%{background-color:#FF9F0A}33%{background-color:#30D158}50%{background-color:#00E5FF}67%{background-color:#3D5AFE}83%{background-color:#BF5AF2}}
+@keyframes rgbglow{0%,100%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(255,45,85,.7)}17%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(255,159,10,.7)}33%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(48,209,88,.7)}50%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(0,229,255,.7)}67%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(61,90,254,.75)}83%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(191,90,242,.7)}}
+/* 彩虹字：標題、結束畫面 */
+.mark,#finale h2{background:var(--rgb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;
+  filter:drop-shadow(0 3px 0 rgba(20,18,50,.45));animation:rgbflow 8s linear infinite}
+/* 開始按鈕：彩虹邊框＋會換顏色的光暈 */
+#begin{border:3px solid transparent;background:linear-gradient(var(--dusk),var(--dusk)) padding-box,var(--rgb) border-box;background-size:100% 100%,300% 100%;
+  animation:rgbborder 6s linear infinite,rgbglow 6s linear infinite}
+/* 小機器人：外框和天線燈跟著變色 */
+.buddy{animation:peek 4.5s ease-in-out infinite,rgbedge 6s linear infinite}
+.buddy::after{animation:rgbfill 6s linear infinite;box-shadow:0 0 10px rgba(255,255,255,.6)}
+/* 選到的按鈕和打開的開關：彩虹流動 */
+.ages button[aria-pressed=true],.seg button[aria-pressed=true],.sw input:checked{background:var(--rgb);background-size:300% 100%;border-color:transparent;animation:rgbflow 6s linear infinite}
+.ages button[aria-pressed=true],.seg button[aria-pressed=true]{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+#idea:focus{animation:rgbedge 5s linear infinite}
+/* 故事畫面：夥伴的眼睛和笑容慢慢換顏色 */
+#face{animation:rgbspin 12s linear infinite}
+#face.moving{animation:hop .5s ease-in-out infinite,rgbspin 12s linear infinite}
+#smile{animation:rgbspin 12s linear infinite}
+#fork button{animation:rgbedge 6s linear infinite}
+#finale .face{animation:rgbspin 12s linear infinite}
+#finale h2{filter:drop-shadow(0 3px 0 rgba(20,18,50,.6)) drop-shadow(0 0 3px rgba(20,18,50,.45))}
 @media (max-width:400px){.mark{font-size:2.5rem}.how{grid-template-columns:1fr}.how li{padding:14px 12px 12px 52px;text-align:left}.how li::before{left:12px;top:50%;margin:-15px 0 0}.ages button{width:44px;height:44px}}
 @media (min-width:700px){.sky{height:330px}.mark{font-size:3.4rem}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -556,11 +585,21 @@ function robot(c){robotLog.push(c);if(robotLog.length>60)robotLog.shift();
 /* ═════════ 把上面的東西接進故事流程 ═════════ */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function api(path,body){
-  const c=new AbortController(),t=setTimeout(()=>c.abort(),150000);
-  try{const r=await fetch(WORKER_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok||!j.ok)throw Error(j.error||(r.status===404?'Worker 還是舊版，請先部署 worker_v3.js':'連線失敗（'+r.status+'）'));
-    return j}catch(e){throw Error(e.name==='AbortError'?'故事等太久了，請再試一次':e.message)}finally{clearTimeout(t)}
+  // 連不上（Failed to fetch）通常是 Worker 當下出錯或網路不穩：自動再試一次
+  for(let attempt=0;;attempt++){
+    const c=new AbortController(),t=setTimeout(()=>c.abort(),150000);
+    try{
+      const r=await fetch(WORKER_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok)throw Object.assign(Error(j.error||(r.status===404?'Worker 還是舊版，請先部署 worker_v3.js':'故事伺服器回傳錯誤（'+r.status+'）')),{server:true});
+      return j;
+    }catch(e){
+      if(e.name==='AbortError')throw Error('故事等太久了，請再試一次');
+      if(e.server)throw e;
+      if(attempt<1){await new Promise(r=>setTimeout(r,2500));continue}
+      throw Error('連不到故事伺服器。請打開 Worker 的 /health 看看有沒有回應，或稍後再試');
+    }finally{clearTimeout(t)}
+  }
 }
 let sceneNo=0,sheetTimer=null,storyTitle='',sceneEmo='calm';
 const face=$('face');
