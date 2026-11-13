@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#2B2A5C">
+<meta name="theme-color" content="#0E0D24">
 <title>聲動奇境｜關燈，開始說故事</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -188,6 +188,34 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 #fork button{animation:rgbedge 6s linear infinite}
 #finale .face{animation:rgbspin 12s linear infinite}
 #finale h2{filter:drop-shadow(0 3px 0 rgba(20,18,50,.6)) drop-shadow(0 0 3px rgba(20,18,50,.45))}
+
+/* ── 深色電競主題：取代原本的米色，讓 RGB 燈光更亮 ── */
+:root{--cream:#0E0D24;--ink:#F2EEFF;--soft:#A7A2D2;--paper-line:#2E2B5C;--card:#17153A;--card-2:#1F1C4A}
+body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),transparent 38%) fixed,
+  radial-gradient(circle at 90% 75%,rgba(0,229,255,.10),transparent 40%) fixed;background-color:#0E0D24}
+#idea{background:var(--card);border-color:#3A3670;box-shadow:0 5px 0 #3A3670;color:var(--ink)}
+#idea::placeholder{color:#6E69A0}
+#idea:focus{box-shadow:0 5px 0 #3A3670,0 0 18px rgba(0,229,255,.25)}
+.ideas button{background:var(--card)!important;color:var(--ink)}
+.ideas li:nth-child(4n+1) button{border-color:#FF2D55!important;box-shadow:0 3px 0 #FF2D55,0 0 12px rgba(255,45,85,.3)!important}
+.ideas li:nth-child(4n+2) button{border-color:#30D158!important;box-shadow:0 3px 0 #30D158,0 0 12px rgba(48,209,88,.3)!important}
+.ideas li:nth-child(4n+3) button{border-color:#FFE60A!important;box-shadow:0 3px 0 #FFE60A,0 0 12px rgba(255,230,10,.25)!important}
+.ideas li:nth-child(4n+4) button{border-color:#BF5AF2!important;box-shadow:0 3px 0 #BF5AF2,0 0 12px rgba(191,90,242,.3)!important}
+.ideas button:active{box-shadow:none!important}
+.ages button,.seg button{background:var(--card);border-color:#3A3670;color:var(--ink)}
+.ghost{background:var(--card);border-color:#00E5FF;color:var(--ink);box-shadow:0 3px 0 #00A8BD,0 0 12px rgba(0,229,255,.25)}
+.how li,.grown{background:var(--card);border-color:#2E2B5C}
+.how li::before{color:#1B1940}
+.sw input{background:#3A3670}
+#notice{color:#FF6B86}
+/* 結束畫面：夜空，彩虹字 */
+#finale{background:radial-gradient(circle at 50% 30%,#2A2066 0,#0E0D24 70%);color:var(--ink)}
+#finale .title{color:#C9C3F2}
+#stat{background:var(--card-2);color:var(--ink);border:2px solid #3A3670}
+#again{background:var(--card);color:var(--ink);border:3px solid transparent;
+  background:linear-gradient(var(--card),var(--card)) padding-box,var(--rgb) border-box;background-size:100% 100%,300% 100%;
+  animation:rgbborder 6s linear infinite;box-shadow:0 0 18px rgba(0,229,255,.25)}
+#again:active{transform:translateY(3px)}
 @media (max-width:400px){.mark{font-size:2.5rem}.how{grid-template-columns:1fr}.how li{padding:14px 12px 12px 52px;text-align:left}.how li::before{left:12px;top:50%;margin:-15px 0 0}.ages button{width:44px;height:44px}}
 @media (min-width:700px){.sky{height:330px}.mark{font-size:3.4rem}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
@@ -207,7 +235,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     </div>
     <svg class="hills" viewBox="0 0 400 112" preserveAspectRatio="none" aria-hidden="true">
       <path d="M0 62 Q70 18 150 54 T300 44 T400 30 V112 H0Z" fill="#3B3276"/>
-      <path d="M0 92 Q90 50 190 84 T400 66 V112 H0Z" fill="#FFF7E6"/>
+      <path d="M0 92 Q90 50 190 84 T400 66 V112 H0Z" fill="#0E0D24"/>
     </svg>
     <div class="buddy face" data-emo="happy" id="buddy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
   </header>
