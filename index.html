@@ -1,468 +1,662 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0d1230">
-<title>聲動奇境 · 完整冒險 ✨｜真正動起來的冒險 · iPhone 音訊修復</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2B2A5C">
+<title>聲動奇境｜關燈，開始說故事</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@500;800&family=Huninn&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0c1028;--panel:#171c3d;--panel2:#22294d;--border:#424b79;--text:#f6f4ff;--muted:#b6bfdc;--gold:#ffdb94;--mint:#8af4dd;--pink:#ff9bd0;--purple:#a998ff;--glow:#6658da;--radius:22px}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 12% 0%,#383071 0,transparent 38%),radial-gradient(ellipse at 90% 6%,#134259 0,transparent 42%),#0c1028;color:var(--text);font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;min-height:100vh}body:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(#fff9 1px,transparent 1.5px);background-size:54px 54px;opacity:.12}button,select,input,textarea{font:inherit}button{border:0;cursor:pointer;color:inherit}button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--mint);outline-offset:2px}h1,h2,h3,p{margin-top:0}h1{font-size:clamp(2rem,4vw,3.6rem);line-height:1.1;margin-bottom:10px;letter-spacing:-.04em}.wrap{max-width:1330px;margin:auto;padding:22px 20px 45px;position:relative}.hero{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:12px 0 24px}.hero p{color:#d0ceee;margin:0;line-height:1.8}.eyebrow{color:var(--mint);font-size:.76rem;font-weight:900;letter-spacing:.18em;margin-bottom:9px}.logo{display:flex;align-items:center;gap:12px}.logo-dot{font-size:2.8rem;filter:drop-shadow(0 3px 16px #bbabff)}.small-tag{font-size:.77rem;color:#d3cbfa;background:#2d2855;padding:9px 13px;border:1px solid #66599c;border-radius:40px;white-space:nowrap}.layout{display:grid;grid-template-columns:345px minmax(0,1fr);gap:18px}.panel{background:linear-gradient(157deg,#1a2041eF,#141a37f7);border:1px solid #454c78;box-shadow:0 20px 70px #01062060;border-radius:var(--radius);overflow:hidden}.side{padding:22px;display:flex;flex-direction:column;gap:16px;align-self:start}.side h2{font-size:1.1rem;margin:0 0 12px}.section{padding-bottom:16px;border-bottom:1px solid #3a436d}.section:last-child{border:0;padding-bottom:0}.tiny{font-size:.79rem;color:var(--muted);line-height:1.65}.field{display:block;color:#d8dcf6;font-weight:800;font-size:.83rem;margin-bottom:9px}input,select{width:100%;color:white;background:#0f1531;border:1px solid #505981;border-radius:12px;padding:12px 13px;min-height:46px}.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}.switches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.switch{background:#282e54;border:1px solid #444e78;padding:11px 6px;border-radius:12px;font-size:.85rem;font-weight:800}.switch.active{background:#5548a1;border-color:#b6a8ff;box-shadow:inset 0 0 0 1px #9d90ff}.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.themes button{background:#252c50;padding:9px 3px;border-radius:11px;font-size:.8rem;border:1px solid #404d78}.themes button.active{border-color:#efb7ff;background:#4c386c}.btn{padding:13px 16px;border-radius:13px;font-weight:900;transition:transform .15s,opacity .15s;display:inline-flex;justify-content:center;align-items:center;gap:7px;min-height:44px}.btn:hover:not(:disabled){transform:translateY(-1px)}.primary{background:linear-gradient(112deg,#ec78c7,#8c75f9);color:#180b2c;box-shadow:0 9px 24px #a765ba3d}.teal{background:#174f5b;color:#cbfffa;border:1px solid #38949f}.dark{background:#262e54;border:1px solid #556087;color:#e6e8fd}.warning{background:#674434;border:1px solid #b27b52;color:#ffe0b1}.wide{width:100%}.connect-row{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:9px}.dot{width:9px;height:9px;background:#d48889;border-radius:100%;display:inline-block;margin-right:4px}.dot.ok{background:#7cebc0;box-shadow:0 0 9px #49ddbd}.main{display:flex;flex-direction:column;min-height:780px}.stage-top{padding:23px 26px 18px;border-bottom:1px solid #42476c;display:flex;align-items:center;justify-content:space-between;gap:13px}.chapter{color:#b5f8ee;font-size:.82rem;font-weight:850;letter-spacing:.07em}.progress{height:7px;background:#2c315a;border-radius:100px;overflow:hidden;margin-top:10px}.progress>div{height:100%;background:linear-gradient(90deg,#8ff6e6,#e3a2ff);width:0;transition:width .3s}.phase-tag{border-radius:100px;padding:8px 12px;font-size:.78rem;font-weight:900;color:#e7dbff;background:#332e61;border:1px solid #6354a0}.story-stage{padding:26px;flex:1}.sky{min-height:190px;border-radius:19px;background:radial-gradient(circle at 82% 40%,#56489199,transparent 32%),linear-gradient(130deg,#292059,#114d67);border:1px solid #7c73bd80;position:relative;display:flex;align-items:center;justify-content:space-between;padding:22px;overflow:hidden;margin-bottom:24px}.sky:after{content:"✦  ⋆    ✦";font-size:3rem;opacity:.45;position:absolute;top:4px;right:6%;color:#e5e0ff;letter-spacing:10px}.sky-kicker{font-size:.7rem;letter-spacing:.16em;font-weight:900;color:#b8f8f0}.sky h2{font-size:clamp(1.4rem,3vw,2.5rem);max-width:500px;line-height:1.3;margin:9px 0 0}.sky-icon{font-size:clamp(3.6rem,6vw,5.5rem);filter:drop-shadow(0 10px 10px #0c193e);transform:rotate(-8deg);flex-shrink:0}.story-label{color:#9ff0df;font-weight:900;font-size:.81rem;letter-spacing:.07em}.story-text{font-size:clamp(1.08rem,1.4vw,1.3rem);line-height:2.05;white-space:pre-wrap;color:#f2eeff;margin:12px 0 24px}.stage-sub{color:#ddd5f5;font-size:.95rem;line-height:1.8}.mission{border:1px solid #9065b5;background:linear-gradient(130deg,#352350,#151b3f);border-radius:19px;padding:19px;margin:16px 0;box-shadow:inset 0 0 30px #562d6433}.mission h3{color:#ffd9f8;font-size:1.12rem;margin-bottom:8px}.mission .why{color:#f3d7f6;font-size:.97rem;line-height:1.85}.mission .how{color:#fff3d6;font-size:1.13rem;font-weight:900;margin:12px 0}.progress-role{background:#111837;border:1px solid #4c5683;border-radius:13px;padding:13px;margin-top:10px}.role-title{font-weight:800;color:#b5f8ee;margin-bottom:7px}.role-bar{height:7px;border-radius:20px;background:#343d69;overflow:hidden;margin-top:8px}.role-bar span{display:block;background:linear-gradient(90deg,#61d9d0,#f8c987);height:100%;width:0;transition:width .22s}.feedback{margin-top:14px;padding:12px 13px;border-radius:11px;background:#343455;color:#ffdf95;line-height:1.7;min-height:48px}.bar-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:18px}.bar-actions .btn{font-size:.9rem}.choice-list{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:16px 0}.choice{border:1px solid #6d7fd0;background:#263059;border-radius:17px;padding:18px;min-height:117px;text-align:left}.choice h3{margin:0 0 12px;color:#bff6ef}.choice p{line-height:1.7;color:#eee9ff}.choice .dir{font-size:1.3rem}.announcement{color:#c8eee8;background:#123a4c;border:1px solid #24727a;border-radius:13px;padding:12px 14px;font-size:.85rem;line-height:1.8;margin:15px 0}.message{color:#e3d0ff;line-height:1.8;min-height:24px;font-size:.85rem}.end{padding:40px 15px;text-align:center}.end h2{font-size:2rem;color:#ffdb94}.footer{padding:17px 26px;border-top:1px solid #42476c;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#afb8d6;font-size:.78rem;line-height:1.6}.hide{display:none!important}.kicker-icon{display:inline-flex;align-items:center;justify-content:center;background:#392e71;border:1px solid #655da6;padding:7px 10px;border-radius:11px}.pill{border-radius:100px;padding:4px 8px;border:1px solid #625b97;background:#2c2753;font-size:.68rem;color:#daccfc}body.senior{--mint:#c7f5cc;--purple:#9cd7ac}.sky h2{min-width:0}.sky-icon{font-family:Georgia,serif;color:#e2c5ff;font-weight:700;text-shadow:0 0 35px #bea7ff66}.two.one-col{grid-template-columns:1fr}.side .switch[aria-pressed="true"]{background:#5548a1;border-color:#b6a8ff}body.senior .sky{background:linear-gradient(130deg,#194e3e,#264556)}body.senior .story-text{font-size:1.35rem;line-height:2.0}body.senior .mission .how{font-size:1.32rem;line-height:1.7}body.senior .btn,body.senior .switch{min-height:52px}body.senior .tiny{font-size:.95rem}body.senior .field{font-size:.98rem}body.senior .progress-role{font-size:1.06rem}@media(max-width:1020px){.layout{grid-template-columns:300px minmax(0,1fr)}.sky-icon{font-size:3rem}.wrap{padding:16px}}@media(max-width:780px){.layout{grid-template-columns:1fr}.hero{align-items:flex-start}.side{order:2}.main{order:1;min-height:610px}.stage-top{padding:16px 19px}.story-stage{padding:17px}.footer{padding:14px 19px}.sky{min-height:146px}.choice-list{grid-template-columns:1fr}}@media(max-width:480px){.bar-actions .btn{flex:1 1 calc(50% - 8px)!important;min-width:0;white-space:normal;line-height:1.5}.hero{flex-direction:column;gap:8px}.small-tag{display:none}.story-text{font-size:1.07rem}.sky{min-height:125px;padding:16px}.sky h2{font-size:1.35rem}.sky-icon{font-size:2.6rem}.btn{font-size:.85rem!important;padding:11px}.bar-actions .btn{flex:1}.footer{flex-direction:column;align-items:flex-start}}@media(prefers-reduced-motion:reduce){.btn,.progress>div,.role-bar span{transition:none!important}}
+:root{
+  --dusk:#2B2A5C; --plum:#5A3F8E; --peach:#FFB48A; --cream:#FFF7E6; --paper-line:#EBDDBF;
+  --moon:#FFD86B; --mint:#8FE8CC; --berry:#FF7E96; --ink:#2B2A5C; --soft:#6E6C92;
+  --story:"Huninn","Chiron GoRound TC","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --round:"Chiron GoRound TC","Huninn","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --ui:"Chiron GoRound TC","Huninn",system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--ui);font-weight:500;line-height:1.7;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--berry);outline-offset:3px;border-radius:8px}
+[hidden]{display:none!important}
 
-/* v1.3.5 progress smoother: preserve the fill node between BLE pulses. */
-.role-bar span{transition:width .34s linear;will-change:width}
-@media(prefers-reduced-motion:reduce){.role-bar span{transition:none}}
+/* ── 夥伴的臉：兩顆會眨、會變表情的眼睛。準備畫面的小機器人和故事畫面的大臉共用 ── */
+.face{position:relative;--glow:0}
+.face .eye{position:absolute;top:.5em;width:1.5em;height:1.9em;border-radius:.62em;background:var(--moon);border:.3em solid transparent;
+  box-shadow:0 0 calc(.5em + 1.1em*var(--glow)) rgba(255,216,107,calc(.35 + .5*var(--glow)));
+  transition:width .3s,height .3s,top .3s,border-radius .3s,transform .3s,background-color .3s;animation:blink 5.2s infinite}
+.face .eye.l{left:.5em}.face .eye.r{right:.5em;animation-delay:.06s}
+@keyframes blink{0%,93%,100%{scale:1 1}96%{scale:1 .12}}
+.face[data-emo=happy] .eye,.face[data-emo=proud] .eye{width:1.75em;height:1.7em;top:.8em;border-radius:50%;background:transparent;border-top-color:var(--moon);box-shadow:none;animation:none}
+.face[data-emo=proud] .eye{transform:translateY(-.12em) scale(1.08)}
+.face[data-emo=excited] .eye{width:1.7em;height:1.9em;top:.45em;border-radius:50%}
+.face[data-emo=surprised] .eye{width:1.75em;height:1.75em;top:.55em;border-radius:50%;animation:none}
+.face[data-emo=worried] .eye{height:1.6em;top:.7em}
+.face[data-emo=worried] .eye.l{transform:rotate(14deg)}.face[data-emo=worried] .eye.r{transform:rotate(-14deg)}
+.face[data-emo=sad] .eye{height:1.3em;top:.95em;border-radius:.5em .5em .7em .7em}
+.face[data-emo=sad] .eye.l{transform:rotate(-16deg)}.face[data-emo=sad] .eye.r{transform:rotate(16deg)}
+.face[data-emo=calm] .eye{height:1em;top:1.1em;border-radius:.45em}
+.face[data-emo=scared] .eye{width:1.1em;height:1.1em;top:.9em;border-radius:50%;animation:shiver .22s infinite}
+.face[data-emo=scared] .eye.l{left:.8em}.face[data-emo=scared] .eye.r{right:.8em}
+@keyframes shiver{0%,100%{transform:translateX(-.03em)}50%{transform:translateX(.03em)}}
+.face.thinking .eye{animation:look 2.6s ease-in-out infinite}
+@keyframes look{0%,100%{transform:translateX(-.22em)}50%{transform:translateX(.22em)}}
+.face.moving{animation:hop .5s ease-in-out infinite}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-.22em)}}
+
+/* ── 準備畫面：黃昏的天空，下面是一張米色的紙 ── */
+.sky{position:relative;height:292px;overflow:hidden;color:#FFF7E6;
+  background:linear-gradient(180deg,#2B2A5C 0%,#4A3A86 38%,#8A4F96 66%,#F09E82 90%,#FFC59A 100%)}
+.sky .star{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);border-radius:50%;background:#FFF3C4;opacity:.85;animation:twinkle 3.4s ease-in-out infinite;animation-delay:var(--d,0s)}
+@keyframes twinkle{0%,100%{opacity:.85}50%{opacity:.25}}
+.sky .crescent{position:absolute;right:30px;top:calc(26px + env(safe-area-inset-top));width:54px;height:54px;border-radius:50%;box-shadow:-13px 8px 0 0 var(--moon);transform:rotate(-18deg)}
+.sky .hills{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:112px;display:block}
+.titles{position:relative;max-width:560px;margin:0 auto;padding:calc(34px + env(safe-area-inset-top)) 24px 0}
+.mark{font-family:var(--story);font-weight:700;font-size:2.9rem;letter-spacing:.08em;margin:0;line-height:1.15;text-shadow:0 3px 0 rgba(27,24,66,.35)}
+.lede{font-family:var(--story);font-size:1.18rem;margin:8px 0 0;color:#FFE9C9}
+.buddy{position:absolute;right:max(26px,calc(50% - 250px));bottom:20px;width:104px;height:84px;border-radius:30px 30px 26px 26px;background:#211F4D;border:4px solid #FFF7E6;font-size:22px;animation:peek 4.5s ease-in-out infinite}
+.buddy::before{content:"";position:absolute;left:50%;top:-20px;width:4px;height:18px;margin-left:-2px;background:#FFF7E6;border-radius:2px}
+.buddy::after{content:"";position:absolute;left:50%;top:-30px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--berry)}
+@keyframes peek{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-7px) rotate(3deg)}}
+
+#setup main{max-width:560px;margin:0 auto;padding:6px 22px calc(44px + env(safe-area-inset-bottom))}
+.ask{font-family:var(--story);font-weight:700;font-size:1.5rem;margin:0 0 10px;display:block}
+#idea{display:block;width:100%;min-height:100px;resize:none;border:3px solid #FFD3DC;border-radius:26px;padding:16px 20px;background:#fff;
+  font-family:var(--story);font-size:1.4rem;line-height:1.6;color:var(--ink);box-shadow:0 5px 0 #FFD3DC;transition:border-color .15s,box-shadow .15s}
+#idea::placeholder{color:#B5AA90}
+#idea:focus{border-color:var(--berry);box-shadow:0 5px 0 var(--berry);outline:none}
+.ideas{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0 30px;padding:0;list-style:none}
+.ideas button{font-family:var(--story);font-size:1.04rem;line-height:1.4;padding:8px 14px;border-radius:999px;background:#fff;border:2px solid var(--paper-line);box-shadow:0 3px 0 var(--paper-line);transition:transform .12s,box-shadow .12s}
+.ideas li:nth-child(4n+1) button{background:#FFE7EC;border-color:#FFC6D1;box-shadow:0 3px 0 #FFC6D1}
+.ideas li:nth-child(4n+2) button{background:#E2F8F0;border-color:#B6EBD9;box-shadow:0 3px 0 #B6EBD9}
+.ideas li:nth-child(4n+3) button{background:#FFF1CC;border-color:#F6DC94;box-shadow:0 3px 0 #F6DC94}
+.ideas li:nth-child(4n+4) button{background:#EAE6FF;border-color:#CEC6F7;box-shadow:0 3px 0 #CEC6F7}
+.ideas button:active{transform:translateY(3px);box-shadow:none}
+
+.field{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:2px dashed var(--paper-line)}
+.field>span:first-child{font-family:var(--story);font-size:1.16rem;font-weight:700}
+.ages{display:flex;gap:8px}
+.ages button{width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid var(--paper-line);font-family:var(--story);font-weight:700;font-size:1.25rem}
+.ages button[aria-pressed=true]{background:var(--berry);border-color:var(--berry);color:#fff;transform:scale(1.08)}
+.band{border-bottom:2px dashed var(--paper-line);margin-bottom:26px}
+.band small{display:block;font-family:var(--ui);font-weight:400;font-size:.82rem;color:var(--soft)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9CDB0;margin-right:7px}
+.dot.on{background:#39C99B;box-shadow:0 0 0 4px #D2F5E8}
+.ghost{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:9px 16px;min-height:48px;white-space:nowrap;font-weight:600;box-shadow:0 3px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+.ghost:active{transform:translateY(3px);box-shadow:none}
+
+/* 最大的按鈕本身就是「夜晚」：按下去，燈就關了 */
+#begin{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:72px;border-radius:24px;
+  background:var(--dusk);color:var(--moon);font-family:var(--story);font-weight:700;font-size:1.5rem;letter-spacing:.05em;
+  box-shadow:0 6px 0 #17163A,0 14px 26px rgba(43,42,92,.28);transition:transform .12s,box-shadow .12s}
+#begin::before{content:"";width:26px;height:26px;border-radius:50%;box-shadow:-7px 4px 0 0 var(--moon);transform:rotate(-18deg) translate(4px,-4px)}
+#begin:active{transform:translateY(5px);box-shadow:0 1px 0 #17163A}
+#notice{min-height:1.7em;margin:14px 0 0;color:#C2334F;font-size:.95rem;font-weight:600}
+
+.how{list-style:none;margin:26px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;counter-reset:how}
+.how li{counter-increment:how;position:relative;background:#fff;border:2px solid var(--paper-line);border-radius:18px;padding:30px 10px 12px;text-align:center;font-family:var(--story);font-size:1rem;line-height:1.45}
+.how li::before{content:counter(how);text-align:center;position:absolute;left:50%;top:-14px;margin-left:-15px;width:30px;height:30px;line-height:30px;border-radius:50%;background:var(--moon);font-weight:700;font-family:var(--ui);font-size:.95rem}
+.past{margin-top:28px}
+.past h2,.grown summary{font-family:var(--story);font-size:1.16rem;font-weight:700;margin:0 0 8px}
+.past ul{list-style:none;margin:0;padding:0}
+.past li{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:8px 0;border-bottom:2px dashed var(--paper-line);font-family:var(--story);font-size:1.06rem}
+.past li span:last-child{font-family:var(--ui);font-size:.8rem;color:var(--soft);white-space:nowrap}
+.grown{margin-top:26px;background:#fff;border:2px solid var(--paper-line);border-radius:22px;padding:4px 18px}
+.grown summary{cursor:pointer;margin:0;padding:12px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.grown summary::-webkit-details-marker{display:none}
+.grown summary::after{content:"＋";color:var(--berry);font-size:1.3rem;line-height:1}
+.grown[open] summary::after{content:"－"}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:2px dashed var(--paper-line)}
+.sw b{display:block;font-family:var(--round);font-weight:800;font-size:1.06rem}
+.sw small{display:block;color:var(--soft);font-size:.84rem;line-height:1.5}
+.sw input{appearance:none;-webkit-appearance:none;flex:none;width:56px;height:32px;margin:0;border-radius:999px;background:#E8DEC6;position:relative;cursor:pointer;transition:background .2s}
+.sw input::after{content:"";position:absolute;left:4px;top:4px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(43,42,92,.25);transition:transform .2s}
+.sw input:checked{background:var(--berry)}
+.sw input:checked::after{transform:translateX(24px)}
+.seg{display:flex;gap:6px;flex:none}
+.seg button{width:44px;height:44px;border-radius:50%;background:#fff;border:2px solid var(--paper-line)}
+.seg button[aria-pressed=true]{background:var(--berry);border-color:var(--berry);color:#fff}
+.grown p{font-family:var(--story);font-size:.95rem;color:var(--soft);margin:0;padding:14px 0;border-top:2px dashed var(--paper-line)}
+.grown a{color:var(--ink)}
+
+/* ── 故事畫面：燈關掉，只剩夥伴的眼睛 ── */
+#stage{position:fixed;inset:0;background:#000;color:#CFC8B4;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);touch-action:manipulation;user-select:none;-webkit-user-select:none;animation:lightsOff 1.1s ease-out both}
+@keyframes lightsOff{from{background:#3A3272;opacity:0}to{background:#000;opacity:1}}
+#face{width:5.2em;height:3.4em;font-size:34px;margin-top:-70px;opacity:.9}
+#smile{width:150px;height:44px;margin-top:8px;overflow:visible}
+#smile path{fill:none;stroke-width:5;stroke-linecap:round}
+#smile .track{stroke:#26233F}
+#smileFill{stroke:var(--moon);stroke-dasharray:100;stroke-dashoffset:100;opacity:0;transition:stroke-dashoffset .25s linear,opacity .2s}
+#caption{width:100%;max-width:520px;min-height:5.4em;text-align:center;font-family:var(--story);font-size:1.22rem;line-height:1.8;color:#D9D1BA;margin:22px 0 0}
+#fork{width:100%;max-width:520px;display:flex;gap:12px;justify-content:center;margin-top:26px}
+#fork button{flex:1;min-height:84px;border:2px solid #4A4670;border-radius:20px;background:#12112A;font-family:var(--story);font-size:1.16rem;color:#E9E1C8;padding:10px;line-height:1.4}
+#fork small{display:block;font-family:var(--ui);font-size:.74rem;color:#8480A8;margin-top:2px}
+#hush{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));left:20px;right:20px;text-align:center;color:#55526F;font-size:.82rem;margin:0}
+#sheet{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;background:#1B1A3D;border:2px solid #3A3870;border-radius:22px;padding:14px;color:#EDE6D0}
+#sheet .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#sheet button{border:2px solid #3A3870;border-radius:14px;min-height:50px;padding:8px;background:#232150}
+#sheet button.hold{grid-column:1/-1;background:#2E2B6B;border-color:#57539E}
+#sheet p{margin:10px 2px 0;color:#9C98C4;font-size:.78rem}
+#resume{position:absolute;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center}
+#resume button{font-family:var(--story);font-weight:700;font-size:1.4rem;color:#2B2A5C;background:var(--moon);border-radius:22px;padding:18px 30px}
+
+/* ── 結束畫面：天亮了 ── */
+#finale{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;color:#FFF7E6;
+  background:linear-gradient(180deg,#2B2A5C 0%,#6A4594 42%,#F09E82 80%,#FFD9A8 100%);animation:dawn 1.4s ease-out both}
+@keyframes dawn{from{opacity:0}to{opacity:1}}
+#finale .face{width:5.2em;height:3.2em;font-size:30px}
+#finale h2{font-family:var(--story);font-size:2.4rem;margin:8px 0 2px;text-shadow:0 3px 0 rgba(27,24,66,.35)}
+#finale .title{font-family:var(--story);font-size:1.2rem;margin:0 0 4px;color:#FFE9C9}
+#bye{font-family:var(--story);font-size:1.5rem;margin:0 0 22px}
+#stat{display:inline-block;background:rgba(255,247,230,.92);color:var(--ink);font-family:var(--story);font-size:1.08rem;border-radius:999px;padding:8px 18px;margin:0 0 26px}
+#stat:empty{display:none}
+#again{background:var(--cream);color:var(--ink);border-radius:20px;min-height:60px;padding:12px 28px;font-family:var(--story);font-weight:700;font-size:1.25rem;box-shadow:0 5px 0 #D9B98E}
+#again:active{transform:translateY(5px);box-shadow:none}
+
+.mark,.ask,.field>span:first-child,.ages button,.seg button,#begin,.ghost,.past h2,.grown summary,#resume button,#again,#finale h2,.how li::before{font-family:var(--round);font-weight:800}
+@media (max-width:400px){.mark{font-size:2.5rem}.how{grid-template-columns:1fr}.how li{padding:14px 12px 12px 52px;text-align:left}.how li::before{left:12px;top:50%;margin:-15px 0 0}.ages button{width:44px;height:44px}}
+@media (min-width:700px){.sky{height:330px}.mark{font-size:3.4rem}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div class="wrap">
-<header class="hero"><div class="logo"><span class="logo-dot">🌌</span><div><div class="eyebrow" id="eyebrow">THE STORY MOVES WITH YOU</div><h1>聲動奇境 <span style="color:#d2acff">✦</span></h1><p id="heroTagline">不只是聽故事。這一次，你就是故事裡的冒險家。</p></div></div><div class="small-tag" id="versionTag">🎙️ 比賽版 · RUN／長輩／合作修正版</div></header>
-<div class="layout">
-<aside class="panel side">
-  <div class="section"><h2 id="sideTitle">✧ 你的冒險</h2>
-    <label class="field" id="playerGroupLabel">遊玩模式</label><div class="switches" id="playerGroup"><button class="switch active" data-player="solo">🌟 單人冒險</button><button class="switch" data-player="coop">🤝 雙人合作</button></div>
-    <label class="field" style="margin-top:14px">使用對象</label><div class="switches" id="modeGroup"><button class="switch active" data-mode="child">🧒 兒童</button><button class="switch" data-mode="senior">🌿 長輩</button></div>
-    <div class="two" style="margin-top:12px" id="roleSettings"><label id="ageField"><span class="field">孩子年齡</span><select id="age"><option>5</option><option selected>6</option><option>7</option><option>8</option></select></label><label id="postureField" class="hide"><span class="field">合作夥伴姿勢</span><select id="posture"><option value="general">一般活動</option><option value="seated">坐姿活動</option></select></label></div>
-  </div>
-  <div class="section" id="themePanel"><h2>✧ 想去哪個世界？</h2><div class="themes" id="themes"><button class="active" data-topic="自由冒險">✨ 自由</button><button data-topic="奇幻">🪄 奇幻</button><button data-topic="太空">🚀 太空</button><button data-topic="海洋">🐋 海洋</button><button data-topic="神祕">🔍 神祕</button><button data-topic="搞笑">🎭 搞笑</button></div><label class="field" for="topic" style="margin-top:12px">也可以自己想一個主題</label><input id="topic" placeholder="例如：一隻不會飛的龍" maxlength="110"><p class="tiny" style="margin:8px 0 0">主題提供靈感，不鎖死角色與劇情。</p></div><div class="section hide" id="seniorInfoPanel"><h2>🌿 AI 坐姿活動</h2><label class="field" for="seniorFocus">本次活動重點</label><select id="seniorFocus"><option value="relax">放鬆舒展</option><option value="arms">肩膀與手臂</option><option value="wrists">手腕與協調</option></select><p class="tiny" style="margin-top:10px">AI 產生坐姿指引，不編寫冒險故事；若 AI 無法回應，改用清楚標示的固定坐姿活動。ESP32 只辨識手持裝置動作，不代表能確認全身姿勢。</p><p class="tiny">請使用穩固、有靠背的椅子，雙腳平放、依能力在舒適範圍活動。如有疼痛、頭暈或不適請停止。這不是醫療復健處方。</p></div>
-  <div class="section"><h2 id="voiceHeading">✧ 旁白設定</h2><label class="field" for="voice">朗讀方式</label><select id="voice"><option value="device">裝置中文語音 · 穩定省額度</option><option value="fish">Fish Audio · 雲端配音</option><option value="off">不朗讀 · 文字測試</option></select><p class="tiny" style="margin:8px 0 0">Fish Audio 需要 Worker 設定 Secret 與 D1。失敗會明確提示並改用裝置朗讀。</p></div>
-  <div class="section"><h2>✧ ESP32 體感裝置</h2>
-    <div class="connect-row"><span id="childStatus"><i class="dot"></i>玩家裝置：未連線</span><button class="btn teal" id="connectChild">連接</button></div>
-    <div class="connect-row" id="familyConnection"><span id="familyStatus"><i class="dot"></i>家人裝置：未連線</span><button class="btn teal" id="connectFamily">連接</button></div>
-    <div class="two"><button class="btn dark" id="calibrate">🎯 校正裝置</button><button class="btn dark" id="invert">↔ 反轉方向</button></div><p class="tiny" style="margin:9px 0 0">沿用原版 ESP32 BLE UUID、EXPECT / TIMED 指令。若裝置斷線，可使用清楚標示的手動備援。</p>
-  </div>
-  <div class="section"><button class="btn primary wide" id="start">✨ 生成全新冒險</button><button class="btn dark wide" id="reset" style="margin-top:8px">↻ 重新開始 / 捨棄本篇</button><p class="tiny" style="margin:11px 0 0" id="startHelp">先規劃主線與結局，再生成前四幕；只有劇情真正需要時才加入動作，第四幕後可左右選路。</p></div>
-  
-</aside>
-<main class="panel main" aria-live="polite"><div class="stage-top"><div style="flex:1"><div class="chapter" id="chapter">📖 冒險尚未開始</div><div class="progress"><div id="chapterBar"></div></div></div><span class="phase-tag" id="phaseTag">等待啟程</span></div>
-<div class="story-stage"><div class="sky"><div><div class="sky-kicker" id="worldCaption">WELCOME TO YOUR WORLD</div><h2 id="storyTitle">讓故事，跟著你動起來。</h2></div><span class="sky-icon" id="storyIcon" aria-hidden="true">✦</span></div>
-<div class="story-label" id="narrativeLabel">✧ 冒險故事</div><p class="story-text" id="storyText">這裡沒有固定的英雄、怪獸或結局。
 
-有的，是一個會因為你而改變的世界。選擇冒險，連接裝置，準備好一起出發吧！</p>
-<div class="message" id="systemMessage" role="status"></div>
-<section class="mission hide" id="mission"><h3 id="missionTitle">🎭 你的任務</h3><div class="why" id="missionWhy"></div><div class="how" id="missionHow"></div><div id="roleBars"></div><div class="feedback" id="motionFeedback">等待語音指引結束，再開始動作。</div><div class="bar-actions"><button class="btn teal" id="skipSpeech">⏩ 跳過朗讀，開始動作</button><button class="btn dark" id="replay">🔊 重聽提示</button><button class="btn warning" id="manualChild">🛟 手動完成孩子任務</button><button class="btn warning" id="manualFamily">🛟 手動完成家人任務</button></div><p class="tiny">雙人合作建議使用兩台 ESP32；如果只有一台，家人任務可使用明確標示的手動備援。手動完成不代表感測器已辨識動作。</p></section>
-<section id="branch" class="mission hide"><h3>🧭 現在，由你決定冒險路線！</h3><p class="stage-sub">聽完路線，按左邊實體按鈕（GPIO0）走左路、右邊實體按鈕（GPIO1）走右路。無須揮手。</p><div class="choice-list"><button class="choice" id="branchLeft"><h3><span class="dir">⬅</span> 左邊</h3><p id="leftLabel"></p></button><button class="choice" id="branchRight"><h3><span class="dir">➡</span> 右邊</h3><p id="rightLabel"></p></button></div><p class="tiny">畫面按鈕是實體按鈕失效時的緊急備援。兩條路將影響後續續寫內容。</p></section>
-<div class="bar-actions" id="generalActions"><button id="nextRest" class="btn primary hide">▶ 繼續冒險</button><button id="stopSpeech" class="btn dark hide">⏹ 停止朗讀</button></div>
-<div id="fishTapPanel" class="announcement hide" role="status" aria-live="polite" style="border-color:#e9bd72;background:#392b40;color:#fff3d6">
-  <strong id="fishTapMessage">流螢的音檔已收到，但 Safari 還沒開始播放。</strong>
-  <div class="bar-actions" style="margin-top:10px">
-    <button type="button" class="btn primary" id="fishTapPlay">▶ 點一下播放流螢</button>
-    <button type="button" class="btn dark" id="fishTapSkip">⏭ 略過本段朗讀</button>
-  </div>
-  <p class="tiny" style="margin:9px 0 0">播放的是已取得的音檔，不會重複呼叫 Fish Audio。</p>
+<div id="setup">
+  <header class="sky">
+    <i class="star" style="--x:9%;--y:16%;--s:4px"></i><i class="star" style="--x:24%;--y:52%;--s:3px;--d:.8s"></i><i class="star" style="--x:41%;--y:11%;--s:3px;--d:1.6s"></i>
+    <i class="star" style="--x:58%;--y:34%;--s:4px;--d:.4s"></i><i class="star" style="--x:71%;--y:58%;--s:3px;--d:2.1s"></i><i class="star" style="--x:88%;--y:44%;--s:3px;--d:1.1s"></i>
+    <i class="star" style="--x:15%;--y:70%;--s:3px;--d:2.6s"></i><i class="star" style="--x:50%;--y:62%;--s:2px;--d:1.9s"></i>
+    <div class="crescent" aria-hidden="true"></div>
+    <div class="titles">
+      <h1 class="mark">聲動奇境</h1>
+      <p class="lede">放下手機，跟故事一起動起來。</p>
+    </div>
+    <svg class="hills" viewBox="0 0 400 112" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 62 Q70 18 150 54 T300 44 T400 30 V112 H0Z" fill="#3B3276"/>
+      <path d="M0 92 Q90 50 190 84 T400 66 V112 H0Z" fill="#FFF7E6"/>
+    </svg>
+    <div class="buddy face" data-emo="happy" id="buddy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+  </header>
+
+  <main>
+    <label class="ask" for="idea">今天想聽什麼故事？</label>
+    <textarea id="idea" maxlength="110" placeholder="例如：怕水的恐龍去海邊"></textarea>
+    <ul class="ideas" id="ideas" aria-label="點一個當作靈感">
+      <li><button type="button" data-idea="會打嗝的企鵝找回家的路">🐧 會打嗝的企鵝</button></li>
+      <li><button type="button" data-idea="月亮上的麵包店少了一顆星星">🥐 月亮上的麵包店</button></li>
+      <li><button type="button" data-idea="不敢睡覺的小貓頭鷹">🦉 不敢睡覺的貓頭鷹</button></li>
+      <li><button type="button" data-idea="">🎲 讓故事自己決定</button></li>
+    </ul>
+
+    <div class="field">
+      <span>孩子幾歲</span>
+      <div class="ages" id="ages" role="group" aria-label="孩子幾歲">
+        <button type="button" data-age="5" aria-pressed="false">5</button><button type="button" data-age="6" aria-pressed="true">6</button>
+        <button type="button" data-age="7" aria-pressed="false">7</button><button type="button" data-age="8" aria-pressed="false">8</button>
+      </div>
+    </div>
+    <div class="field band">
+      <span><span id="bandState"><i class="dot"></i>手環還沒連上</span><small>沒有手環也可以用畫面上的按鈕玩</small></span>
+      <button type="button" class="ghost" id="connect">連接手環</button>
+    </div>
+
+    <button type="button" id="begin">關燈，開始說故事</button>
+    <p id="notice" role="status" aria-live="polite"></p>
+
+    <ol class="how" aria-label="怎麼玩">
+      <li>說出想聽的故事</li>
+      <li>把手機放下，聽夥伴說</li>
+      <li>夥伴動，你也跟著動</li>
+    </ol>
+
+    <section class="past" id="past" hidden>
+      <h2>聽過的故事</h2>
+      <ul id="pastList"></ul>
+    </section>
+
+    <details class="grown">
+      <summary>更多設定</summary>
+      <label class="sw"><span><b>坐著玩</b><small>故事不會出現跑和跳</small></span><input type="checkbox" id="seated"></label>
+      <label class="sw"><span><b>顯示字幕</b><small>讓旁邊的人看到故事在說什麼</small></span><input type="checkbox" id="subs"></label>
+      <label class="sw"><span><b>用 Fish 配音</b><small>聲音比較好聽，但要等久一點</small></span><input type="checkbox" id="fish"></label>
+      <div class="sw"><span><b>手環靈敏度</b><small>孩子動了卻沒反應，就調高</small></span>
+        <div class="seg" id="sensSeg" role="group" aria-label="手環靈敏度"><button type="button" data-sens="low" aria-pressed="false">低</button><button type="button" data-sens="mid" aria-pressed="true">中</button><button type="button" data-sens="high" aria-pressed="false">高</button></div>
+      </div>
+      <p>沒有手環？故事開始後長按畫面，會出現代替手環的按鈕。長輩的坐姿活動在<a href="./">原本的頁面</a>。</p>
+    </details>
+  </main>
 </div>
-<div id="ending" class="end hide"><h2 id="endingTitle">🎉 這場冒險，因為你而完成。</h2><p id="endingDesc">這次的選擇、動作與結果，都屬於你們自己的故事。</p><button id="restartEnding" class="btn primary">✨ 再創造一個不同的世界</button></div>
-</div><div class="footer"><span>📍 <span id="techState">尚未連線 · 可先用手動測試</span></span><span id="footerNote">每個故事都有不同世界、選擇與結局 ✨</span></div></main>
-</div></div>
+
+<section id="stage" hidden aria-label="故事進行中">
+  <div class="face" id="face" data-emo="calm" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+  <svg id="smile" viewBox="0 0 150 44" aria-hidden="true"><path class="track" d="M12 8 Q75 50 138 8"/><path id="smileFill" pathLength="100" d="M12 8 Q75 50 138 8"/></svg>
+  <p id="caption" hidden></p>
+  <div id="fork" hidden>
+    <button type="button" data-choice="left"><span id="forkL"></span><small>◀ 左邊的按鈕</small></button>
+    <button type="button" data-choice="right"><span id="forkR"></span><small>右邊的按鈕 ▶</small></button>
+  </div>
+  <p id="hush">故事進行中，可以把手機放下了。長按畫面可以暫停。</p>
+  <div id="sheet" hidden>
+    <div class="grid">
+      <button type="button" id="pauseBtn">暫停故事</button>
+      <button type="button" id="skipBtn">跳過這段動作</button>
+      <button type="button" class="hold" id="simMove">按住＝在動（代替手環）</button>
+      <button type="button" id="simJump">跳一下</button>
+      <button type="button" id="quitBtn">結束故事</button>
+    </div>
+    <p id="sheetInfo"></p>
+  </div>
+  <div id="resume" hidden><button type="button" id="resumeBtn">點一下，故事繼續</button></div>
+</section>
+
+<section id="finale" hidden>
+  <div class="face" data-emo="happy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+  <h2>故事說完了</h2>
+  <p class="title" id="endTitle"></p>
+  <p id="bye">明天見。</p>
+  <p id="stat"></p>
+  <button type="button" id="again">再聽一個故事</button>
+</section>
+
 <script>
 'use strict';
+/* ═════════ 設定 ═════════ */
+const WORKER_URL='https://lucky-waterfall-f8a2.shopcom2009.workers.dev'; // 換 Worker 網址時只改這一行
 const BLE={service:'4fa8691a-136d-4560-84ed-01354051b785',characteristic:'beb5483e-36e1-4688-b7f5-ea07361b26a8'};
-const WORKER_URL='https://lucky-waterfall-f8a2.shopcom2009.workers.dev/'; // 直接連此 Worker。若新 Worker 網址不同，只改這一行
-const $=id=>document.getElementById(id);
-const RESTS=new Set([1,6,8]);
-// v1.4: 劇情自然轉場的少量換手（孩子單人模式），使用 GPIO1 確認。
-const HAND_SWAP_SCENES=new Set([]);
-const SENIOR_ROUTINE=[
- {title:'活動前準備',scene:'請坐在穩固、有靠背的椅子上，雙腳自然放在地面。雙肩放鬆，先感受自己的呼吸。這是溫和的坐姿活動，不必勉強。',action:null},
- {title:'輕輕舉起手臂',scene:'準備開始第一個活動。慢慢將戴裝置的手抬到舒適的高度，不需要抬過肩膀。',code:'ARM_UP',seconds:3, purpose:'溫和活動肩膀與手臂',cue:'慢慢舉起戴裝置的手臂，在舒適高度維持三秒。',during:'維持姿勢，放慢呼吸。',result:'完成上舉活動。放鬆手臂，休息一下。'},
- {title:'慢慢放低手臂',scene:'接下來，讓肩膀放鬆，緩緩將手臂放低。',code:'ARM_DOWN',seconds:3,purpose:'練習溫和控制手臂放低',cue:'將手腕慢慢放低，在舒適位置保持三秒。',during:'動作慢一點，不必急。',result:'完成放低活動。讓雙肩自然放鬆。'},
- {title:'向左活動手腕',scene:'保持坐穩，手臂放在舒服的位置，準備向左活動手腕。',code:'SWIPE_LEFT',count:2,purpose:'輕柔練習向左移動手腕',cue:'向左小幅揮動兩次，每次回到中間，不要用力甩。',during:'很好，保持自然節奏。',result:'左側手腕活動完成。'},
- {title:'向右活動手腕',scene:'換另一邊，不需要轉動整個身體。',code:'SWIPE_RIGHT',count:2,purpose:'輕柔練習向右移動手腕',cue:'向右小幅揮動兩次，每次回到中間，不要用力甩。',during:'慢慢完成，不必求快。',result:'右側手腕活動完成。'},
- {title:'短暫休息',scene:'現在休息一下。雙手自然放下，呼吸放慢。準備好後再按「下一項活動」。',action:null},
- {title:'手腕向左輕傾',scene:'下一個是小角度的手腕活動。不要傾斜身體。',code:'TILT_LEFT',count:2,purpose:'練習手腕小角度活動',cue:'把戴裝置的手腕小幅向左傾斜兩次，回到中間再做。',during:'幅度小一點也可以。',result:'完成向左傾斜的手腕活動。'},
- {title:'手腕向右輕傾',scene:'接著換右邊。坐姿保持穩定。',code:'TILT_RIGHT',count:2,purpose:'練習手腕另一方向的活動',cue:'把手腕小幅向右傾斜兩次，回到中間再做。',during:'維持舒服的動作幅度。',result:'完成向右傾斜的手腕活動。'},
- {title:'輕輕搖動手臂',scene:'最後一個動作，放鬆手臂與手腕。',code:'SHAKE',seconds:3,purpose:'完成溫和的小幅度手臂活動',cue:'輕輕搖動戴裝置的手臂約三秒，不要快速甩動。',during:'輕輕動一動，維持舒服的節奏。',result:'最後一項活動完成。可以把雙手放下休息。'},
- {title:'活動完成',scene:'今天的坐姿舒展活動已完成。辛苦了！請慢慢放鬆。如果身體不舒服，記得停止並告知家人。',action:null}
-];
-function seniorSession(player){return SENIOR_ROUTINE.map((s,i)=>{const act=s.code?{code:s.code,label:s.title,count:s.seconds?1:s.count,seconds:s.seconds||0,purpose:s.purpose,cue:s.cue,during:s.during,result:s.result,fail:['放慢速度，試著在舒適範圍內再做一次。']}:null;return {index:i+1,title:s.title,scene:s.scene,action:act,family:player==='coop'&&act?{...act,purpose:'陪同長輩一起完成溫和的手臂活動',cue:'陪同者也依提示輕柔動作，與長輩一起完成。',result:'陪同者也完成活動。'}:null}})}
-function totalSteps(){return state.mode==='senior'?SENIOR_ROUTINE.length:8}
+const SENS={low:{bodyMin:4,armMin:3,stillMax:1},mid:{bodyMin:3,armMin:2,stillMax:1},high:{bodyMin:2,armMin:1,stillMax:0}};
 
-const state={mode:'child',player:'solo',posture:'general',topic:'自由冒險',age:6,plan:null,scenes:[],index:0,nextIndex:5,choice:null,log:[],phase:'idle',busy:false,run:0,progress:null,attempts:0,voice:'device',handSide:'right',swapForScene:0,swapCalibrating:false,lastSwapScene:0,branchChoosing:false,branchArmed:false,branchArmTimer:null,branchArmedAt:0};
-const devices={child:{device:null,characteristic:null,queue:Promise.resolve(),connected:false},family:{device:null,characteristic:null,queue:Promise.resolve(),connected:false}};
-let narrationToken=0,narrationFinish=null,activeAudio=null,holdInterval=null,narrationAbort=null,speechRequest=null;
-let pendingFishAudio=null;
-let lastToastTime=0;
-function txt(id,value){$(id).textContent=String(value??'')}
-function hide(id,yes){$(id).classList.toggle('hide',!!yes)}
-function msg(text){txt('systemMessage',text);txt('techState',text)}
-function setPhase(phase,label){state.phase=phase;txt('phaseTag',label);const senior=state.mode==='senior';txt('chapter',state.index?`第 ${state.index} / ${totalSteps()} ${senior?'項':'幕'} · ${state.plan?.title||(senior?'坐姿活動':'冒險')}`:(senior?'準備坐姿活動':'準備你的故事'));$('chapterBar').style.width=state.index?((state.index/totalSteps())*100)+'%':'0%'}
-function setSelection(group,key,value){document.querySelectorAll('#'+group+' [data-'+key+']').forEach(b=>{const isSelected=b.dataset[key]===value;b.classList.toggle('active',isSelected);b.setAttribute('aria-pressed',String(isSelected))})}
-function updateRoleUI(){
- const childMode=state.mode==='child',cooperative=state.player==='coop';
- hide('ageField',!childMode);hide('postureField',!cooperative||!childMode);
- hide('roleSettings',!childMode);
- $('roleSettings').classList.toggle('one-col',!(childMode&&cooperative));
- $('age').disabled=!childMode; $('posture').disabled=!cooperative||!childMode;
- hide('familyConnection',!cooperative);
- if(state.mode==='senior'){state.posture='seated';$('posture').value='seated'}
- else if(!cooperative){state.posture='general'}
- const primaryLabel=childMode?'孩子':'長輩';
- const d=devices.child;const el=$('childStatus');el.replaceChildren();const dot=document.createElement('i');dot.className='dot'+(d.connected?' ok':'');el.append(dot,document.createTextNode(primaryLabel+'裝置：'+(d.connected?'已連線':'未連線')));
- $('manualChild').textContent='🛟 手動完成'+primaryLabel+'任務';
- $('connectChild').setAttribute('aria-label','連接'+primaryLabel+'裝置');
- hide('themePanel',!childMode);hide('seniorInfoPanel',childMode);
- txt('heroTagline',childMode?'不只是聽故事。這一次，你就是故事裡的冒險家。':'AI 幫你安排溫和的坐姿活動，不必聽冒險故事。');
- txt('versionTag',childMode?'🚀 比賽版 · 兒童體感':'🌿 比賽版 · 長輩坐姿活動');
- txt('eyebrow',childMode?'THE STORY MOVES WITH YOU':'GENTLE MOVEMENT FOR YOU');
- document.querySelector('[data-player=solo]').textContent=childMode?'🌟 單人冒險':'🌿 單人活動';
- document.querySelector('[data-player=coop]').textContent=childMode?'🤝 雙人合作':'🤝 雙人陪同';
- txt('sideTitle',childMode?'✧ 你的冒險':'🌿 坐姿活動設定');
- txt('playerGroupLabel',childMode?'遊玩模式':'活動方式');
- txt('voiceHeading',childMode?'✧ 旁白設定':'✧ 語音指引');
- txt('start',childMode?'✨ 生成全新冒險':'🌿 AI 生成今日活動');
- txt('startHelp',childMode?'先規劃主線與結局，再生成前四幕；只有劇情真正需要時才加入動作，第四幕後可左右選路。':'AI 產生不含故事的活動指引；動作類型由程式限制。生成失敗會顯示原因，不會假裝成功。');
- txt('missionTitle',childMode?'🎭 你的任務':'🌿 本項活動');
- txt('narrativeLabel',childMode?'✧ 冒險故事':'🌿 活動指引');
- txt('footerNote',childMode?'每個故事都有不同世界、選擇與結局 ✨':'AI 活動指引 · 舒適優先；不適立即停止');
- if(!state.plan){txt('worldCaption',childMode?'WELCOME TO YOUR WORLD':'GENTLE SEATED MOVEMENT');txt('storyTitle',childMode?'讓故事，跟著你動起來。':'坐穩、放鬆，跟著指引動一動。');txt('storyText',childMode?'選擇主題，連接 ESP32，然後按「生成全新冒險」。':'長輩模式由 AI 提供坐姿活動引導，不會生成冒險故事。坐在穩固、有椅背的椅子上，準備好後按「AI 生成今日活動」。');msg(childMode?'準備好後按「生成全新冒險」。':'請坐穩，準備好後按「開始坐姿活動」。');}
- txt('endingTitle',childMode?'🎉 這場冒險，因為你而完成。':'🌿 今天的坐姿活動完成！');
- txt('endingDesc',childMode?'這次的選擇、動作與結果，都屬於你們自己的故事。':'做得很好，現在讓雙手慢慢放鬆、休息一下。');
- txt('restartEnding',childMode?'✨ 再創造一個不同的世界':'🌿 再做一次坐姿活動');
- setSelection('playerGroup','player',state.player);setSelection('modeGroup','mode',state.mode);
-}
+/* ENGINE-BEGIN —— 故事流程核心（不碰畫面、聲音、藍牙，全部由外面傳進來，方便測試） */
+function createEngine(d){
+  const cfg=Object.assign({bodyMin:3,armMin:2,stillMax:1,tick:100,autoContinue:60,practiceAuto:14,reHint:20,prefetchBoth:true,seated:false},d.cfg||{});
+  const S={run:0,phase:'idle',paused:false,pauses:0,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0};
+  const alive=r=>r===S.run;
+  const CMD={body:'ACT:BODY',jump:'ACT:JUMP',arm:'ACT:ARM',still:'ACT:STILL'};
+  const P_HINT=a=>['跟我一起試試看！','跟我一起'+a+'！','沒關係，我們等一下再試。'];
+  const PRACTICE=[
+    {kind:'body',do:'原地跑步',lead:'跟我一起，在原地跑一跑！',beats:['跑、跑、跑！','好棒，再一下下！','哇，你跑得好快！'],sound:'step',demo:'swing',target:{type:'seconds',value:5}},
+    {kind:'jump',do:'原地跳',lead:'跟我一起跳、跳、跳！',beats:['跳！','再跳！','跳得好高！'],sound:'splash',demo:'up',target:{type:'count',value:3}},
+    {kind:'arm',do:'揮動雙手',lead:'把手舉起來，跟我一起揮一揮！',beats:['揮呀揮！','再大力一點！','揮得好漂亮！'],sound:'rustle',demo:'wave',target:{type:'seconds',value:4}},
+    {kind:'still',do:'像木頭人一樣不動',lead:'現在變成木頭人，一動也不要動……',beats:['噓……','很好，繼續不動……','好厲害，你完全沒動！'],sound:'none',demo:'freeze',target:{type:'seconds',value:3}}
+  ].map(m=>Object.assign(m,{hints:P_HINT(m.do),hintAt:[3,7,11]}));
 
-function persistSettings(){try{localStorage.setItem('sd-next-settings',JSON.stringify({voice:$('voice').value}))}catch(e){console.warn('瀏覽器未允許保存設定',e?.message)}}
-try{let saved=JSON.parse(localStorage.getItem('sd-next-settings')||'{}');$('voice').value=saved.voice||'device'}catch{}
-function apiURL(){return WORKER_URL.replace(/\/+$/,'')}
-function ensureIdle(){if(state.plan){msg('若要更改模式，請先按「重新開始」；目前進度已經開始。');return false}return true}
-$('playerGroup').addEventListener('click',ev=>{const v=ev.target.closest('[data-player]')?.dataset.player;if(!v||!ensureIdle())return;state.player=v;updateRoleUI()});
-$('modeGroup').addEventListener('click',ev=>{const v=ev.target.closest('[data-mode]')?.dataset.mode;if(!v||!ensureIdle())return;state.mode=v;document.body.classList.toggle('senior',v==='senior');updateRoleUI()});
-$('themes').addEventListener('click',ev=>{const btn=ev.target.closest('[data-topic]');if(!btn||!ensureIdle())return;state.topic=btn.dataset.topic;document.querySelectorAll('#themes button').forEach(b=>b.classList.toggle('active',b===btn))});
-$('voice').onchange=()=>{state.voice=$('voice').value;persistSettings()};state.voice=$('voice').value;
-$('age').onchange=()=>{state.age=Number($('age').value)};
-$('posture').onchange=()=>{if(!ensureIdle())return;state.posture=$('posture').value};
-// Next 1.3.2: Safari audio handoff. Reuse one player throughout the adventure.
-const fishPlayer=new Audio();
-fishPlayer.preload='auto';
-fishPlayer.playsInline=true;
-let fishPrimed=false;
-function primeFishAudio(){
-  if(state.voice!=='fish'||fishPrimed)return;
-  // Called synchronously from the player's tap (start/next), never after an await.
-  fishPrimed=true;
-  try{
-    fishPlayer.src='data:audio/wav;base64,UklGRqQMAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YYAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
-    fishPlayer.muted=false;
-    const attempt=fishPlayer.play();
-    Promise.resolve(attempt).then(()=>{
-      if(fishPlayer.src.startsWith('data:'))fishPlayer.pause();
-    }).catch(()=>{fishPrimed=false;});
-  }catch(e){fishPrimed=false;console.info('Safari audio priming unavailable',e)}
-}
-document.addEventListener('click',e=>{if(e.target.closest('button') && state.voice==='fish' && !fishPrimed)primeFishAudio()}, {capture:true});
-function voiceCancel(){hide('stopSpeech',true);hide('fishTapPanel',true);pendingFishAudio=null;narrationToken++;if(narrationAbort){narrationAbort.abort();narrationAbort=null}if(activeAudio){activeAudio.pause();activeAudio.removeAttribute('src');activeAudio.load();activeAudio=null}if(window.speechSynthesis)window.speechSynthesis.cancel();if(narrationFinish){const end=narrationFinish;narrationFinish=null;end()}}
-function speakDevice(text,token){return new Promise(resolve=>{if(token!==narrationToken)return resolve();if(!('speechSynthesis' in window)){msg('瀏覽器不支援內建朗讀，請依文字繼續。');return resolve()};let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(watch);if(narrationFinish===finish)narrationFinish=null;resolve()};narrationFinish=finish;const utterance=new SpeechSynthesisUtterance(text);utterance.lang='zh-TW';utterance.rate=.94;utterance.pitch=1;const voices=window.speechSynthesis.getVoices();utterance.voice=voices.find(v=>v.lang==='zh-TW')||voices.find(v=>v.lang.startsWith('zh'))||null;utterance.onend=finish;utterance.onerror=finish;const watch=setTimeout(finish,45000);try{window.speechSynthesis.speak(utterance)}catch{finish()}})}
-function offerFishTap(message,token,audio){
-  if(token!==narrationToken||audio!==activeAudio)return;
-  pendingFishAudio={token,audio};
-  txt('fishTapMessage',message);
-  $('fishTapPlay').disabled=false;
-  hide('fishTapPanel',false);
-  msg('🎙️ 音檔已下載。iPhone Safari 沒有自動開始播放，請按「點一下播放流螢」。');
-}
-$('fishTapPlay').addEventListener('click',()=>{fishPrimed=true;
-  // Must call play() directly inside this click callback to preserve Safari's user gesture.
-  const item=pendingFishAudio;
-  if(!item||item.token!==narrationToken||item.audio!==activeAudio)return;
-  $('fishTapPlay').disabled=true;
-  let playPromise;
-  try{
-    // Retrying the *same* downloaded audio. No new /api/voice request.
-    item.audio.pause();
-    try{item.audio.currentTime=0}catch{}
-    playPromise=item.audio.play();
-  }catch(e){
-    $('fishTapPlay').disabled=false;
-    txt('fishTapMessage','Safari 無法開始播放：'+(e.message||String(e))+'。可略過本段。');
-    return;
+  async function hold(r){while(alive(r)&&S.paused)await d.sleep(cfg.tick)}
+  // 唸一句；如果中途被暫停，繼續後整句重唸
+  async function say(r,text){
+    text=String(text||'').trim();if(!text)return;
+    while(alive(r)){await hold(r);if(!alive(r))return;const pc=S.pauses;d.ui('line',text);await d.speak(text);if(S.pauses===pc)return}
   }
-  Promise.resolve(playPromise).then(()=>{
-    if(pendingFishAudio===item)hide('fishTapPanel',true);
-  }).catch(e=>{
-    if(pendingFishAudio!==item)return;
-    $('fishTapPlay').disabled=false;
-    txt('fishTapMessage','Safari 仍拒絕播放：'+(e.message||String(e))+'。請確認手機音量，或略過本段。');
-  });
-});
-$('fishTapSkip').addEventListener('click',()=>{if(pendingFishAudio)stopAndUnlock()});
-async function speak(text){text=String(text||'').trim();if(!text||state.voice==='off')return;voiceCancel();const token=narrationToken;hide('stopSpeech',false);try{
- if(state.voice==='fish'){
-   if(Array.from(text).length>480){msg('這段文字超過 Fish 每段 480 字限制，完整內容改用裝置朗讀（沒有截斷故事）。');await speakDevice(text,token);return}
-   const ctrl=new AbortController();narrationAbort=ctrl;const timer=setTimeout(()=>ctrl.abort(),48000);
-   try{const r=await fetch(apiURL()+'/api/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:ctrl.signal});if(token!==narrationToken)return;if(!r.ok){const d=await r.json().catch(()=>({}));throw Error(d.error||'HTTP '+r.status)}if(!r.headers.get('Content-Type')?.includes('audio/'))throw Error('Fish 沒有回傳音訊');const blob=await r.blob();if(blob.size<1000)throw Error('Fish 回傳的音檔太小，可能無法播放');const url=URL.createObjectURL(blob);try{
-       await new Promise(resolve=>{
-         if(token!==narrationToken)return resolve();
-         const audio=fishPlayer;audio.pause();audio.src=url;audio.preload='auto';audio.playsInline=true;activeAudio=audio;
-         let finished=false,stallTimer,started=false;
-         const done=()=>{if(finished)return;finished=true;clearTimeout(stallTimer);hide('fishTapPanel',true);if(pendingFishAudio?.audio===audio)pendingFishAudio=null;if(narrationFinish===done)narrationFinish=null;resolve()};
-         narrationFinish=done;
-         audio.onended=done;
-         audio.onerror=()=>{
-           if(token!==narrationToken)return done();
-           clearTimeout(stallTimer);
-           offerFishTap('收到音檔，但 Safari 無法解碼或播放。可嘗試點擊播放，或略過本段。',token,audio);
-         };
-         audio.onplaying=()=>{started=true;clearTimeout(stallTimer);if(pendingFishAudio?.audio===audio){pendingFishAudio=null;hide('fishTapPanel',true)}};
-         // Some mobile Safari versions leave play() pending with no sound.
-         stallTimer=setTimeout(()=>{if(!finished&&!started&&token===narrationToken){offerFishTap('音檔已收到，但 Safari 遲遲沒有開始播放。請點一下啟動流螢。',token,audio)}},6500);
-         try{
-           Promise.resolve(audio.play()).catch(e=>{
-             if(!finished&&token===narrationToken)offerFishTap('Safari 阻擋了自動播放（'+(e.name||'播放限制')+'）。請點一下播放流螢。',token,audio);
-           });
-         }catch(e){offerFishTap('Safari 無法自動播放：'+(e.message||String(e)),token,audio)}
-       });
-     }finally{if(fishPlayer.src===url){fishPlayer.pause();fishPlayer.removeAttribute('src');fishPlayer.load()}URL.revokeObjectURL(url);if(activeAudio===fishPlayer)activeAudio=null;hide('fishTapPanel',true);pendingFishAudio=null}return}
-   catch(e){if(token!==narrationToken)return;msg('Fish 音訊失敗：'+e.message+'。本段改用裝置語音。')}
-   finally{clearTimeout(timer);if(narrationAbort===ctrl)narrationAbort=null}
- }
- if(token!==narrationToken)return;await speakDevice(text,token)
-}finally{if(token===narrationToken)hide('stopSpeech',true)}
-}
-function stopAndUnlock(){voiceCancel();if(state.phase==='briefing'){void unlockAction()}else if(state.phase==='rest'){void proceedAfterRest()}else if(state.phase==='success'){void moveNext()}else if(state.phase==='branchBriefing'){void unlockBranch()}}
-$('stopSpeech').onclick=()=>voiceCancel();$('skipSpeech').onclick=stopAndUnlock;
-function currentScene(){return state.scenes.find(s=>s.index===state.index)}
-function showActionPreview(scene){const a=scene.action;hide('mission',false);txt('missionWhy',a.purpose);txt('missionHow',a.cue);renderRoles();txt('motionFeedback',state.mode==='senior'?'🔊 請先聽完動作指引，再依自己的能力輕柔活動。':'🔊 請先聽完劇情，接著就能動起來。');$('skipSpeech').disabled=false;hide('manualFamily',state.player!=='coop')}
-function makeRole(r){const elem=document.createElement('div');elem.className='progress-role';elem.innerHTML='<div class="role-title"></div><div class="how"></div><div class="tiny"></div><div class="role-bar"><span></span></div>';return elem}
-function renderRoles(){
- const root=$('roleBars');
- if(!state.progress){root.replaceChildren();return;}
- const roles=state.player==='coop'?['child','family']:['child'];
- for(const child of [...root.children])if(!roles.includes(child.dataset.role))child.remove();
- for(const role of roles){
-  const p=state.progress[role];if(!p)continue;
-  let el=[...root.children].find(child=>child.dataset.role===role);
-  if(!el){el=makeRole(role);el.dataset.role=role;root.appendChild(el);}
-  el.querySelector('.role-title').textContent=(role==='child'?(state.mode==='senior'?'🌿 長輩':'🧒 孩子'):(state.mode==='senior'?'🤝 陪同者':'🤝 家人'))+'：'+(p.action.label||p.action.code);
-  el.querySelector('.how').textContent=p.action.cue;
-  el.querySelector('.tiny').textContent=p.done?'✅ 完成':p.action.seconds?'保持 '+p.action.seconds+' 秒 · '+Math.min(p.elapsed||0,p.action.seconds).toFixed(1)+' 秒':`完成 ${p.count}/${p.action.count} 次`;
-  const total=p.action.seconds||p.action.count;
-  const percent=total>0?Math.max(0,Math.min(100,(p.done?1:p.action.seconds?(p.elapsed||0)/total:p.count/total)*100)):0;
-  el.querySelector('.role-bar span').style.width=percent+'%';
- }
-}
-function resetProgress(scene){state.progress={child:{action:scene.action,count:0,elapsed:0,started:0,last:0,done:false},family:scene.family?{action:scene.family,count:0,elapsed:0,started:0,last:0,done:false}:null};state.attempts=0;$('roleBars').replaceChildren();renderRoles()}
-async function request(path,payload,timeoutMs=115000){const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeoutMs);try{const r=await fetch(apiURL()+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok){if(r.status===404||r.status===410)throw Error('目前網址可能是舊版 Worker，請把 Next 1.3 Worker 部署到程式設定的固定網址。');throw Error(d.error||`HTTP ${r.status}`)}return d}finally{clearTimeout(timer)}}
-function clearAdventure(){void send('child','SESSION_END');void send('family','SESSION_END');state.run++;voiceCancel();stopHoldLoop();state.plan=null;state.scenes=[];state.index=0;state.nextIndex=5;state.choice=null;state.log=[];state.progress=null;state.busy=false;state.phase='idle';state.handSide='right';state.swapForScene=0;state.swapCalibrating=false;state.lastSwapScene=0;state.branchChoosing=false;state.branchArmed=false;clearTimeout(state.branchArmTimer);hide('mission',true);hide('branch',true);hide('ending',true);hide('nextRest',true);txt('storyIcon','✦');updateRoleUI();setPhase('idle',state.mode==='senior'?'等待開始':'等待啟程');void pauseAll()}
-$('reset').onclick=()=>{if(state.plan&&!confirm('確定清除目前進度並重新開始嗎？'))return;clearAdventure()};$('restartEnding').onclick=()=>{primeFishAudio();clearAdventure();void begin()};
-async function begin(){if(state.busy)return;
- if(state.mode==='senior'){
-   clearAdventure();state.voice=$('voice').value;primeFishAudio();const run=state.run;state.busy=true;state.posture='seated';
-   const focus=$('seniorFocus').value;
-   setPhase('loading','AI 正在安排坐姿活動');txt('storyTitle','正在準備今日活動……');
-   txt('storyText','AI 正在根據活動重點準備清楚的坐姿指引。ESP32 支援的動作、次數和休息安排由程式保護。');
-   $('start').disabled=true;persistSettings();await pauseAll();
-   try{
-     const d=await request('/api/senior-session',{player:state.player,focus});
-     if(run!==state.run)return;
-     state.plan={title:d.title||'AI 坐姿活動',world:d.intro||'溫和、舒適、循序活動'};
-     state.scenes=d.scenes;state.nextIndex=totalSteps()+1;state.busy=false;
-     txt('worldCaption','AI GENTLE MOVEMENT');txt('storyIcon','✦');
-     msg('✅ AI 已準備坐姿活動。沒有生成冒險故事。');await openScene(1);
-   }catch(e){if(run===state.run){
-      state.busy=false;
-      state.plan={title:'坐姿舒展（離線備援）',world:'預先設計的溫和坐姿活動'};
-      state.scenes=seniorSession(state.player);
-      state.nextIndex=totalSteps()+1;
-      msg('⚠️ AI 活動暫時不可用，已切換到預先設計的坐姿活動（不是 AI 生成）。原因：'+e.message);
-      txt('worldCaption','OFFLINE GENTLE MOVEMENT');
-      await openScene(1);
-    }}
-   finally{$('start').disabled=false}
-   return;
- }
- clearAdventure();state.voice=$('voice').value;primeFishAudio();const run=state.run;state.busy=true;state.age=state.mode==='child'?Number($('age').value):null;state.posture=state.mode==='senior'?'seated':state.player==='coop' ? $('posture').value : 'general';state.voice=$('voice').value;const topic=$('topic').value.trim()||state.topic;setPhase('loading','AI 正在創造世界');txt('storyTitle','世界正在誕生……');txt('storyText','AI 正在規劃故事目標、角色與結局，接著先寫出前四幕。');msg('正在連線 Workers AI。生成時間取決於模型負載，請稍候……');$('start').disabled=true;persistSettings();await pauseAll();try{const d=await request('/api/start',{mode:state.mode,player:state.player,posture:state.posture,...(state.mode==='child'?{age:state.age}:{}),topic});if(run!==state.run)return;state.plan=d.plan;state.scenes=d.scenes;state.nextIndex=d.nextIndex;txt('storyTitle',d.plan.title);txt('worldCaption',d.plan.world);txt('storyIcon','✦');state.busy=false;msg('✅ 主線已規劃完成。先用右手握住裝置，開始冒險。');await speak('今天先用右手握住裝置，準備好就出發！');if(run===state.run)await openScene(1)}catch(e){if(run===state.run){state.busy=false;setPhase('error','生成失敗');txt('storyText','生成未完成，沒有使用假故事。請檢查 Worker Binding 或再試一次。');msg('❌ '+e.message);txt('storyTitle','這次生成遇到問題')}}finally{$('start').disabled=false}}
-$('start').onclick=()=>{state.voice=$('voice').value;primeFishAudio();if(state.plan&&!confirm('重新開始會清除目前進度，確定嗎？'))return;void begin()};
-async function openScene(index){const run=state.run;const scene=state.scenes.find(v=>v.index===index);if(!scene){msg('尚未取得第 '+index+' 幕，請重試續寫。');return}voiceCancel();stopHoldLoop();state.index=index;setPhase('briefing',state.mode==='senior'?'🌿 坐姿活動':(!scene.action?'📖 故事演出':'🎭 事件發生'));txt('storyTitle',scene.title);txt('storyText',scene.scene);hide('mission',true);hide('branch',true);hide('nextRest',true);hide('ending',true);msg(state.mode==='senior'?`正在第 ${index} 項坐姿活動 · ${state.plan.title}`:`正在第 ${index} 幕 · ${state.plan.title}`);await pauseAll();
- if(!scene.action){setPhase('rest',state.mode==='senior'?'🌿 休息與說明':'🌙 聆聽故事');hide('nextRest',false);$('nextRest').textContent=state.mode==='senior'?(index===totalSteps()?'✅ 完成活動':'▶ 下一項活動'):(index===8?'✨ 看故事結局':'▶ 前往下一幕');const beforeSpeech=narrationToken;await speak(scene.scene);if(run!==state.run||state.index!==index||state.phase!=='rest')return;if(state.mode!=='senior'&&state.voice!=='off'&&narrationToken===beforeSpeech+1){await proceedAfterRest()}return}
- resetProgress(scene);showActionPreview(scene);const narration=scene.scene+' '+scene.action.purpose+' '+scene.action.cue+(scene.family?' 家人的任務：'+scene.family.purpose+' '+scene.family.cue:'');await speak(narration);if(run!==state.run||state.index!==index||state.phase!=='briefing')return;if(document.hidden){msg('頁面正在背景執行，請回到網頁後按跳過朗讀以啟動動作。');return}await unlockAction()}
-async function unlockAction(){if(state.phase!=='briefing')return;voiceCancel();setPhase('action','🟣 輪到你行動');$('skipSpeech').disabled=true;txt('motionFeedback',state.mode==='senior'?'🌿 開始活動。慢慢做，在舒適範圍內動作，不用勉強。':'🎮 開始了！做出冒險任務中的動作，故事會跟著你改變。');await syncDevices();startHoldLoop();}
-$('replay').onclick=async()=>{const s=currentScene();if(!s?.action)return;const txts=s.action.purpose+' '+s.action.cue+(s.family?' 家人的任務：'+s.family.cue:'');await speak(txts)};
-$('nextRest').onclick=()=>{if(state.phase==='handSwap'){void confirmHandSwap();return;}voiceCancel();if(state.phase==='seniorStepDone'){hide('nextRest',true);void moveNext()}else if(state.phase==='continuationError'){hide('nextRest',true);void moveNext()}else if(state.phase==='action'){hide('nextRest',true);startHoldLoop();void syncDevices()}else if(state.phase==='branch'){hide('nextRest',true);void unlockBranch()}else void proceedAfterRest()};
-async function proceedAfterRest(){if(state.phase!=='rest')return;hide('nextRest',true);if(state.mode==='child'){const s=currentScene();if(s)logEvent(state.index,s.title+'：'+s.scene.slice(-120))}if(state.index===totalSteps()){finishStory();return}await moveNext()}
-function logEvent(index,what){const record={index,what:what.slice(0,170)};const last=state.log[state.log.length-1];if(last?.index===record.index&&last.what===record.what)return;state.log.push(record);if(state.log.length>12)state.log.shift()}
-async function onSuccess(){if(state.phase!=='action')return;const scene=currentScene();stopHoldLoop();setPhase('success',state.mode==='senior'?'🌿 活動完成':'✨ 冒險成功！');await pauseAll();txt('motionFeedback',state.mode==='senior'?'✅ 完成這項活動。請先休息，再進入下一項。':'✅ 成功！你的行動真的改變了故事。');const result=scene.action.result+(scene.family?' '+scene.family.result:'');txt('storyText',scene.scene+(state.mode==='senior'?'\n\n✓ 本項完成：\n':'\n\n✦ 你的行動帶來了結果：\n')+result);if(state.mode!=='senior')logEvent(state.index,scene.title+'：'+result);await speak(result);if(state.phase!=='success')return;if(state.mode==='senior'){setPhase('seniorStepDone','🌿 暫停休息');hide('nextRest',false);$('nextRest').textContent='▶ 下一項活動';msg('已完成第 '+state.index+' 項。可以休息，準備好再前進。');return}
- if(state.index===4){await openBranch();return}await moveNext()}
-// v1.3.4: Timed motion accumulates only from verified BLE pulses; inactivity preserves progress.
-function startHoldLoop(){
-  stopHoldLoop();
-  holdInterval=setInterval(()=>{
-    if(state.phase!=='action'||!state.progress)return;
-    let changed=false;
-    for(const role of state.player==='coop'?['child','family']:['child']){
-      const p=state.progress[role];
-      if(!p||p.done||!p.action.seconds||!p.last)continue;
-      const now=performance.now();
-      if(now-p.last>1500&&!p.paused){
-        p.paused=true;p.started=0;
-        txt('motionFeedback',state.mode==='senior'?'動作先暫停，準備好了再繼續。':'先喘口氣！準備好了再繼續，剛剛的進度還在！');
-        changed=true;
+  function makeQueue(r){
+    const q=[];let busy=false;
+    async function pump(){if(busy)return;busy=true;while(q.length&&alive(r))await say(r,q.shift());busy=false}
+    return {push(t){if(t){q.push(t);pump()}},clear(){q.length=0},get idle(){return !busy&&!q.length},async drain(){while(busy&&alive(r))await d.sleep(cfg.tick)}};
+  }
+
+  // 一段動作：孩子動的時候旁白跟著進度往下講；沒動時提示一層一層變清楚；絕不卡死
+  async function runMove(r,m,opt){
+    opt=opt||{};
+    const name=S.story?S.story.companion.name:'我';
+    const A=S.act={kind:m.kind,sound:m.sound,value:0,target:m.target.value,lastProgress:0,lastPacket:0,skip:false,auto:false};
+    d.ui('move',{move:m,practice:!!opt.practice});
+    d.cmd(CMD[m.kind]);d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+m.demo);
+    const q=makeQueue(r);q.push(m.lead);
+    const said=[false,false];let leadDone=0,stage=0,hintClock=0,lastHint=0;
+    const auto=(opt.practice?cfg.practiceAuto:cfg.autoContinue)*1000;
+    while(alive(r)){
+      await hold(r);if(!alive(r))return null;
+      const now=d.now();
+      if(!leadDone&&q.idle){leadDone=now;hintClock=now}
+      const frac=A.value/A.target;
+      d.ui('progress',Math.min(1,frac));
+      if(A.skip||frac>=1)break;
+      if(!said[0]&&frac>=1/3){said[0]=true;q.push(m.beats[0])}
+      if(!said[1]&&frac>=2/3){said[1]=true;q.push(m.beats[1])}
+      if(A.lastProgress>hintClock){hintClock=A.lastProgress;stage=0}          // 有在動 → 提示重新計時
+      if(leadDone&&q.idle){
+        const idle=(now-hintClock)/1000;
+        if(stage<3&&idle>=m.hintAt[stage]){q.push(m.hints[stage]);d.robot(stage===2?'WAIT':'NUDGE');stage++;lastHint=now}
+        else if(stage>=3&&now-lastHint>=cfg.reHint*1000){q.push(m.hints[1]);d.robot('NUDGE');lastHint=now}
+        if(now-Math.max(A.lastProgress,leadDone)>=auto){A.auto=true;break}
       }
+      await d.sleep(cfg.tick);
     }
-    if(changed)renderRoles();
-  },150);
-}
-function stopHoldLoop(){if(holdInterval)clearInterval(holdInterval);holdInterval=null}
-function markComplete(role){const p=state.progress?.[role];if(!p||p.done)return;p.done=true;p.elapsed=p.action.seconds||0;renderRoles();txt('motionFeedback',role==='child'?(state.mode==='senior'?'🌿 長輩的任務完成！':'🧒 孩子的任務完成！'):'🤝 家人的任務完成！');void send(role,'PAUSE');if(state.progress.child.done&&(!state.progress.family||state.progress.family.done))void onSuccess();else void syncDevices()}
-function acceptMotion(role,signal,source='ble'){
-  // 選路只接受實體按鈕，不接受任何 MPU6050 動作。
-  if(state.phase==='branch')return;
-  if(state.phase!=='action'||!state.progress)return;
-  const p=state.progress[role];if(!p||p.done)return;
-  if(signal==='HOLD_END'){
-    if(p.action.seconds){p.paused=true;p.started=0;p.last=0;renderRoles();}
-    return;
+    if(!alive(r))return null;
+    S.act=null;d.cmd('PAUSE');q.clear();await q.drain();
+    if(!alive(r))return null;
+    d.ui('progress',1);
+    if(!opt.practice)S.moved+=m.target.type==='count'?Math.round(Math.min(A.value,A.target)*1.5):Math.round(Math.min(A.value,A.target));
+    if(A.auto){
+      d.robot('WAIT');
+      if(!opt.practice)await say(r,name+'牽起你的手：「沒關係，我們一起慢慢走過去。」');
+    }else{d.robot('CHEER');d.sfx('cheer')}
+    if(!(opt.practice&&A.auto))await say(r,m.beats[2]);
+    d.ui('progress',0);d.ui('level',0);d.ui('rest');
+    return {auto:A.auto,skipped:A.skip};
   }
-  if(signal!==p.action.code){
-    if(['SWIPE_LEFT','SWIPE_RIGHT','RUN','SHAKE','JUMP','ARM_UP','ARM_DOWN','HOLD_UP','TILT_LEFT','TILT_RIGHT'].includes(signal)&&source==='ble'){
-      state.attempts++;
-      if(state.attempts%3===1)txt('motionFeedback',p.action.fail[(Math.floor(state.attempts/3))%Math.max(1,p.action.fail.length)]||'方向不太對，試試任務提示中的動作。');
+
+  // 手環（或模擬按鈕）送來的訊號
+  function signal(sig){
+    const now=d.now(),A=S.act;
+    if(sig==='CHOICE_LEFT'||sig==='CHOICE_RIGHT'){if(S.choiceWaiter&&!S.paused){const w=S.choiceWaiter;S.choiceWaiter=null;w(sig==='CHOICE_LEFT'?'left':'right')}return}
+    if(sig==='START'){if(A)A.skip=true;return}                                // 大人可以按右鍵幫孩子跳過
+    if(!A||S.paused)return;
+    if(sig==='J'){if(A.kind==='jump'){A.value+=1;A.lastProgress=now;d.sfx(A.sound)}else if(A.kind==='body')d.sfx(A.sound);return}
+    if(sig==='S'){if(A.kind==='body'||A.kind==='arm')d.sfx(A.sound);return}
+    if(sig.length>2&&sig[0]==='A'&&sig[1]===':'){
+      const lv=Number(sig.slice(2));if(!Number.isFinite(lv))return;
+      const dt=A.lastPacket?Math.min(0.5,Math.max(0.05,(now-A.lastPacket)/1000)):0.25;A.lastPacket=now;d.ui('level',lv);
+      if(A.kind==='body'){if(lv>=cfg.bodyMin){A.value+=dt;A.lastProgress=now}}
+      else if(A.kind==='arm'){if(lv>=cfg.armMin){A.value+=dt;A.lastProgress=now}}
+      else if(A.kind==='still'){if(lv<=cfg.stillMax){A.value+=dt;A.lastProgress=now}else if(lv>=cfg.bodyMin)A.value=Math.max(0,A.value-1)}
     }
-    return;
   }
-  if(p.action.seconds){
-    const now=performance.now();
-    // Count verified pulse intervals only. A long gap contributes no time.
-    // Original ESP32 RUN pulses are typically >=280 ms apart.
-    if(p.last&&!p.paused&&now-p.last<=1450){
-      p.elapsed=Math.min(p.action.seconds,(p.elapsed||0)+Math.min((now-p.last)/1000,0.58));
+
+  // 等 AI 的時候不讓孩子空等：先唸一句，還沒好就一起做小練習
+  async function waitWith(r,promise,line){
+    let settled=false,val,err;promise.then(v=>{settled=true;val=v},e=>{settled=true;err=e});
+    await d.sleep(300);
+    if(!settled&&line)await say(r,line);
+    const list=cfg.seated?PRACTICE.filter(m=>m.kind==='arm'||m.kind==='still'):PRACTICE;
+    let i=0;
+    while(alive(r)&&!settled){
+      await runMove(r,list[i%list.length],{practice:true});S.practices++;i++;
+      if(alive(r)&&!settled)await say(r,i%2?'故事快到了，我們再玩一個！':'再等一下下，故事就要來囉！');
     }
-    p.started=now;p.last=now;p.paused=false;
-    txt('motionFeedback',p.action.during||'正在努力！世界正等著你的下一步……');
-    if(p.elapsed>=p.action.seconds)markComplete(role);
-  }else{
-    p.count=Math.min(p.action.count,p.count+1);
-    txt('motionFeedback',(p.action.during||'有反應了！再來！')+' · '+p.count+'/'+p.action.count);
-    if(p.count>=p.action.count)markComplete(role);
-    else void send(role,'ACTION_TICK');
+    if(err)throw err;return val;
   }
-  renderRoles();
-}
-$('manualChild').onclick=()=>manual('child');$('manualFamily').onclick=()=>manual('family');function manual(role){if(state.phase!=='action')return;const p=state.progress?.[role];if(!p)return;if(!confirm('這是「手動備援」，不代表 ESP32 真正偵測成功。確定要完成'+(role==='child'?(state.mode==='senior'?'長輩':'孩子'):'陪同者')+'的任務嗎？'))return;markComplete(role)}
-// 1.4.2: Never accept an incidental motion as a route choice.
-// GPIO1 START arms one swipe for 7 seconds. Screen choices are an emergency fallback.
-async function armBranch(){
-  if(state.phase==='branch')msg('🧭 左邊實體按鈕選左路，右邊實體按鈕選右路。');
-}
-async function openBranch(){
-   if(!state.plan?.branch?.left?.label||!state.plan?.branch?.right?.label){
-     msg('本篇沒有完整左右選項，略過選路，繼續故事。');
-     state.choice={direction:'none',label:'未進行選路'};
-     await moveNext();
-     return;
-   }
-  voiceCancel();
-  state.branchChoosing=false;state.branchArmed=false;
-  clearTimeout(state.branchArmTimer);
-  hide('mission',true);hide('branch',false);
-  txt('leftLabel',state.plan.branch.left.label);txt('rightLabel',state.plan.branch.right.label);
-  setPhase('branch','🧭 等待左右實體按鈕');
-  msg('請按左邊實體按鈕選左路、右邊實體按鈕選右路；不需揮手。畫面按鈕亦可備援。');
-  await send('child','BRANCH_ON');
-  if(state.phase!=='branch')return;
-  if(devices.family.connected)await send('family','PAUSE');
-  if(state.phase!=='branch')return;
-  await speak('接下來，這條路由你決定！向左，'+state.plan.branch.left.label+'。向右，'+state.plan.branch.right.label+'。按左邊按鈕，選左路。按右邊按鈕，選右路。');
-}
-async function unlockBranch(){
-  if(state.phase!=='branch'||state.branchChoosing)return;
-  voiceCancel();
-  msg('按左邊實體按鈕選左路，右邊實體按鈕選右路。');
-}
-$('branchLeft').onclick=()=>void pickBranch('left','備用畫面按鈕');
-$('branchRight').onclick=()=>void pickBranch('right','備用畫面按鈕');
-async function pickBranch(direction,from){
-  if(!['branch','branchBriefing'].includes(state.phase)||state.branchChoosing)return;
-  state.branchChoosing=true;state.branchArmed=false;clearTimeout(state.branchArmTimer);
-  setPhase('branchChoosing','🧭 路線已確認');
-  voiceCancel(); // Stop the instruction so no late narration keeps the UI locked.
-  state.choice=direction;
-  await send('child','BRANCH_OFF');
-  hide('branch',true);
-  await pauseAll();
-  msg('✅ 已選擇'+(direction==='left'?'左':'右')+'路（'+from+'），接下來的事件將沿著這條路發展。');
-  logEvent(4,'玩家選擇'+(direction==='left'?'左':'右')+'路：'+state.plan.branch[direction].label);
-  await moveNext();
-}
-// 手握控制器換手流程。換手後不要求回到空間中央，只校正姿勢。
-async function beginHandSwap(nextIndex){
- if(state.phase==='handSwap'||state.phase==='calibratingHand')return;
- state.swapForScene=nextIndex;state.swapCalibrating=false;
- state.handSide=state.handSide==='right'?'left':'right';
- const hand=state.handSide==='left'?'左手':'右手';
- setPhase('handSwap','✋ 換手休息');await pauseAll();
- hide('mission',true);hide('branch',true);hide('nextRest',false);
- $('nextRest').textContent='✋ 我已換好，開始校正';
- txt('storyTitle','換另一隻手來冒險！');
- txt('storyText',`剛才辛苦了！現在讓另一隻手也加入冒險。\n\n請把裝置換到${hand}，握穩後按裝置上的「開始」按鈕。`);
- msg('🔊 換手後按 ESP32 GPIO1，會自動校正並繼續。沒有 BLE 連線可用畫面上的按鈕備援。');
- await speak(`先休息一下！把裝置換到${hand}。握好了，按一下開始按鈕。我們就繼續冒險！`);
-}
-async function confirmHandSwap(){
- if(state.phase!=='handSwap'||state.swapCalibrating)return;
- state.swapCalibrating=true;setPhase('calibratingHand','✋ 換手校正中');
- hide('nextRest',true);
- msg('請握穩裝置，正在校正。');
- if(devices.child.connected){
-   try{await send('child','CALIBRATE');}catch(e){state.swapCalibrating=false;state.phase='handSwap';hide('nextRest',false);msg('校正發送失敗，請重試：'+e.message)}
- }else{await finishHandSwap(true)}
-}
-async function finishHandSwap(noBle=false){
- if(state.phase!=='calibratingHand')return;
- const index=state.swapForScene;
- state.lastSwapScene=index;state.swapForScene=0;state.swapCalibrating=false;
- msg(noBle?'⚠️ 未連接 ESP32，已用備援模式繼續。':'✅ 換手校正完成！');
- await openScene(index);
-}
-async function moveNext(){if(['loading','loadingNext','finished'].includes(state.phase))return;const nextIndex=state.index+1;
- if(state.mode==='child'&&state.player==='solo'&&HAND_SWAP_SCENES.has(nextIndex)&&state.lastSwapScene!==nextIndex){await beginHandSwap(nextIndex);return;}if(nextIndex>totalSteps()){finishStory();return}if(state.mode!=='senior'&&nextIndex===5&&!state.choice){await openBranch();return}const existing=state.scenes.some(s=>s.index===nextIndex);if(existing){await openScene(nextIndex);return}const run=state.run;setPhase('loadingNext','✨ 世界繼續生長');txt('storyText','正在續寫你剛才的行動和選路後果……\n\n這次不會偷偷載入舊故事。');hide('mission',true);await pauseAll();try{const d=await request('/api/next',{mode:state.mode,player:state.player,posture:state.posture,plan:state.plan,nextIndex,choice:state.choice,log:state.log});if(run!==state.run)return;state.scenes.push(...d.scenes);state.nextIndex=d.nextIndex;await openScene(nextIndex)}catch(e){if(run!==state.run)return;setPhase('continuationError','⚠️ 續寫失敗');txt('storyText','下一段 AI 生成失敗，但前面完成的故事仍保留。可以按「重試續寫」，不必重新生成開頭。');txt('systemMessage',e.message);hide('nextRest',false);$('nextRest').textContent='↻ 重試續寫';/* Retry uses the permanent nextRest handler. */}}
-function finishStory(){voiceCancel();stopHoldLoop();setPhase('finished',state.mode==='senior'?'🌿 坐姿活動結束':'🏆 冒險完成');hide('mission',true);hide('branch',true);hide('nextRest',true);hide('ending',false);void pauseAll();msg(state.mode==='senior'?'🌿 全部坐姿活動已完成。請放鬆休息，覺得不舒服時停止活動。':'🌟 全部 8 幕已完成！可以再生成新的冒險。')}
-// BLE protocol compatible with original ESP32 sketch (same UUIDs and commands).
-function statusDevices(){for(const role of ['child','family']){const d=devices[role];const el=$(role+'Status');el.replaceChildren();const dot=document.createElement('i');dot.className='dot'+(d.connected?' ok':'');el.append(dot,document.createTextNode((role==='child'?(state.mode==='senior'?'長輩':'孩子'):'家人')+'裝置：'+(d.connected?'已連線':'未連線')))} }
-async function send(role,command){const d=devices[role];if(!d.characteristic||!d.connected)return false;const ch=d.characteristic;const promise=d.queue.then(async()=>{if(ch!==d.characteristic||!d.connected)return false;await ch.writeValue(new TextEncoder().encode(command));return true});d.queue=promise.catch(()=>false);try{return await promise}catch(e){console.warn(role,command,e);return false}}
-async function pauseAll(){await Promise.all(['child','family'].map(role=>send(role,'PAUSE')))}
-async function syncDevices(){if(state.phase==='branch')return send('child','BRANCH_ON');for(const role of ['child','family']){const p=state.progress?.[role];const cmd=state.phase==='action'&&p&&!p.done?(p.action.seconds?'TIMED:':'EXPECT:')+p.action.code:'PAUSE';await send(role,cmd)}}
-async function connect(role){const d=devices[role];if(!navigator.bluetooth?.requestDevice){msg('目前瀏覽器沒有 Web Bluetooth。桌機建議 Chrome；iPhone 需要支援 BLE 的瀏覽器環境。');return}if(d.connected){d.device?.gatt?.disconnect();return}try{const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE.service]});const other=devices[role==='child'?'family':'child'];if(dev.id===other.device?.id)throw Error('不能讓兩個角色使用同一台裝置');const server=await dev.gatt.connect();const service=await server.getPrimaryService(BLE.service);const characteristic=await service.getCharacteristic(BLE.characteristic);d.device=dev;d.characteristic=characteristic;d.connected=true;d.queue=Promise.resolve();dev.addEventListener('gattserverdisconnected',()=>{if(d.device!==dev)return;d.connected=false;d.characteristic=null;statusDevices();msg('⚠️ '+(role==='child'?'孩子':'家人')+' ESP32 已斷線。可以重新連線或用手動備援，不會自動跳幕。')});await characteristic.startNotifications();characteristic.addEventListener('characteristicvaluechanged',e=>onBle(role,e));statusDevices();await send(role,role==='family'&&state.posture==='seated'?'MODE_SENIOR':state.mode==='senior'?'MODE_SENIOR':'MODE_CHILD');await send(role,'INFO');await send(role,'READY');if(!state.plan)await send(role,'SESSION_END');await send(role,'GAME_ACTIVE');await syncDevices();msg('✅ '+(role==='child'?'孩子':'家人')+'裝置連線成功。先校正姿勢再開始動作。')}catch(e){if(d.device?.gatt?.connected)d.device.gatt.disconnect();d.connected=false;d.characteristic=null;statusDevices();msg('連線失敗：'+e.message)}}
-$('connectChild').onclick=()=>void connect('child');$('connectFamily').onclick=()=>void connect('family');
-$('calibrate').onclick=async()=>{for(const role of state.player==='coop'?['child','family']:['child'])await send(role,'CALIBRATE');msg('校正中，保持正常中立姿勢約 2 秒。完成後會恢復目前任務。')};
-$('invert').onclick=async()=>{for(const role of state.player==='coop'?['child','family']:['child'])await send(role,'INVERT_LR');msg('已送出反轉左右方向指令（實際結果取決於 ESP32 韌體）。')};
-// v0.3 實體按鈕：由主裝置決定遊玩模式，合作夥伴按鈕不替主裝置開始新故事。
-let lastHardwareStartAt=0;
-function handleHardwareButton(role,signal){
-  if(role!=='child')return;
-  if(signal==='MODE_CHILD'||signal==='MODE_SENIOR'){
-    if(state.plan||state.busy){msg('目前冒險／活動已開始，模式不能中途切換。');return;}
-    state.mode=signal==='MODE_SENIOR'?'senior':'child';
-    document.body.classList.toggle('senior',state.mode==='senior');
-    updateRoleUI();
-    msg(state.mode==='senior'?'🌿 已由裝置切換長輩模式。':'🎮 已由裝置切換兒童模式。');
-    return;
+  function fetchHalf(c){const p=d.api('/api/v3/next',{story:S.story,choice:c});p.catch(()=>{});return p}
+
+  async function playScenes(r,scenes){
+    for(const sc of scenes){
+      if(!alive(r))return;
+      d.ui('scene',sc);d.robot('EMO:'+sc.emotion);if(d.prefetch)d.prefetch(sc);
+      await say(r,sc.text);
+      if(sc.move&&alive(r))await runMove(r,sc.move);
+      if(sc.after&&alive(r))await say(r,sc.after);
+    }
   }
-  if(state.phase==='branch'&&signal==='CHOICE_LEFT'){void pickBranch('left','裝置左按鈕');return;}
-  if(state.phase==='branch'&&signal==='CHOICE_RIGHT'){void pickBranch('right','裝置右按鈕');return;}
-  if(signal==='SESSION_READY'){
-    // Firmware long press alone must not silently erase the page's running story.
-    if(state.plan)msg('裝置已解除模式鎖定；網頁仍有故事進度。若要換模式，請按網站「重新開始」。');
-    return;
+  async function askBranch(r){
+    const b=S.story.branch,name=S.story.companion.name;
+    S.phase='branch';d.ui('branch',b);d.cmd('BRANCH_ON');d.robot('ASK');
+    let choice=null;new Promise(res=>{S.choiceWaiter=res}).then(c=>{choice=c});
+    await say(r,'想去「'+b.left.label+'」，就按左邊的按鈕。想去「'+b.right.label+'」，就按右邊的按鈕。');
+    let last=d.now();
+    while(alive(r)&&!choice){
+      await hold(r);
+      if(!choice&&d.now()-last>=15000){await say(r,name+'在等你決定喔。左邊的按鈕是「'+b.left.label+'」，右邊的按鈕是「'+b.right.label+'」。');last=d.now()}
+      await d.sleep(cfg.tick);
+    }
+    if(!alive(r))return null;
+    d.cmd('BRANCH_OFF');S.phase='story';d.sfx('chime');d.ui('chosen',choice);
+    await say(r,'好，我們去「'+b[choice].label+'」！');
+    return choice;
   }
-  if(signal!=='START')return;
-  const now=Date.now();
-  if(now-lastHardwareStartAt<700)return;
-  lastHardwareStartAt=now;
-  if(state.phase==='handSwap'){void confirmHandSwap();return;}
-  if(state.phase==='branch'){msg('選路請按左按鈕或右按鈕。');return;}
-  if(!state.plan&&!state.busy&&state.phase==='idle'){
-    msg('▶ 裝置已按開始。正在準備內容；若 Safari 阻擋流螢，請點畫面上的播放按鈕。');
-    void begin();
-  }else if(state.phase==='rest'||state.phase==='seniorStepDone'){
-    $('nextRest').click();
-  }else if(state.phase==='continuationError'){
-    msg('續寫失敗時請先在畫面上確認是否重試，以免誤按。');
-  }else{
-    msg('已收到開始／確認按鈕；目前請先完成朗讀、體感動作或選路。');
+
+  async function start(params){
+    const r=++S.run;
+    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0});
+    d.ui('dark');d.robot('EMO:happy');
+    try{
+      const data=await waitWith(r,d.api('/api/v3/start',params),'故事正在路上。等它來的時候，我們先暖暖身！');
+      if(!alive(r))return;
+      S.story=data.story;S.phase='story';d.ui('story',data.story);
+      const name=S.story.companion.name;
+      if(cfg.prefetchBoth){S.pending.left=fetchHalf('left');S.pending.right=fetchHalf('right')}   // 孩子聽上半段時，兩條路都先準備好
+      const w=data.warmup||{lines:[],steps:[],outro:''};
+      for(const l of w.lines)await say(r,l);
+      if(S.practices<2)for(const st of w.steps){
+        if(!alive(r))return;
+        await runMove(r,{kind:st.kind,do:st.do,lead:st.lead,beats:['很好！','就是這樣！',st.done],hints:P_HINT(st.do),hintAt:[3,7,11],sound:st.sound,demo:st.demo,target:st.target},{practice:true});
+      }
+      await say(r,w.outro);
+      await playScenes(r,data.scenes);
+      if(!alive(r))return;
+      const choice=await askBranch(r);if(!alive(r)||!choice)return;
+      let half=null;
+      for(let attempt=0;attempt<2&&!half&&alive(r);attempt++){
+        if(!S.pending[choice]||attempt)S.pending[choice]=fetchHalf(choice);
+        try{half=await waitWith(r,S.pending[choice],name+'正在想接下來的路，我們先動一動等牠！')}catch(e){half=null}
+      }
+      if(!alive(r))return;
+      if(half&&half.scenes)await playScenes(r,half.scenes);
+      else await say(r,name+'說：「今天的路先走到這裡。剩下的冒險，我們明天再繼續！」');
+      if(!alive(r))return;
+      d.robot('WAVE');
+      await say(r,name+'跟你揮揮手：「今天謝謝你陪我冒險。明天見！」');
+      if(!alive(r))return;
+      S.phase='done';d.cmd('PAUSE');d.ui('end',{story:S.story,moved:S.moved});
+    }catch(e){
+      if(!alive(r))return;
+      S.phase='error';S.act=null;d.cmd('PAUSE');d.ui('error',(e&&e.message)||String(e));
+    }
   }
+  function stop(){S.run++;S.act=null;S.choiceWaiter=null;S.paused=false;S.phase='idle';d.cmd('PAUSE');d.cmd('BRANCH_OFF');if(d.cancelSpeech)d.cancelSpeech()}
+  function pause(){if(S.paused||S.phase==='idle'||S.phase==='done'||S.phase==='error')return;S.paused=true;S.pauses++;d.cmd('PAUSE');if(d.cancelSpeech)d.cancelSpeech();d.ui('paused',true)}
+  function resume(){if(!S.paused)return;S.paused=false;if(S.act){S.act.lastProgress=d.now();S.act.lastPacket=0;d.cmd(CMD[S.act.kind])}else if(S.phase==='branch')d.cmd('BRANCH_ON');d.ui('paused',false)}
+  return {start,stop,pause,resume,signal,skipMove(){if(S.act)S.act.skip=true},state:S,cfg};
 }
-function onBle(role,event){const d=devices[role];if(event.target!==d.characteristic)return;const raw=new TextDecoder().decode(event.target.value).trim().toUpperCase();if(!raw)return;console.log('[BLE]',role,raw);if(raw==='CALIBRATED'&&role==='child'&&state.phase==='calibratingHand'){void finishHandSwap();return;}if(raw==='READY'||raw==='CALIBRATED'||raw==='SENSOR_READY'){void syncDevices();return}if(raw==='HOLD_END'){acceptMotion(role,raw);return}if(['CALIBRATING','HOLDPOSE_WAIT','HOLDPOSE_SAVED','SENSOR_ERROR','LR_INVERTED','LR_DEFAULT'].includes(raw)){if(raw==='CALIBRATED'||raw==='LR_INVERTED'||raw==='LR_DEFAULT')void syncDevices();return}if(['MODE_CHILD','MODE_SENIOR','START','SESSION_READY','CHOICE_LEFT','CHOICE_RIGHT'].includes(raw)){handleHardwareButton(role,raw);return}if(raw.startsWith('FW:')||raw.startsWith('TURN:')||raw.startsWith('INFO:')||raw==='GAME_ACTIVE')return;acceptMotion(role,raw,'ble')}
-// Keep paused devices from accumulating counts while browsing in the background.
-document.addEventListener('visibilitychange',()=>{if(document.hidden){voiceCancel();stopHoldLoop();void pauseAll();if(state.phase==='action'||state.phase==='branch'){msg('頁面切到背景，體感暫停。回來後按「恢復體感」。');hide('nextRest',false);$('nextRest').textContent='▶ 恢復體感';/* Restore uses the permanent nextRest handler. */}}});
-window.addEventListener('pagehide',()=>{voiceCancel();stopHoldLoop()});
-hide('manualFamily',true);updateRoleUI();statusDevices();setPhase('idle','等待啟程');
+/* ENGINE-END */
+
+/* ═════════ 畫面小工具 ═════════ */
+const $=id=>document.getElementById(id);
+const show=(id,on)=>{$(id).hidden=!on};
+const notice=t=>{$('notice').textContent=t||''};
+
+/* ═════════ 聲音：語音 ═════════ */
+let voiceMode='device',speechToken=0,speechEnd=null,fishFails=0;
+const player=new Audio();player.preload='auto';player.playsInline=true;
+const voiceCache=new Map();let prefetchChain=Promise.resolve();
+function silentWav(){const n=800,b=new Uint8Array(44+n*2),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i)};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,16000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  let s='';for(const x of b)s+=String.fromCharCode(x);return 'data:audio/wav;base64,'+btoa(s)}
+function chunk(text,max){
+  const parts=String(text).match(/[^。！？!?\n]+[。！？!?…」』]*|\n+/g)||[text];const out=[];let cur='';
+  for(const p of parts){const t=p.replace(/\n+/g,'');if(!t)continue;
+    if(cur&&(cur+t).length>max){out.push(cur);cur=''}
+    if(t.length>max){for(let i=0;i<t.length;i+=max)out.push(t.slice(i,i+max))}else cur+=t}
+  if(cur)out.push(cur);return out}
+function endSpeech(){if(speechEnd){const f=speechEnd;speechEnd=null;f()}}
+function cancelSpeech(){speechToken++;try{speechSynthesis.cancel()}catch(e){}try{player.pause()}catch(e){}endSpeech()}
+function speakDevice(text,my){return new Promise(resolve=>{
+  if(my!==speechToken)return resolve();
+  if(!('speechSynthesis' in window)){const fin=()=>{clearTimeout(tm0);if(speechEnd===fin)speechEnd=null;resolve()};const tm0=setTimeout(fin,text.length*230+400);speechEnd=fin;return}
+  const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';u.rate=.92;u.pitch=1.05;
+  const vs=speechSynthesis.getVoices();u.voice=vs.find(v=>v.lang==='zh-TW')||vs.find(v=>/^zh/.test(v.lang))||null;
+  let done=false;const fin=()=>{if(done)return;done=true;clearTimeout(tm);if(speechEnd===fin)speechEnd=null;resolve()};
+  const tm=setTimeout(fin,text.length*420+5000);speechEnd=fin;u.onend=fin;u.onerror=fin;
+  try{speechSynthesis.speak(u)}catch(e){fin()}})}
+async function fetchVoice(text){
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),25000);
+  try{const r=await fetch(WORKER_URL+'/api/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:c.signal});
+    if(!r.ok||!(r.headers.get('Content-Type')||'').includes('audio/'))throw Error('voice');
+    return URL.createObjectURL(await r.blob())}finally{clearTimeout(t)}}
+function voiceFor(text){if(!voiceCache.has(text))voiceCache.set(text,fetchVoice(text).catch(()=>null));return voiceCache.get(text)}
+async function speakFish(text,my){
+  const url=await voiceFor(text);if(my!==speechToken)return;
+  if(!url){if(++fishFails>=3)voiceMode='device';return speakDevice(text,my)}
+  fishFails=0;
+  let blocked=false;
+  await new Promise(resolve=>{let done=false;const fin=()=>{if(done)return;done=true;clearTimeout(tm);player.onended=player.onerror=null;if(speechEnd===fin)speechEnd=null;resolve()};
+    const tm=setTimeout(fin,text.length*450+12000);speechEnd=fin;player.onended=fin;player.onerror=fin;player.src=url;
+    Promise.resolve(player.play()).catch(()=>{blocked=true;fin()})});
+  if(blocked&&my===speechToken)await speakDevice(text,my);
+}
+async function speak(text){
+  const my=++speechToken;
+  for(const p of chunk(text,voiceMode==='fish'?360:120)){if(my!==speechToken)return;await(voiceMode==='fish'?speakFish(p,my):speakDevice(p,my))}
+}
+// Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
+function prefetch(sc){
+  if(voiceMode!=='fish')return;
+  const list=[...chunk(sc.text,360)];
+  if(sc.move)list.push(sc.move.lead,...sc.move.beats);
+  if(sc.after)list.push(...chunk(sc.after,360));
+  if(sc.move)list.push(...sc.move.hints);
+  for(const t of list)prefetchChain=prefetchChain.then(()=>voiceFor(t)).catch(()=>{});
+}
+
+/* ═════════ 聲音：音效（用程式合成，不需要音檔） ═════════ */
+let actx=null,lastSfx=0;
+function audio(){if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}if(actx&&actx.state==='suspended')actx.resume();return actx}
+function noise(dur,type,freq,q,gain,attack){
+  const a=audio();if(!a)return;const n=Math.floor(a.sampleRate*dur),buf=a.createBuffer(1,n,a.sampleRate),ch=buf.getChannelData(0);
+  for(let i=0;i<n;i++)ch[i]=Math.random()*2-1;
+  const src=a.createBufferSource();src.buffer=buf;const f=a.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;
+  const g=a.createGain(),t=a.currentTime;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+(attack||0.006));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f);f.connect(g);g.connect(a.destination);src.start(t);src.stop(t+dur+0.02);return f}
+function tone(freq,at,dur,gain){const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.type='sine';o.frequency.value=freq;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+0.05)}
+function sfx(name){
+  if(!name||name==='none')return;
+  const now=performance.now();
+  if(name==='chime'){tone(880,0,.5,.18);tone(1320,.14,.7,.16);return}
+  if(name==='cheer'){tone(660,0,.18,.14);tone(880,.12,.18,.14);tone(1100,.24,.4,.16);return}
+  if(now-lastSfx<170)return;lastSfx=now;
+  if(name==='step')noise(.09,'lowpass',380,.7,.5);
+  else if(name==='splash'){const f=noise(.28,'bandpass',1500,.9,.42);if(f&&actx)f.frequency.exponentialRampToValueAtTime(500,actx.currentTime+.26)}
+  else if(name==='rustle')noise(.14,'highpass',3200,.5,.2);
+  else if(name==='clap')noise(.05,'bandpass',1900,1.2,.55);
+  else if(name==='wind')noise(.7,'lowpass',620,.4,.16,.3);
+}
+
+/* ═════════ 手環（藍牙） ═════════ */
+const band={device:null,ch:null,queue:Promise.resolve(),connected:false};
+function bandUI(){const el=$('bandState');el.replaceChildren();const i=document.createElement('i');i.className='dot'+(band.connected?' on':'');
+  el.append(i,document.createTextNode(band.connected?'手環連上了':'手環還沒連上'));$('connect').textContent=band.connected?'中斷連線':'連接手環'}
+function cmd(c){if(!band.ch||!band.connected)return;const ch=band.ch;
+  band.queue=band.queue.then(()=>ch===band.ch&&band.connected?ch.writeValue(new TextEncoder().encode(c)):null).catch(()=>{})}
+async function connectBand(){
+  if(band.connected){try{band.device.gatt.disconnect()}catch(e){}return}
+  if(!navigator.bluetooth||!navigator.bluetooth.requestDevice){notice('這個瀏覽器不能連手環。iPhone 請改用 Bluefy；也可以先用畫面上的按鈕試玩。');return}
+  try{
+    const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE.service]});
+    const server=await dev.gatt.connect(),svc=await server.getPrimaryService(BLE.service),ch=await svc.getCharacteristic(BLE.characteristic);
+    band.device=dev;band.ch=ch;band.connected=true;band.queue=Promise.resolve();
+    dev.addEventListener('gattserverdisconnected',()=>{if(band.device!==dev)return;band.connected=false;band.ch=null;bandUI();notice('手環斷線了。可以重新連接，或長按畫面用按鈕代替。')});
+    await ch.startNotifications();
+    ch.addEventListener('characteristicvaluechanged',e=>{const t=new TextDecoder().decode(e.target.value).trim().toUpperCase();if(t)engine.signal(t)});
+    cmd('MODE_CHILD');cmd('GAME_ACTIVE');cmd('PAUSE');bandUI();notice('手環連上了。');
+  }catch(e){band.connected=false;band.ch=null;bandUI();notice('沒有連上手環：'+(e.message||e))}
+}
+
+/* ═════════ 機器人（預留）═════════
+   之後 SDQ-30 做好，只要在這裡把指令送出去。目前會送出的指令：
+   EMO:<happy|excited|worried|surprised|sad|calm|proud|scared>  換眼睛表情（每一幕開頭）
+   DEMO:<swing|up|wave|freeze>  示範動作（一段動作開始）
+   NUDGE  孩子還沒動，動作做大一點、看向孩子      WAIT  表示「我等你」
+   CHEER  孩子完成了，歡呼      ASK  等孩子選路      WAVE  故事結束，揮手說明天見 */
+const robotLog=[];
+function robot(c){robotLog.push(c);if(robotLog.length>60)robotLog.shift();
+  try{window.dispatchEvent(new CustomEvent('sdq-robot',{detail:c}))}catch(e){}}
+
+/* ═════════ 把上面的東西接進故事流程 ═════════ */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function api(path,body){
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),150000);
+  try{const r=await fetch(WORKER_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw Error(j.error||(r.status===404?'Worker 還是舊版，請先部署 worker_v3.js':'連線失敗（'+r.status+'）'));
+    return j}catch(e){throw Error(e.name==='AbortError'?'故事等太久了，請再試一次':e.message)}finally{clearTimeout(t)}
+}
+let sceneNo=0,sheetTimer=null,storyTitle='',sceneEmo='calm';
+const face=$('face');
+function fmtTime(s){return s>=60?Math.floor(s/60)+' 分 '+(s%60)+' 秒':s+' 秒'}
+function ui(ev,data){
+  if(ev==='dark'){show('setup',false);show('finale',false);show('stage',true);show('fork',false);show('resume',false);show('sheet',false);
+    $('caption').textContent='';show('caption',$('subs').checked);sceneNo=0;storyTitle='';sceneEmo='happy';
+    face.dataset.emo='calm';face.classList.add('thinking');face.classList.remove('moving');sheetInfo();window.scrollTo(0,0)}
+  else if(ev==='story'){storyTitle=data.title;face.classList.remove('thinking');face.dataset.emo='happy';sheetInfo()}
+  else if(ev==='line'){$('caption').textContent=data}
+  else if(ev==='level'){face.style.setProperty('--glow',Math.min(1,data/7).toFixed(2))}
+  else if(ev==='progress'){$('smileFill').style.strokeDashoffset=String(100*(1-data));$('smileFill').style.opacity=data>0.01?'1':'0'}
+  else if(ev==='move'){face.classList.remove('thinking');face.classList.add('moving');face.dataset.emo='excited'}
+  else if(ev==='rest'){face.classList.remove('moving');face.dataset.emo=sceneEmo;if(!storyTitle)face.classList.add('thinking')}
+  else if(ev==='scene'){sceneNo=data.index;sceneEmo=data.emotion||'calm';face.dataset.emo=sceneEmo;sheetInfo()}
+  else if(ev==='branch'){$('forkL').textContent=data.left.label;$('forkR').textContent=data.right.label;show('fork',true);show('caption',false);face.dataset.emo='surprised'}
+  else if(ev==='chosen'){show('fork',false);show('caption',$('subs').checked);face.dataset.emo='happy'}
+  else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事'}
+  else if(ev==='end'){leaveStage();show('finale',true);window.scrollTo(0,0);
+    $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion.name+'說：「明天見！」';
+    $('stat').textContent=data.moved?'你今天動了 '+fmtTime(data.moved):'';remember(data.story,data.moved)}
+  else if(ev==='error'){leaveStage();show('setup',true);notice('故事沒有說成：'+data+'。請再按一次開始。')}
+}
+function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' / 8 幕':'故事準備中')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')}
+function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech()}
+// 聽過的故事：只記故事名稱和運動時間，而且只存在這台裝置上
+function pastStories(){try{return JSON.parse(localStorage.getItem('sdq-v3-stories')||'[]')}catch(e){return []}}
+function remember(story,moved){try{const list=pastStories();list.unshift({title:story.title,name:story.companion.name,moved:moved||0,t:Date.now()});localStorage.setItem('sdq-v3-stories',JSON.stringify(list.slice(0,6)))}catch(e){}renderPast()}
+function renderPast(){const list=pastStories(),ul=$('pastList');ul.replaceChildren();show('past',list.length>0);
+  for(const s of list){const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');a.textContent='《'+s.title+'》和'+s.name;b.textContent=s.moved?'動了 '+fmtTime(s.moved):'';li.append(a,b);ul.append(li)}}
+
+const engine=createEngine({speak,cancelSpeech,sfx,cmd,robot,api,ui,prefetch,sleep,now:()=>performance.now(),cfg:{}});
+
+/* 螢幕不要自己鎖起來（鎖了故事會被系統暫停） */
+let wake=null;
+async function keepAwake(){try{if('wakeLock' in navigator)wake=await navigator.wakeLock.request('screen')}catch(e){}}
+function releaseWake(){try{if(wake)wake.release()}catch(e){}wake=null}
+document.addEventListener('visibilitychange',()=>{
+  if($('stage').hidden)return;
+  if(document.hidden){engine.pause();show('resume',true)}else keepAwake();
+});
+$('resumeBtn').onclick=()=>{audio();show('resume',false);keepAwake();engine.resume()};
+
+/* 沒有手環時，用按鈕或鍵盤代替 */
+let simTimer=null,simHeld=false,simStep=0;
+function simStart(){if(simTimer)return;simTimer=setInterval(()=>{if(band.connected)return;engine.signal('A:'+(simHeld?6:0));if(simHeld&&(++simStep%2===0))engine.signal('S')},250)}
+function simStop(){clearInterval(simTimer);simTimer=null;simHeld=false}
+const holdOn=e=>{e.preventDefault();simHeld=true},holdOff=()=>{simHeld=false};
+$('simMove').addEventListener('pointerdown',holdOn);['pointerup','pointerleave','pointercancel'].forEach(t=>$('simMove').addEventListener(t,holdOff));
+$('simJump').onclick=()=>engine.signal('J');
+document.addEventListener('keydown',e=>{
+  if($('stage').hidden)return;
+  if(e.code==='Space'){e.preventDefault();simHeld=true}
+  else if(e.key==='j'||e.key==='J')engine.signal('J');
+  else if(e.key==='ArrowLeft')engine.signal('CHOICE_LEFT');
+  else if(e.key==='ArrowRight')engine.signal('CHOICE_RIGHT');
+  else if(e.key==='Enter')engine.skipMove();
+});
+document.addEventListener('keyup',e=>{if(e.code==='Space')simHeld=false});
+
+/* 黑畫面上長按一秒，才會出現控制鈕（避免孩子誤觸） */
+let pressTimer=null;
+$('stage').addEventListener('pointerdown',e=>{if(e.target.closest('#sheet,#fork,#resume'))return;pressTimer=setTimeout(()=>{show('sheet',true);clearTimeout(sheetTimer);sheetTimer=setTimeout(()=>{if(!simHeld)show('sheet',false)},9000)},900)});
+['pointerup','pointerleave','pointercancel'].forEach(t=>$('stage').addEventListener(t,()=>clearTimeout(pressTimer)));
+$('sheet').addEventListener('pointerdown',()=>{clearTimeout(sheetTimer);sheetTimer=setTimeout(()=>{if(!simHeld)show('sheet',false)},9000)});
+$('pauseBtn').onclick=()=>{if(engine.state.paused){audio();engine.resume()}else engine.pause()};
+$('skipBtn').onclick=()=>engine.skipMove();
+$('quitBtn').onclick=()=>{engine.stop();leaveStage();show('setup',true);notice('')};
+$('fork').addEventListener('click',e=>{const b=e.target.closest('[data-choice]');if(b)engine.signal(b.dataset.choice==='left'?'CHOICE_LEFT':'CHOICE_RIGHT')});
+
+/* 準備畫面 */
+$('ideas').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('idea').value=b.dataset.idea||'';$('idea').focus()});
+let ageValue='6',sensValue='mid';
+function setSens(v){sensValue=v;document.querySelectorAll('#sensSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.sens===v)))}
+$('sensSeg').addEventListener('click',e=>{const b=e.target.closest('[data-sens]');if(b)setSens(b.dataset.sens)});
+function setAge(a){ageValue=String(a);document.querySelectorAll('#ages button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.age===ageValue)))}
+$('ages').addEventListener('click',e=>{const b=e.target.closest('[data-age]');if(b)setAge(b.dataset.age)});
+$('connect').onclick=connectBand;
+try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voice==='fish';if(s.sens&&SENS[s.sens])setSens(s.sens);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
+function begin(){
+  notice('');
+  // 這些一定要在「按下按鈕」的當下做，手機才允許之後自動播放聲音
+  audio();try{player.src=silentWav();Promise.resolve(player.play()).catch(()=>{})}catch(e){}
+  try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}
+  keepAwake();
+  voiceMode=$('fish').checked?'fish':'device';fishFails=0;voiceCache.clear();
+  const seated=$('seated').checked;
+  Object.assign(engine.cfg,SENS[sensValue]||SENS.mid,{seated});
+  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,voice:voiceMode,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
+  simStart();
+  engine.start({mode:'child',player:'solo',posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[]});
+}
+$('begin').onclick=begin;
+$('again').onclick=()=>{show('finale',false);show('setup',true);window.scrollTo(0,0)};
+window.addEventListener('pagehide',()=>{cancelSpeech();cmd('PAUSE')});
+bandUI();renderPast();
 </script>
-</body></html>
+</body>
+</html>
