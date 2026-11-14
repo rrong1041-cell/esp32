@@ -65,6 +65,7 @@ textarea{width:100%;height:160px;background:#15151d;color:var(--text);border:1px
       <div><div class="dim">晃動強度</div><div id="big">–</div></div>
       <div class="dim">每秒收到 <b id="rate">0</b> 筆<br>S 訊號 <b id="sCount">0</b> 次　J 訊號 <b id="jCount">0</b> 次</div>
     </div>
+    <div class="verdict" id="diag">還沒連上手環。</div>
     <canvas id="chart"></canvas>
     <div id="log"></div>
     <p class="dim">先按 ACT:BODY，隨便動一動，確認數字有在變。最下面是手環送來的原始訊息。</p>
@@ -136,12 +137,22 @@ document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>cmd(b.dataset.
 /* ── 收訊號 ── */
 const hist=[];            // {t,lv}
 const sigTimes=[];        // 最近一秒內收到的筆數
-let sTotal=0,jTotal=0,lastLevel=null;
+let sTotal=0,jTotal=0,lastLevel=null,rxTotal=0,gotOk=false,noMpu=false;
 const listeners=new Set();
+// 用手環的回覆判斷問題出在哪裡
+function diagnosis(){
+  if(!band.connected&&!rxTotal)return '還沒連上手環。';
+  if(!rxTotal)return '手環完全沒有送任何訊息回來：藍牙有連上，但收不到通知。可能是手環韌體不是新版，或通知沒有開。';
+  if(noMpu)return '藍牙正常，但手環說它找不到 MPU6050 感測器（ERR:NO_MPU）。請檢查感測器的接線，並看序列埠的訊息。';
+  if(!hist.length)return gotOk?'藍牙雙向都正常，但還沒收到強度數值。請按 ACT:BODY。':'有收到訊息，但沒有強度數值。';
+  return '手環正常：藍牙雙向都通，也有收到強度數值。';
+}
 function onRaw(raw){
   const parts=String(raw).split(/[\r\n,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean);
   for(const p of parts){
-    const t=now();addLog('← '+p);
+    const t=now();addLog('← '+p);rxTotal++;
+    if(p.startsWith('OK:'))gotOk=true;
+    if(p==='ERR:NO_MPU')noMpu=true;
     if(p.startsWith('A:')){const lv=Number(p.slice(2));if(Number.isFinite(lv)){lastLevel=lv;hist.push({t,lv});sigTimes.push(t)}}
     else if(p==='S')sTotal++;
     else if(p==='J')jTotal++;
@@ -150,7 +161,7 @@ function onRaw(raw){
 }
 const logLines=[];
 function addLog(s){const t=(now()/1000).toFixed(2);logLines.push(t+'  '+s);if(logLines.length>200)logLines.splice(0,logLines.length-200)}
-setInterval(()=>{const el=$('log'),stick=el.scrollTop+el.clientHeight>=el.scrollHeight-4;el.textContent=logLines.join('\n');if(stick)el.scrollTop=el.scrollHeight},250);
+setInterval(()=>{$('diag').textContent=diagnosis();const el=$('log'),stick=el.scrollTop+el.clientHeight>=el.scrollHeight-4;el.textContent=logLines.join('\n');if(stick)el.scrollTop=el.scrollHeight},250);
 
 /* ── 即時圖 ── */
 const cv=$('chart'),cx=cv.getContext('2d');
@@ -166,7 +177,7 @@ function draw(){
   pts.forEach((p,i)=>{const x=(p.t-t0)/10000*w,y=h-6-(p.lv/max)*(h-12);i?cx.lineTo(x,y):cx.moveTo(x,y)});cx.stroke();
   while(sigTimes.length&&sigTimes[0]<t1-1000)sigTimes.shift();
   $('rate').textContent=sigTimes.length;$('big').textContent=lastLevel===null?'–':lastLevel;
-  $('sCount').textContent=sTotal;$('jCount').textContent=jTotal;
+  $('sCount').textContent=sTotal;$('jCount').textContent=jTotal;$('diag').textContent=diagnosis();
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
@@ -277,6 +288,7 @@ function renderReaction(){
 /* ── 5. 結果 ── */
 function report(){
   const L=[],r=levelResults;L.push('【手環測試結果】');
+  L.push('手環狀態：'+diagnosis()+`（共收到 ${rxTotal} 則訊息${gotOk?'，有收到 OK 回覆':''}）`);
   for(const k of Object.keys(LEVEL_TESTS)){const x=r[k];if(x)L.push(`${x.name}：最小${f1(x.min)} 低10%${f1(x.p10)} 中${f1(x.med)} 高10%${f1(x.p90)} 最大${f1(x.max)}｜S ${x.s} 次｜${x.n} 筆（每秒 ${f1(x.rate)}）`)}
   const v=levelVerdict().replace(/<[^>]+>/g,'');if(v!=='還沒有結果。')L.push(v.replace(/\s*\n\s*/g,' '));
   if(countRes!==null)L.push(`搖 5 下：收到 ${countRes} 次`);
