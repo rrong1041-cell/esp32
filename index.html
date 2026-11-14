@@ -459,7 +459,10 @@ function createEngine(d){
     const deck=shuffle(ok);if(deck[0]&&deck[0].kind==='still'){const k=deck.findIndex(m=>m.kind!=='still');if(k>0)[deck[0],deck[k]]=[deck[k],deck[0]]}
     return deck;
   }
-  function nextPractice(){if(!S.deck||!S.deck.length)S.deck=practiceDeck();return S.deck.shift()}
+  // Fish 配音：下一個暖身動作的句子先準備好（影片實測：沒先準備時，句子之間會突然安靜 1～3 秒）
+  const practiceLines=m=>m?[m.lead,...m.beats,m.hints[0]]:[];
+  function nextPractice(){if(!S.deck||!S.deck.length)S.deck=practiceDeck();const m=S.deck.shift();
+    if(d.prefetchText)d.prefetchText(practiceLines(S.deck[0]));return m}
 
   async function hold(r){while(alive(r)&&S.paused)await d.sleep(cfg.tick)}
   // 唸一段。聲音層支援暫停時，暫停後會從停下的那一句接著唸；不支援時才整段重唸
@@ -662,6 +665,7 @@ function createEngine(d){
   // 等 AI 的時候不讓孩子空等：先唸一句，還沒好就一起做小練習
   async function waitWith(r,promise,line){
     let settled=false,val,err;promise.then(v=>{settled=true;val=v},e=>{settled=true;err=e});
+    if(d.prefetchText){d.prefetchText([line,...practiceLines(S.deck&&S.deck[0]),...BETWEEN])}
     await d.sleep(300);
     if(!settled&&line)await say(r,line);
     while(alive(r)&&!settled){
