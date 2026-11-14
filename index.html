@@ -104,7 +104,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .past h2,.grown summary{font-family:var(--story);font-size:1.16rem;font-weight:700;margin:0 0 8px}
 .past ul{list-style:none;margin:0;padding:0}
 .past li{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:8px 0;border-bottom:2px dashed var(--paper-line);font-family:var(--story);font-size:1.06rem}
-.past li span:last-child{font-family:var(--ui);font-size:.8rem;color:var(--soft);white-space:nowrap}
+.past li span:first-child{flex:1;min-width:0}
+.past li .moved{font-family:var(--ui);font-size:.8rem;color:var(--soft);white-space:nowrap}
+.past li .replay{flex:none;font-family:var(--round);font-weight:800;font-size:.85rem;color:#2B2A5C;background:var(--moon);border:0;border-radius:999px;padding:6px 12px;cursor:pointer;align-self:center}
 .grown{margin-top:26px;background:#fff;border:2px solid var(--paper-line);border-radius:22px;padding:4px 18px}
 .grown summary{cursor:pointer;margin:0;padding:12px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
 .grown summary::-webkit-details-marker{display:none}
@@ -509,7 +511,8 @@ function createEngine(d){
     }
     if(err)throw err;return val;
   }
-  function fetchHalf(c){const p=d.api(S.story&&S.story.api===4?'/api/v4/next':'/api/v3/next',{story:S.story,choice:c});p.catch(()=>{});return p}
+  // 兩條路的下半段都先準備；準備好的留在 S.halves，故事結束時一起存起來，之後可以「再聽一次」
+  function fetchHalf(c){const p=d.api(S.story&&S.story.api===4?'/api/v4/next':'/api/v3/next',{story:S.story,choice:c});p.then(v=>{if(v&&v.scenes)S.halves[c]=v}).catch(()=>{});return p}
 
   async function playScenes(r,scenes){
     for(const sc of scenes){
@@ -538,16 +541,20 @@ function createEngine(d){
     return choice;
   }
 
-  async function start(params){
+  // replay：之前存下來的故事（不用再問 AI；配音的句子一模一樣，Fish 會直接用存好的音檔）
+  async function start(params,replay){
     const r=++S.run;
-    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0});
+    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},choiceWaiter:null,practices:0,moved:0});
     d.ui('dark');d.robot('EMO:happy');
     try{
-      const data=await waitWith(r,d.api(cfg.api==='v3'?'/api/v3/start':'/api/v4/start',params),'故事正在路上。等它來的時候，我們先暖暖身！');
+      const data=replay?replay.start:await waitWith(r,d.api(cfg.api==='v3'?'/api/v3/start':'/api/v4/start',params),'故事正在路上。等它來的時候，我們先暖暖身！');
       if(!alive(r))return;
       S.story=data.story;S.phase='story';d.ui('story',data.story);
       const name=S.story.companion.name;
-      if(cfg.prefetchBoth){S.pending.left=fetchHalf('left');S.pending.right=fetchHalf('right')}   // 孩子聽上半段時，兩條路都先準備好
+      for(const c of ['left','right']){                                                       // 孩子聽上半段時，兩條路都先準備好
+        if(replay&&replay.halves&&replay.halves[c]){S.halves[c]=replay.halves[c];S.pending[c]=Promise.resolve(replay.halves[c])}
+        else if(cfg.prefetchBoth)S.pending[c]=fetchHalf(c);
+      }
       const w=data.warmup||{lines:[],steps:[],outro:''};
       for(const l of w.lines)await say(r,l);
       if(S.practices<2)for(const st of w.steps){
@@ -570,7 +577,7 @@ function createEngine(d){
       d.robot('WAVE');
       await say(r,name+'跟你揮揮手：「今天謝謝你陪我冒險。明天見！」');
       if(!alive(r))return;
-      S.phase='done';d.cmd('PAUSE');d.ui('end',{story:S.story,moved:S.moved});
+      S.phase='done';d.cmd('PAUSE');d.ui('end',{story:S.story,moved:S.moved,replay:!!replay,save:{start:data,halves:Object.assign({},S.halves)}});
     }catch(e){
       if(!alive(r))return;
       S.phase='error';S.act=null;d.cmd('PAUSE');d.ui('error',(e&&e.message)||String(e));
@@ -627,26 +634,35 @@ function voiceScore(v){
   if(/Hanhan|Yating|Zhiwei/i.test(n))s-=10;              // Windows 舊的機器聲音
   return s;
 }
+let talkVoice=null;
 function bestVoice(){
   if(pickedVoice)return pickedVoice;
   let vs=[];try{vs=speechSynthesis.getVoices()}catch(e){}
   const list=vs.map(v=>[voiceScore(v),v]).filter(x=>x[0]>=0).sort((a,b)=>b[0]-a[0]);
-  if(list.length)pickedVoice=list[0][1];
+  if(list.length){
+    pickedVoice=list[0][1];
+    // 對話用另一個好聽的聲音（例如旁白曉臻、夥伴雲哲），讓孩子聽得出「現在是角色在說話」
+    const other=list.find(x=>x[1].name!==pickedVoice.name&&x[0]>=150);
+    talkVoice=other?other[1]:null;
+  }
   return pickedVoice;
 }
-try{speechSynthesis.addEventListener('voiceschanged',()=>{pickedVoice=null;bestVoice()})}catch(e){}
-async function speakDevice(text,my){
+try{speechSynthesis.addEventListener('voiceschanged',()=>{pickedVoice=null;talkVoice=null;bestVoice()})}catch(e){}
+// 說故事的聲音設定：旁白慢一點；對話換聲音，沒有第二個好聲音時就用同一個聲音但音調高一點
+const VOICE_STYLE={narr:{rate:.86,pitch:1.0},talk:{rate:.95,pitch:1.08},talkSame:{rate:.95,pitch:1.28}};
+async function speakDevice(text,my,role){
   while(my===speechToken){
     await waitResume(my);if(my!==speechToken)return;
-    await speakDeviceOnce(text,my);
+    await speakDeviceOnce(text,my,role);
     if(!speechPaused)return;          // 唸完了；若是被暫停打斷，繼續後重唸這一句
   }
 }
-function speakDeviceOnce(text,my){return new Promise(resolve=>{
+function speakDeviceOnce(text,my,role){return new Promise(resolve=>{
   if(my!==speechToken)return resolve();
   if(!('speechSynthesis' in window)){const fin=()=>{clearTimeout(tm0);if(speechEnd===fin)speechEnd=null;resolve()};const tm0=setTimeout(fin,text.length*230+400);speechEnd=fin;return}
-  const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';u.rate=.92;u.pitch=1.05;
-  u.voice=bestVoice();
+  const narr=bestVoice(),talk=role==='talk',st=talk?(talkVoice?VOICE_STYLE.talk:VOICE_STYLE.talkSame):VOICE_STYLE.narr;
+  const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';u.rate=st.rate;u.pitch=st.pitch;
+  u.voice=talk&&talkVoice?talkVoice:narr;
   let done=false;const fin=()=>{if(done)return;done=true;clearTimeout(tm);if(speechEnd===fin)speechEnd=null;resolve()};
   const tm=setTimeout(fin,text.length*420+5000);speechEnd=fin;u.onend=fin;u.onerror=fin;
   try{speechSynthesis.speak(u)}catch(e){fin()}})}
@@ -669,10 +685,32 @@ async function speakFish(text,my){
     Promise.resolve(player.play()).catch(()=>{if(speechPaused)return;blocked=true;fin()})});
   if(blocked&&my===speechToken)await speakDevice(text,my);
 }
+// 「」裡是角色說的話，外面是旁白
+function storyParts(text){
+  return (String(text).match(/「[^」]*」?|[^「]+/g)||[String(text)]).map(s=>s.trim()).filter(Boolean)
+    .map(s=>s[0]==='「'?{role:'talk',text:s.replace(/^「|」$/g,'')}:{role:'narr',text:s});
+}
+// 說故事的停頓：句子結束停久一點，換角色說話前後也停一下。停頓中被暫停或取消都會立刻反應
+async function storyPause(ms,my){const end=performance.now()+ms;while(my===speechToken&&performance.now()<end){await waitResume(my);await new Promise(r=>setTimeout(r,40))}}
 async function speak(text){
   const my=++speechToken;
-  // 裝置語音一句一句唸（暫停後只重唸那一句）；字幕跟著目前唸的這一段走
-  for(const p of chunk(text,voiceMode==='fish'?360:40)){if(my!==speechToken)return;$('caption').textContent=p;await(voiceMode==='fish'?speakFish(p,my):speakDevice(p,my))}
+  if(voiceMode==='fish'){                                   // Fish 自己的聲音就有語氣，維持一段一段送
+    for(const p of chunk(text,360)){if(my!==speechToken)return;$('caption').textContent=p;await speakFish(p,my)}
+    return;
+  }
+  // 裝置語音：旁白和對話分開唸，一句一句唸（暫停後只重唸那一句）；字幕跟著目前唸的這一句走
+  let prev=null;
+  for(const part of storyParts(text)){
+    if(my!==speechToken)return;
+    if(prev&&prev!==part.role)await storyPause(220,my);
+    for(const p of chunk(part.text,40)){
+      if(my!==speechToken)return;
+      $('caption').textContent=part.role==='talk'?'「'+p+'」':p;
+      await speakDevice(p,my,part.role);
+      await storyPause(/[。！？!?…—]$/.test(p)?380:120,my);
+    }
+    prev=part.role;
+  }
 }
 // Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
 function prefetch(sc){
@@ -789,16 +827,47 @@ function ui(ev,data){
   else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事'}
   else if(ev==='end'){leaveStage();show('finale',true);window.scrollTo(0,0);
     $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion.name+'說：「明天見！」';
-    $('stat').textContent=data.moved?'你今天動了 '+fmtTime(data.moved):'';remember(data.story,data.moved)}
+    $('stat').textContent=data.moved?'你今天動了 '+fmtTime(data.moved):'';remember(data.story,data.moved,data.save,data.replay)}
   else if(ev==='error'){leaveStage();show('setup',true);notice('故事沒有說成：'+data+'。請再按一次開始。')}
 }
 function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' / 8 幕':'故事準備中')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')}
 function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech()}
-// 聽過的故事：只記故事名稱和運動時間，而且只存在這台裝置上
+// 聽過的故事：名稱和運動時間，加上整篇故事（兩條路的下半段都有），只存在這台裝置上。
+// 「再聽一次」不用再問 AI，配音的句子也一模一樣，所以 Fish 會直接播存好的音檔，不用額度。
+const SAVED_KEY='sdq-v4-saved',SAVED_MAX=8;
+let replayId=null;
 function pastStories(){try{return JSON.parse(localStorage.getItem('sdq-v3-stories')||'[]')}catch(e){return []}}
-function remember(story,moved){try{const list=pastStories();list.unshift({title:story.title,name:story.companion.name,moved:moved||0,t:Date.now()});localStorage.setItem('sdq-v3-stories',JSON.stringify(list.slice(0,6)))}catch(e){}renderPast()}
-function renderPast(){const list=pastStories(),ul=$('pastList');ul.replaceChildren();show('past',list.length>0);
-  for(const s of list){const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');a.textContent='《'+s.title+'》和'+s.name;b.textContent=s.moved?'動了 '+fmtTime(s.moved):'';li.append(a,b);ul.append(li)}}
+function savedStories(){try{return JSON.parse(localStorage.getItem(SAVED_KEY)||'{}')}catch(e){return {}}}
+function storeSaved(all){
+  // 空間不夠就丟掉最舊的，再試一次
+  const ids=Object.keys(all).sort((a,b)=>(all[a].t||0)-(all[b].t||0));
+  while(ids.length){try{localStorage.setItem(SAVED_KEY,JSON.stringify(all));return}catch(e){delete all[ids.shift()]}}
+  try{localStorage.removeItem(SAVED_KEY)}catch(e){}
+}
+function remember(story,moved,save,isReplay){
+  try{
+    const all=savedStories();
+    if(isReplay&&replayId&&all[replayId]){                       // 重聽：不新增一筆，只把這次新準備好的另一條路補進去
+      if(save)Object.assign(all[replayId].halves,save.halves||{});
+      storeSaved(all);renderPast();return;
+    }
+    const id='s'+Date.now(),list=pastStories();
+    list.unshift({id,title:story.title,name:story.companion.name,moved:moved||0,t:Date.now()});
+    localStorage.setItem('sdq-v3-stories',JSON.stringify(list.slice(0,SAVED_MAX)));
+    if(save&&save.start&&save.start.scenes){
+      all[id]={t:Date.now(),start:save.start,halves:save.halves||{}};
+      const keep=new Set(list.slice(0,SAVED_MAX).map(x=>x.id));
+      for(const k of Object.keys(all))if(!keep.has(k))delete all[k];
+      storeSaved(all);
+    }
+  }catch(e){}
+  renderPast();
+}
+function renderPast(){const list=pastStories(),saved=savedStories(),ul=$('pastList');ul.replaceChildren();show('past',list.length>0);
+  for(const s of list){const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');a.textContent='《'+s.title+'》和'+s.name;b.className='moved';b.textContent=s.moved?'動了 '+fmtTime(s.moved):'';li.append(a,b);
+    if(s.id&&saved[s.id]){const btn=document.createElement('button');btn.type='button';btn.className='replay';btn.dataset.replay=s.id;btn.textContent='再聽一次';li.append(btn)}
+    ul.append(li)}}
+$('pastList').addEventListener('click',e=>{const b=e.target.closest('[data-replay]');if(!b)return;const s=savedStories()[b.dataset.replay];if(s){replayId=b.dataset.replay;begin(s)}});
 
 const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,sleep,now:()=>performance.now(),cfg:{}});
 
@@ -848,8 +917,9 @@ function setAge(a){ageValue=String(a);document.querySelectorAll('#ages button').
 $('ages').addEventListener('click',e=>{const b=e.target.closest('[data-age]');if(b)setAge(b.dataset.age)});
 $('connect').onclick=connectBand;
 try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voice==='fish';if(s.sens&&SENS[s.sens])setSens(s.sens);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
-function begin(){
+function begin(replay){
   notice('');
+  if(!(replay&&replay.start&&replay.start.scenes)){replay=null;replayId=null}   // 一般開始；replay 是「再聽一次」存下來的故事
   // 這些一定要在「按下按鈕」的當下做，手機才允許之後自動播放聲音
   audio();try{player.src=silentWav();Promise.resolve(player.play()).catch(()=>{})}catch(e){}
   try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}
@@ -859,9 +929,9 @@ function begin(){
   Object.assign(engine.cfg,SENS[sensValue]||SENS.mid,{seated});
   try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,voice:voiceMode,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
   simStart();
-  engine.start({mode:'child',player:'solo',posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[]});
+  engine.start({mode:'child',player:'solo',posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[]},replay||undefined);
 }
-$('begin').onclick=begin;
+$('begin').onclick=()=>begin(null);
 $('again').onclick=()=>{show('finale',false);show('setup',true);window.scrollTo(0,0)};
 window.addEventListener('pagehide',()=>{cancelSpeech();cmd('PAUSE')});
 bandUI();renderPast();
