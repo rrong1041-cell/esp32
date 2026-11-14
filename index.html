@@ -342,10 +342,10 @@ function createEngine(d){
   ].map(m=>Object.assign(m,{hints:P_HINT(m.do),hintAt:[3,7,11]}));
 
   async function hold(r){while(alive(r)&&S.paused)await d.sleep(cfg.tick)}
-  // 唸一句；如果中途被暫停，繼續後整句重唸
+  // 唸一段。聲音層支援暫停時，暫停後會從停下的那一句接著唸；不支援時才整段重唸
   async function say(r,text){
     text=String(text||'').trim();if(!text)return;
-    while(alive(r)){await hold(r);if(!alive(r))return;const pc=S.pauses;d.ui('line',text);await d.speak(text);if(S.pauses===pc)return}
+    while(alive(r)){await hold(r);if(!alive(r))return;const pc=S.pauses;d.ui('line',text);await d.speak(text);if(d.pauseSpeech||S.pauses===pc)return}
   }
   function makeQueue(r){
     const q=[];let busy=false;
@@ -492,8 +492,8 @@ function createEngine(d){
     }
   }
   function stop(){S.run++;S.act=null;S.choiceWaiter=null;S.paused=false;S.phase='idle';d.cmd('PAUSE');d.cmd('BRANCH_OFF');if(d.cancelSpeech)d.cancelSpeech()}
-  function pause(){if(S.paused||S.phase==='idle'||S.phase==='done'||S.phase==='error')return;S.paused=true;S.pauses++;d.cmd('PAUSE');if(d.cancelSpeech)d.cancelSpeech();d.ui('paused',true)}
-  function resume(){if(!S.paused)return;S.paused=false;if(S.act){S.act.lastProgress=d.now();S.act.lastPacket=0;d.cmd(CMD[S.act.kind])}else if(S.phase==='branch')d.cmd('BRANCH_ON');d.ui('paused',false)}
+  function pause(){if(S.paused||S.phase==='idle'||S.phase==='done'||S.phase==='error')return;S.paused=true;S.pauses++;d.cmd('PAUSE');if(d.pauseSpeech)d.pauseSpeech();else if(d.cancelSpeech)d.cancelSpeech();d.ui('paused',true)}
+  function resume(){if(!S.paused)return;S.paused=false;if(d.resumeSpeech)d.resumeSpeech();if(S.act){S.act.lastProgress=d.now();S.act.lastPacket=0;d.cmd(CMD[S.act.kind])}else if(S.phase==='branch')d.cmd('BRANCH_ON');d.ui('paused',false)}
   return {start,stop,pause,resume,signal,skipMove(){if(S.act)S.act.skip=true},state:S,cfg};
 }
 /* ENGINE-END */
@@ -512,13 +512,31 @@ function silentWav(){const n=800,b=new Uint8Array(44+n*2),v=new DataView(b.buffe
   let s='';for(const x of b)s+=String.fromCharCode(x);return 'data:audio/wav;base64,'+btoa(s)}
 function chunk(text,max){
   const parts=String(text).match(/[^。！？!?\n]+[。！？!?…」』]*|\n+/g)||[text];const out=[];let cur='';
+  const add=t=>{if(cur&&(cur+t).length>max){out.push(cur);cur=''}cur+=t};
   for(const p of parts){const t=p.replace(/\n+/g,'');if(!t)continue;
-    if(cur&&(cur+t).length>max){out.push(cur);cur=''}
-    if(t.length>max){for(let i=0;i<t.length;i+=max)out.push(t.slice(i,i+max))}else cur+=t}
+    if(t.length<=max){add(t);continue}
+    // 句子太長：先在逗號處分開，真的還太長才硬切
+    for(const c of t.match(/[^，、；：,]+[，、；：,」』]*/g)||[t]){
+      if(c.length<=max){add(c);continue}
+      if(cur){out.push(cur);cur=''}
+      for(let i=0;i<c.length;i+=max)out.push(c.slice(i,i+max))}}
   if(cur)out.push(cur);return out}
 function endSpeech(){if(speechEnd){const f=speechEnd;speechEnd=null;f()}}
-function cancelSpeech(){speechToken++;try{speechSynthesis.cancel()}catch(e){}try{player.pause()}catch(e){}endSpeech()}
-function speakDevice(text,my){return new Promise(resolve=>{
+// 暫停：Fish 音檔停在原位；裝置語音停掉這一句，繼續時只重唸這一句
+let speechPaused=false,fishPlaying=false;const resumeWaiters=[];
+function releaseWaiters(){resumeWaiters.splice(0).forEach(f=>f())}
+function waitResume(my){return new Promise(res=>{if(!speechPaused||my!==speechToken)return res();resumeWaiters.push(res)})}
+function pauseSpeech(){if(speechPaused)return;speechPaused=true;try{player.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}
+function resumeSpeech(){if(!speechPaused)return;speechPaused=false;if(fishPlaying){try{Promise.resolve(player.play()).catch(()=>{})}catch(e){}}releaseWaiters()}
+function cancelSpeech(){speechToken++;speechPaused=false;releaseWaiters();try{speechSynthesis.cancel()}catch(e){}try{player.pause()}catch(e){}endSpeech()}
+async function speakDevice(text,my){
+  while(my===speechToken){
+    await waitResume(my);if(my!==speechToken)return;
+    await speakDeviceOnce(text,my);
+    if(!speechPaused)return;          // 唸完了；若是被暫停打斷，繼續後重唸這一句
+  }
+}
+function speakDeviceOnce(text,my){return new Promise(resolve=>{
   if(my!==speechToken)return resolve();
   if(!('speechSynthesis' in window)){const fin=()=>{clearTimeout(tm0);if(speechEnd===fin)speechEnd=null;resolve()};const tm0=setTimeout(fin,text.length*230+400);speechEnd=fin;return}
   const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';u.rate=.92;u.pitch=1.05;
@@ -536,15 +554,19 @@ async function speakFish(text,my){
   const url=await voiceFor(text);if(my!==speechToken)return;
   if(!url){if(++fishFails>=3)voiceMode='device';return speakDevice(text,my)}
   fishFails=0;
+  await waitResume(my);if(my!==speechToken)return;
   let blocked=false;
-  await new Promise(resolve=>{let done=false;const fin=()=>{if(done)return;done=true;clearTimeout(tm);player.onended=player.onerror=null;if(speechEnd===fin)speechEnd=null;resolve()};
-    const tm=setTimeout(fin,text.length*450+12000);speechEnd=fin;player.onended=fin;player.onerror=fin;player.src=url;
-    Promise.resolve(player.play()).catch(()=>{blocked=true;fin()})});
+  await new Promise(resolve=>{let done=false,tm=null,budget=text.length*450+12000;
+    const fin=()=>{if(done)return;done=true;fishPlaying=false;clearTimeout(tm);player.onended=player.onerror=null;if(speechEnd===fin)speechEnd=null;resolve()};
+    const guard=()=>{if(!speechPaused)budget-=1000;if(budget<=0)return fin();tm=setTimeout(guard,1000)};   // 暫停的時間不算進逾時
+    tm=setTimeout(guard,1000);speechEnd=fin;player.onended=fin;player.onerror=fin;player.src=url;fishPlaying=true;
+    Promise.resolve(player.play()).catch(()=>{if(speechPaused)return;blocked=true;fin()})});
   if(blocked&&my===speechToken)await speakDevice(text,my);
 }
 async function speak(text){
   const my=++speechToken;
-  for(const p of chunk(text,voiceMode==='fish'?360:120)){if(my!==speechToken)return;await(voiceMode==='fish'?speakFish(p,my):speakDevice(p,my))}
+  // 裝置語音一句一句唸（暫停後只重唸那一句）；字幕跟著目前唸的這一段走
+  for(const p of chunk(text,voiceMode==='fish'?360:40)){if(my!==speechToken)return;$('caption').textContent=p;await(voiceMode==='fish'?speakFish(p,my):speakDevice(p,my))}
 }
 // Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
 function prefetch(sc){
@@ -659,7 +681,7 @@ function remember(story,moved){try{const list=pastStories();list.unshift({title:
 function renderPast(){const list=pastStories(),ul=$('pastList');ul.replaceChildren();show('past',list.length>0);
   for(const s of list){const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');a.textContent='《'+s.title+'》和'+s.name;b.textContent=s.moved?'動了 '+fmtTime(s.moved):'';li.append(a,b);ul.append(li)}}
 
-const engine=createEngine({speak,cancelSpeech,sfx,cmd,robot,api,ui,prefetch,sleep,now:()=>performance.now(),cfg:{}});
+const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,sleep,now:()=>performance.now(),cfg:{}});
 
 /* 螢幕不要自己鎖起來（鎖了故事會被系統暫停） */
 let wake=null;
