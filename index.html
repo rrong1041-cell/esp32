@@ -47,6 +47,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @keyframes look{0%,100%{transform:translateX(-.22em)}50%{transform:translateX(.22em)}}
 .face.moving{animation:hop .5s ease-in-out infinite}
 @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-.22em)}}
+/* 眼睛會到處看（--lx/--ly 由程式隨機設定）；偶爾連眨兩下 */
+.face .eye{translate:var(--lx,0) var(--ly,0);transition:width .3s,height .3s,top .3s,border-radius .3s,transform .3s,background-color .3s,translate .45s ease}
+.face.blink2 .eye{animation:blink2 .5s 1}
+@keyframes blink2{0%,100%{scale:1 1}20%,60%{scale:1 .1}40%{scale:1 1}}
+/* 臉頰：開心的時候紅紅的 */
+.face .cheek{position:absolute;top:2.3em;width:.95em;height:.45em;border-radius:50%;background:#FF7E96;opacity:0;filter:blur(1.5px);transition:opacity .4s}
+.face .cheek.l{left:.15em}.face .cheek.r{right:.15em}
+.face[data-emo=happy] .cheek,.face[data-emo=proud] .cheek,.face[data-emo=excited] .cheek{opacity:.6}
+/* 嘴巴：表情不同形狀不同；說話時一開一合（--open 由程式控制） */
+.face .mouth{position:absolute;left:50%;translate:-50% 0;top:2.35em;width:1.1em;height:.6em;box-sizing:border-box;border:.2em solid transparent;border-bottom-color:var(--moon);border-radius:50%;
+  transition:width .2s,height .2s,top .2s,border-radius .2s,background-color .2s}
+.face[data-emo=happy] .mouth,.face[data-emo=proud] .mouth{width:1.7em;height:.95em;top:2.15em}
+.face[data-emo=excited] .mouth{width:1.4em;height:.7em;top:2.65em;border:0;background:var(--moon);border-radius:.1em .1em .9em .9em}
+.face[data-emo=surprised] .mouth,.face[data-emo=scared] .mouth{width:.7em;height:.8em;top:2.6em;border:.2em solid var(--moon);border-radius:50%}
+.face[data-emo=worried] .mouth{width:1em;height:.2em;top:2.95em;border:0;background:var(--moon);border-radius:.1em;transform:rotate(-7deg)}
+.face[data-emo=sad] .mouth{width:1.2em;height:.7em;top:2.85em;border-color:transparent;border-top-color:var(--moon)}
+.face.talking .mouth{width:1.15em;top:2.55em;height:calc(.18em + .72em*var(--open,0));border:0;background:var(--moon);border-radius:.6em;transform:none;transition:height .07s linear}
 
 /* ── 準備畫面：黃昏的天空，下面是一張米色的紙 ── */
 .sky{position:relative;height:292px;overflow:hidden;color:#FFF7E6;
@@ -126,18 +143,91 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .grown a{color:var(--ink)}
 
 /* ── 故事畫面：燈關掉，只剩夥伴的眼睛 ── */
-#stage{position:fixed;inset:0;background:#000;color:#CFC8B4;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);touch-action:manipulation;user-select:none;-webkit-user-select:none;animation:lightsOff 1.1s ease-out both}
-@keyframes lightsOff{from{background:#3A3272;opacity:0}to{background:#000;opacity:1}}
-#face{width:5.2em;height:3.4em;font-size:34px;margin-top:-70px;opacity:.9}
-#smile{width:150px;height:44px;margin-top:8px;overflow:visible}
-#smile path{fill:none;stroke-width:5;stroke-linecap:round}
-#smile .track{stroke:#26233F}
-#smileFill{stroke:var(--moon);stroke-dasharray:100;stroke-dashoffset:100;opacity:0;transition:stroke-dashoffset .25s linear,opacity .2s}
-#caption{width:100%;max-width:520px;min-height:5.4em;text-align:center;font-family:var(--story);font-size:1.22rem;line-height:1.8;color:#D9D1BA;margin:22px 0 0}
-#fork{width:100%;max-width:520px;display:flex;gap:12px;justify-content:center;margin-top:26px}
-#fork button{flex:1;min-height:84px;border:2px solid #4A4670;border-radius:20px;background:#12112A;font-family:var(--story);font-size:1.16rem;color:#E9E1C8;padding:10px;line-height:1.4}
-#fork small{display:block;font-family:var(--ui);font-size:.74rem;color:#8480A8;margin-top:2px}
+#stage{position:fixed;inset:0;color:#CFC8B4;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 36%,#1C1748 0,#0B0A22 52%,#000 100%);
+  padding:env(safe-area-inset-top) 20px env(safe-area-inset-bottom);touch-action:manipulation;user-select:none;-webkit-user-select:none;animation:lightsOff 1.1s ease-out both}
+/* 夜空的小星星，慢慢閃 */
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;animation:twinkle 6s ease-in-out infinite;
+  background:radial-gradient(1.6px 1.6px at 10% 16%,#FFF3C4,transparent 70%),radial-gradient(1.4px 1.4px at 26% 72%,#C9F6FF,transparent 70%),
+  radial-gradient(1.8px 1.8px at 84% 14%,#FFF3C4,transparent 70%),radial-gradient(1.3px 1.3px at 70% 64%,#FFD3F0,transparent 70%),
+  radial-gradient(1.5px 1.5px at 45% 9%,#fff,transparent 70%),radial-gradient(1.3px 1.3px at 92% 48%,#C9F6FF,transparent 70%),
+  radial-gradient(1.5px 1.5px at 6% 52%,#FFD3F0,transparent 70%),radial-gradient(1.2px 1.2px at 58% 86%,#fff,transparent 70%)}
+#stage>*{position:relative}
+#stage>#hush,#stage>#sheet,#stage>#resume{position:absolute}
+@keyframes lightsOff{from{opacity:0;filter:brightness(2.2)}to{opacity:1;filter:none}}
+
+/* ── 機器人夥伴：RGB 外框的頭、會擺的手、天線燈 ── */
+.bot{font-size:clamp(24px,7.5vw,34px);margin:-30px 0 0;animation:float 3.4s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-9px) rotate(1.5deg)}}
+.bot .head{position:relative;z-index:2;padding:.45em .55em .5em;border-radius:1.4em;border:.13em solid transparent;
+  background:linear-gradient(#100F2C,#100F2C) padding-box,var(--rgb) border-box;background-size:100% 100%,300% 100%;
+  animation:rgbborder 6s linear infinite,headglow 6s linear infinite}
+@keyframes headglow{0%,100%{box-shadow:0 0 30px rgba(255,45,85,.35),inset 0 0 22px rgba(255,45,85,.12)}33%{box-shadow:0 0 30px rgba(48,209,88,.32),inset 0 0 22px rgba(48,209,88,.1)}66%{box-shadow:0 0 30px rgba(61,90,254,.4),inset 0 0 22px rgba(61,90,254,.12)}}
+.bot .ant{position:absolute;z-index:1;left:50%;top:-.95em;width:.14em;height:1em;margin-left:-.07em;background:#3F3B7A;border-radius:.1em;transform-origin:50% 100%;animation:antwig 2.6s ease-in-out infinite}
+.bot .ant::after{content:"";position:absolute;left:50%;top:-.4em;width:.48em;height:.48em;margin-left:-.24em;border-radius:50%;animation:rgbfill 6s linear infinite;box-shadow:0 0 12px 3px rgba(255,255,255,.3)}
+@keyframes antwig{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
+.bot .arm{position:absolute;z-index:1;top:1.55em;width:.46em;height:1.75em;border-radius:.3em;background:#2E2A66;border:.08em solid #4E49A0;transform-origin:50% .2em;
+  transition:transform .4s cubic-bezier(.3,1.5,.5,1)}
+.bot .arm::after{content:"";position:absolute;left:50%;bottom:-.32em;width:.62em;height:.62em;margin-left:-.31em;border-radius:50%;animation:rgbfill 6s linear infinite;box-shadow:0 0 10px rgba(255,255,255,.35)}
+.bot .arm.l{left:-.32em;transform:rotate(16deg)}.bot .arm.r{right:-.32em;transform:rotate(-16deg)}
+#face{width:5.2em;height:3.6em;font-size:1em}
+/* 機器人示範的動作（跟著 DEMO 指令換） */
+.bot[data-pose=up] .arm.l{transform:rotate(165deg)}.bot[data-pose=up] .arm.r{transform:rotate(-165deg)}
+.bot[data-pose=down] .arm.l{transform:rotate(3deg)}.bot[data-pose=down] .arm.r{transform:rotate(-3deg)}
+.bot[data-pose=down]{animation:squat 1.2s ease-in-out infinite}
+@keyframes squat{0%,100%{transform:translateY(0)}50%{transform:translateY(8px) scale(1.02,.97)}}
+.bot[data-pose=ask] .arm.l{transform:rotate(92deg)}.bot[data-pose=ask] .arm.r{transform:rotate(-92deg)}
+.bot[data-pose=ask]{animation:tilt 2.4s ease-in-out infinite}
+@keyframes tilt{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+.bot[data-pose=freeze] .arm.l{transform:rotate(45deg)}.bot[data-pose=freeze] .arm.r{transform:rotate(-45deg)}
+.bot[data-pose=freeze]{animation:none}
+.bot[data-pose=shake] .arm.l,.bot[data-pose=swim] .arm.l{animation:altL .55s ease-in-out infinite alternate}
+.bot[data-pose=shake] .arm.r,.bot[data-pose=swim] .arm.r{animation:altR .55s ease-in-out infinite alternate-reverse}
+@keyframes altL{from{transform:rotate(25deg)}to{transform:rotate(165deg)}}
+@keyframes altR{from{transform:rotate(-25deg)}to{transform:rotate(-165deg)}}
+.bot[data-pose=flap] .arm.l{animation:flapL .32s ease-in-out infinite alternate}.bot[data-pose=flap] .arm.r{animation:flapR .32s ease-in-out infinite alternate}
+@keyframes flapL{from{transform:rotate(45deg)}to{transform:rotate(125deg)}}
+@keyframes flapR{from{transform:rotate(-45deg)}to{transform:rotate(-125deg)}}
+.bot[data-pose=swing]{animation:runhop .36s ease-in-out infinite}
+.bot[data-pose=swing] .arm.l{animation:swingL .36s ease-in-out infinite alternate}.bot[data-pose=swing] .arm.r{animation:swingR .36s ease-in-out infinite alternate}
+@keyframes runhop{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes swingL{from{transform:rotate(-10deg)}to{transform:rotate(55deg)}}
+@keyframes swingR{from{transform:rotate(-55deg)}to{transform:rotate(10deg)}}
+.bot[data-pose=wave] .arm.r{animation:waveR .3s ease-in-out infinite alternate}
+@keyframes waveR{from{transform:rotate(-130deg)}to{transform:rotate(-170deg)}}
+.bot[data-pose=cheer]{animation:runhop .45s ease-in-out infinite}
+.bot[data-pose=cheer] .arm.l{animation:cheerL .45s ease-in-out infinite alternate}.bot[data-pose=cheer] .arm.r{animation:cheerR .45s ease-in-out infinite alternate}
+@keyframes cheerL{from{transform:rotate(140deg)}to{transform:rotate(170deg)}}
+@keyframes cheerR{from{transform:rotate(-140deg)}to{transform:rotate(-170deg)}}
+.bot[data-pose=jump]{animation:botjump .8s cubic-bezier(.3,0,.4,1) infinite}
+.bot[data-pose=jump] .arm.l{transform:rotate(150deg)}.bot[data-pose=jump] .arm.r{transform:rotate(-150deg)}
+@keyframes botjump{0%,100%{transform:translateY(0) scale(1.04,.95)}45%{transform:translateY(-34px) scale(.97,1.04)}}
+.bot[data-pose=twist],.bot[data-pose=steer]{animation:rock .5s ease-in-out infinite alternate}
+.bot[data-pose=twist] .arm.l,.bot[data-pose=steer] .arm.l{transform:rotate(70deg)}.bot[data-pose=twist] .arm.r,.bot[data-pose=steer] .arm.r{transform:rotate(-70deg)}
+@keyframes rock{from{transform:rotate(-9deg)}to{transform:rotate(9deg)}}
+.bot[data-pose=stir] .arm.r{animation:stirR .5s linear infinite}
+@keyframes stirR{0%{transform:rotate(-70deg)}25%{transform:rotate(-95deg)}50%{transform:rotate(-110deg)}75%{transform:rotate(-95deg)}100%{transform:rotate(-70deg)}}
+.bot[data-pose=nudge]{animation:nudge .5s ease-in-out 2}
+@keyframes nudge{0%,100%{transform:translateX(0) rotate(0)}30%{transform:translateX(-8px) rotate(-6deg)}70%{transform:translateX(8px) rotate(6deg)}}
+
+/* 進度條：孩子動的時候，彩虹慢慢填滿 */
+#meter{width:min(240px,62vw);height:12px;margin-top:26px;border-radius:99px;background:#1A1838;border:1px solid #2E2B5C;overflow:hidden;opacity:0;transition:opacity .3s}
+#meter.on{opacity:1}
+#meterFill{display:block;height:100%;width:0;border-radius:inherit;background:var(--rgb);background-size:300% 100%;animation:rgbflow 4s linear infinite;transition:width .25s linear;box-shadow:0 0 12px rgba(255,255,255,.4)}
+#caption{width:100%;max-width:540px;min-height:5.4em;text-align:center;font-family:var(--story);font-size:1.22rem;line-height:1.8;color:#E4DCC6;margin:22px 0 0;
+  padding:12px 18px;border-radius:20px;background:rgba(22,20,56,.6);border:1px solid #2E2B5C}
+/* 選路：左青、右粉，跟兩顆實體按鈕一左一右 */
+#fork{width:100%;max-width:540px;display:flex;gap:14px;justify-content:center;margin-top:28px}
+#fork button{flex:1;min-height:110px;border:3px solid;border-radius:24px;background:#12112A;font-family:var(--story);font-size:1.2rem;color:#F2EEFF;padding:10px 8px;line-height:1.4;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:transform .15s}
+#fork button[data-choice=left]{border-color:#00E5FF;animation:pulseL 1.8s ease-in-out infinite}
+#fork button[data-choice=right]{border-color:#FF3DA6;animation:pulseR 1.8s ease-in-out infinite .9s}
+@keyframes pulseL{0%,100%{box-shadow:0 0 10px rgba(0,229,255,.25)}50%{box-shadow:0 0 30px rgba(0,229,255,.6)}}
+@keyframes pulseR{0%,100%{box-shadow:0 0 10px rgba(255,61,166,.25)}50%{box-shadow:0 0 30px rgba(255,61,166,.6)}}
+#fork button:active{transform:scale(.96)}
+#fork .arrow{font-size:1.5rem;line-height:1}
+#fork button[data-choice=left] .arrow{color:#00E5FF}#fork button[data-choice=right] .arrow{color:#FF3DA6}
+#fork small{display:block;font-family:var(--ui);font-size:.76rem;color:#9C98C4;margin-top:2px}
 #hush{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));left:20px;right:20px;text-align:center;color:#55526F;font-size:.82rem;margin:0}
 #sheet{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;background:#1B1A3D;border:2px solid #3A3870;border-radius:22px;padding:14px;color:#EDE6D0}
 #sheet .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -184,10 +274,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ages button[aria-pressed=true],.seg button[aria-pressed=true]{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
 #idea:focus{animation:rgbedge 5s linear infinite}
 /* 故事畫面：夥伴的眼睛和笑容慢慢換顏色 */
-#face{animation:rgbspin 12s linear infinite}
-#face.moving{animation:hop .5s ease-in-out infinite,rgbspin 12s linear infinite}
-#smile{animation:rgbspin 12s linear infinite}
-#fork button{animation:rgbedge 6s linear infinite}
+#face,#face.moving{animation:rgbspin 14s linear infinite}
 #finale .face{animation:rgbspin 12s linear infinite}
 #finale h2{filter:drop-shadow(0 3px 0 rgba(20,18,50,.6)) drop-shadow(0 0 3px rgba(20,18,50,.45))}
 
@@ -239,7 +326,7 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
       <path d="M0 62 Q70 18 150 54 T300 44 T400 30 V112 H0Z" fill="#3B3276"/>
       <path d="M0 92 Q90 50 190 84 T400 66 V112 H0Z" fill="#0E0D24"/>
     </svg>
-    <div class="buddy face" data-emo="happy" id="buddy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+    <div class="buddy face" data-emo="happy" id="buddy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i><i class="mouth"></i></div>
   </header>
 
   <main>
@@ -292,12 +379,15 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
 </div>
 
 <section id="stage" hidden aria-label="故事進行中">
-  <div class="face" id="face" data-emo="calm" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
-  <svg id="smile" viewBox="0 0 150 44" aria-hidden="true"><path class="track" d="M12 8 Q75 50 138 8"/><path id="smileFill" pathLength="100" d="M12 8 Q75 50 138 8"/></svg>
+  <div class="bot" id="bot" aria-hidden="true">
+    <i class="ant"></i><i class="arm l"></i><i class="arm r"></i>
+    <div class="head"><div class="face" id="face" data-emo="calm"><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i><i class="mouth"></i></div></div>
+  </div>
+  <div id="meter" aria-hidden="true"><i id="meterFill"></i></div>
   <p id="caption" hidden></p>
   <div id="fork" hidden>
-    <button type="button" data-choice="left"><span id="forkL"></span><small>◀ 左邊的按鈕</small></button>
-    <button type="button" data-choice="right"><span id="forkR"></span><small>右邊的按鈕 ▶</small></button>
+    <button type="button" data-choice="left"><b class="arrow">◀</b><span id="forkL"></span><small>按左邊的按鈕</small></button>
+    <button type="button" data-choice="right"><b class="arrow">▶</b><span id="forkR"></span><small>按右邊的按鈕</small></button>
   </div>
   <p id="hush">故事進行中，可以把手機放下了。長按畫面可以暫停。</p>
   <div id="sheet" hidden>
@@ -314,7 +404,7 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
 </section>
 
 <section id="finale" hidden>
-  <div class="face" data-emo="happy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+  <div class="face" data-emo="happy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i><i class="mouth"></i></div>
   <h2>故事說完了</h2>
   <p class="title" id="endTitle"></p>
   <p id="bye">明天見。</p>
@@ -342,12 +432,30 @@ function createEngine(d){
   const alive=r=>r===S.run;
   const CMD={body:'ACT:BODY',jump:'ACT:JUMP',arm:'ACT:ARM',still:'ACT:STILL',shake:'ACT:BODY',game:'ACT:BODY'};
   const P_HINT=a=>['跟我一起試試看！','跟我一起'+a+'！','沒關係，我們等一下再試。'];
+  // 暖身動作庫：每次隨機洗牌，同一輪不重複。stand＝要站著才能做；jump＝手環要能認跳
   const PRACTICE=[
-    {kind:'body',do:'原地跑步',lead:'跟我一起，在原地跑一跑！',beats:['跑、跑、跑！','好棒，再一下下！','哇，你跑得好快！'],sound:'step',demo:'swing',target:{type:'seconds',value:5}},
-    {kind:'shake',do:'搖一搖',lead:'手一上一下，跟我一起搖一搖！',beats:['搖！','再搖！','搖得好棒！'],sound:'clap',demo:'shake',target:{type:'count',value:3}},
-    {kind:'arm',do:'揮動雙手',lead:'把手舉起來，跟我一起揮一揮！',beats:['揮呀揮！','再大力一點！','揮得好漂亮！'],sound:'rustle',demo:'wave',target:{type:'seconds',value:4}},
-    {kind:'still',do:'像木頭人一樣不動',lead:'現在變成木頭人，一動也不要動……',beats:['噓……','很好，繼續不動……','好厲害，你完全沒動！'],sound:'none',demo:'freeze',target:{type:'seconds',value:3}}
+    {kind:'body',stand:1,do:'原地跑步',lead:'跟我一起，在原地跑一跑！',beats:['跑、跑、跑！','好棒，再一下下！','哇，你跑得好快！'],sound:'step',demo:'swing',target:{type:'seconds',value:5}},
+    {kind:'body',stand:1,do:'踩水坑',lead:'地上有好多小水坑，跟我一起踩、踩、踩！',beats:['啪嗒、啪嗒！','水花濺起來了！','哇，好好玩的水坑！'],sound:'splash',demo:'swing',target:{type:'seconds',value:4}},
+    {kind:'shake',do:'搖鈴鐺',lead:'手裡拿著一個小鈴鐺，跟我一起搖一搖！',beats:['叮鈴！','叮鈴叮鈴！','鈴鐺在唱歌了！'],sound:'clap',demo:'shake',target:{type:'count',value:3}},
+    {kind:'shake',do:'搖果樹',lead:'樹上有好多果子，抓住樹幹，搖一搖！',beats:['咚！掉下一顆！','又掉一顆！','籃子裝滿了！'],sound:'pop',demo:'shake',target:{type:'count',value:3}},
+    {kind:'arm',do:'拍翅膀',lead:'我們變成小鳥，兩隻手當翅膀，拍呀拍！',beats:['拍拍拍！','飛高一點！','你飛起來了！'],sound:'rustle',demo:'flap',target:{type:'seconds',value:4}},
+    {kind:'arm',do:'划小船',lead:'我們坐上小船，兩隻手一起划、划、划！',beats:['划呀划！','船往前走了！','到對岸了！'],sound:'splash',demo:'swim',target:{type:'seconds',value:4}},
+    {kind:'arm',do:'攪魔法湯',lead:'鍋子裡有魔法湯，拿起大湯匙，攪一攪！',beats:['咕嚕咕嚕！','冒泡泡了！','魔法湯煮好了！'],sound:'rustle',demo:'stir',target:{type:'seconds',value:4}},
+    {kind:'arm',do:'揮手打招呼',lead:'遠遠的有朋友在看我們，一起揮揮手！',beats:['嗨！','再揮大一點！','朋友看到我們了！'],sound:'rustle',demo:'wave',target:{type:'seconds',value:4}},
+    {kind:'arm',do:'開車',lead:'握住方向盤，左轉、右轉，開車出發！',beats:['叭叭！','轉彎囉！','到站了！'],sound:'step',demo:'steer',target:{type:'seconds',value:4}},
+    {kind:'still',do:'像木頭人一樣不動',lead:'現在變成木頭人，一動也不要動……',beats:['噓……','很好，繼續不動……','好厲害，你完全沒動！'],sound:'none',demo:'freeze',target:{type:'seconds',value:3}},
+    {kind:'still',do:'變成小石頭',lead:'變成一顆小石頭，安安靜靜，一動也不動……',beats:['噓……','小石頭睡著了……','好厲害，一動也沒動！'],sound:'none',demo:'freeze',target:{type:'seconds',value:3}},
+    {kind:'jump',stand:1,jump:1,do:'青蛙跳',lead:'我們變成小青蛙，跳、跳！',beats:['呱！','再跳一下！','青蛙跳得好高！'],sound:'splash',demo:'jump',target:{type:'count',value:2}}
   ].map(m=>Object.assign(m,{hints:P_HINT(m.do),hintAt:[3,7,11]}));
+  const BETWEEN=['故事快到了，我們再玩一個！','再等一下下，故事就要來囉！','夥伴還在想故事，我們再動一動！','好好玩！再來一個！'];
+  const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  function practiceDeck(){
+    const ok=PRACTICE.filter(m=>!(cfg.seated&&m.stand)&&!(m.jump&&!(cfg.gestures||[]).includes('JUMP')));
+    // 不要連續兩次都是木頭人：先把動的排前面，木頭人插在中間
+    const deck=shuffle(ok);if(deck[0]&&deck[0].kind==='still'){const k=deck.findIndex(m=>m.kind!=='still');if(k>0)[deck[0],deck[k]]=[deck[k],deck[0]]}
+    return deck;
+  }
+  function nextPractice(){if(!S.deck||!S.deck.length)S.deck=practiceDeck();return S.deck.shift()}
 
   async function hold(r){while(alive(r)&&S.paused)await d.sleep(cfg.tick)}
   // 唸一段。聲音層支援暫停時，暫停後會從停下的那一句接著唸；不支援時才整段重唸
@@ -517,7 +625,12 @@ function createEngine(d){
   // 手環（或模擬按鈕）送來的訊號
   function signal(sig){
     const now=d.now(),A=S.act;
-    if(sig==='CHOICE_LEFT'||sig==='CHOICE_RIGHT'){if(S.choiceWaiter&&!S.paused){const w=S.choiceWaiter;S.choiceWaiter=null;w(sig==='CHOICE_LEFT'?'left':'right')}return}
+    if(sig==='CHOICE_LEFT'||sig==='CHOICE_RIGHT'){
+      const c=sig==='CHOICE_LEFT'?'left':'right';
+      if(S.paused)return;
+      if(S.choiceWaiter){const w=S.choiceWaiter;S.choiceWaiter=null;w(c)}
+      else S.lastChoice={c,t:now};                                            // 孩子聽到問題就先按了：記下來，等一下直接用
+      return}
     if(sig==='START'){if(A)A.skip=true;return}                                // 大人可以按右鍵幫孩子跳過
     if(!A||S.paused)return;
     if(A.kind==='game'){                                                     // v4 玩法：只記下最新強度和搖的次數，判斷交給 runGame
@@ -547,11 +660,9 @@ function createEngine(d){
     let settled=false,val,err;promise.then(v=>{settled=true;val=v},e=>{settled=true;err=e});
     await d.sleep(300);
     if(!settled&&line)await say(r,line);
-    const list=cfg.seated?PRACTICE.filter(m=>m.kind!=='body'):PRACTICE;
-    let i=0;
     while(alive(r)&&!settled){
-      await runMove(r,list[i%list.length],{practice:true});S.practices++;i++;
-      if(alive(r)&&!settled)await say(r,i%2?'故事快到了，我們再玩一個！':'再等一下下，故事就要來囉！');
+      await runMove(r,nextPractice(),{practice:true});S.practices++;
+      if(alive(r)&&!settled)await say(r,pick(BETWEEN));
     }
     if(err)throw err;return val;
   }
@@ -573,33 +684,47 @@ function createEngine(d){
     }
     fire();
   }
+  const branchLines=(b,name)=>({ask:'想去「'+b.left.label+'」，就按左邊的按鈕。想去「'+b.right.label+'」，就按右邊的按鈕。',
+    remind:name+'在等你決定喔。左邊的按鈕是「'+b.left.label+'」，右邊的按鈕是「'+b.right.label+'」。',
+    left:'好，我們去「'+b.left.label+'」！',right:'好，我們去「'+b.right.label+'」！'});
   async function askBranch(r){
-    const b=S.story.branch,name=S.story.companion.name;
+    const b=S.story.branch,name=S.story.companion.name,L=branchLines(b,name);
     S.phase='branch';d.ui('branch',b);d.cmd('BRANCH_ON');d.robot('ASK');
-    let choice=null;new Promise(res=>{S.choiceWaiter=res}).then(c=>{choice=c});
-    await say(r,'想去「'+b.left.label+'」，就按左邊的按鈕。想去「'+b.right.label+'」，就按右邊的按鈕。');
-    let last=d.now();
-    while(alive(r)&&!choice){
-      await hold(r);
-      if(!choice&&d.now()-last>=15000){await say(r,name+'在等你決定喔。左邊的按鈕是「'+b.left.label+'」，右邊的按鈕是「'+b.right.label+'」。');last=d.now()}
-      await d.sleep(cfg.tick);
+    let choice=null;
+    // 故事最後一句就在問「要去哪裡」，孩子常常一聽到就按了：8 秒內按的直接算數
+    if(S.lastChoice&&d.now()-S.lastChoice.t<8000)choice=S.lastChoice.c;
+    S.lastChoice=null;
+    if(!choice){
+      new Promise(res=>{S.choiceWaiter=res}).then(c=>{choice=c});
+      // 說明唸到一半孩子就按了：不用等它唸完
+      const q=makeQueue(r);q.push(L.ask);
+      let last=d.now();
+      while(alive(r)&&!choice){
+        await hold(r);
+        if(!choice&&q.idle&&d.now()-last>=15000){q.push(L.remind);last=d.now()}
+        else if(!q.idle)last=d.now();
+        await d.sleep(cfg.tick);
+      }
+      q.clear();if(d.cancelSpeech&&!q.idle)d.cancelSpeech();await q.drain();
     }
+    S.choiceWaiter=null;
     if(!alive(r))return null;
     d.cmd('BRANCH_OFF');S.phase='story';d.sfx('chime');d.ui('chosen',choice);
-    await say(r,'好，我們去「'+b[choice].label+'」！');
+    await say(r,L[choice]);
     return choice;
   }
 
   // replay：之前存下來的故事（不用再問 AI；配音的句子一模一樣，Fish 會直接用存好的音檔）
   async function start(params,replay){
     const r=++S.run;
-    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},log:[],choiceWaiter:null,practices:0,moved:0});
+    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},log:[],choiceWaiter:null,lastChoice:null,practices:0,moved:0,deck:practiceDeck()});
     d.ui('dark');d.robot('EMO:happy');
     try{
-      const data=replay?replay.start:await waitWith(r,d.api(cfg.api==='v3'?'/api/v3/start':cfg.api==='v4'?'/api/v4/start':'/api/v5/start',params),'故事正在路上。等它來的時候，我們先暖暖身！');
+      const data=replay?replay.start:await waitWith(r,d.api(cfg.api==='v3'?'/api/v3/start':cfg.api==='v4'?'/api/v4/start':'/api/v5/start',params),pick(['故事正在路上。等它來的時候，我們先暖暖身！','我正在想一個新故事。想好之前，我們先動一動！','嘿嘿，故事馬上來。先跟我玩個小遊戲！']));
       if(!alive(r))return;
       S.story=data.story;S.phase='story';d.ui('story',data.story);
       const name=S.story.companion.name;
+      if(d.prefetchText&&S.story.branch){const L=branchLines(S.story.branch,name);d.prefetchText([L.ask,L.left,L.right])}
       // v5：下半段要知道孩子在上半段的表現，所以等上半段的動作都做完才開始寫；v3、v4 一開始就先準備
       const lateFetch=S.story.api===5;
       const prepare=()=>{for(const c of ['left','right'])if(!S.pending[c]&&cfg.prefetchBoth)S.pending[c]=fetchHalf(c)};
@@ -610,9 +735,10 @@ function createEngine(d){
       if(!lateFetch)prepare();
       const w=data.warmup||{lines:[],steps:[],outro:''};
       for(const l of w.lines)await say(r,l);
-      if(S.practices<2)for(const st of w.steps){
+      // 暖身：每次從動作庫隨機抽，不再固定「跑→搖→木頭人」；等故事時已經暖過身就少做一點
+      for(let k=S.practices;k<2;k++){
         if(!alive(r))return;
-        await runMove(r,{kind:st.kind,do:st.do,lead:st.lead,beats:['很好！','就是這樣！',st.done],hints:P_HINT(st.do),hintAt:[3,7,11],sound:st.sound,demo:st.demo,target:st.target},{practice:true});
+        await runMove(r,nextPractice(),{practice:true});S.practices++;
       }
       await say(r,w.outro);
       await playScenes(r,data.scenes,lateFetch?prepare:null);
@@ -672,9 +798,20 @@ function endSpeech(){if(speechEnd){const f=speechEnd;speechEnd=null;f()}}
 let speechPaused=false,fishPlaying=false;const resumeWaiters=[];
 function releaseWaiters(){resumeWaiters.splice(0).forEach(f=>f())}
 function waitResume(my){return new Promise(res=>{if(!speechPaused||my!==speechToken)return res();resumeWaiters.push(res)})}
-function pauseSpeech(){if(speechPaused)return;speechPaused=true;try{player.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}
+function pauseSpeech(){if(speechPaused)return;speechPaused=true;setTalking(false);try{player.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}
 function resumeSpeech(){if(!speechPaused)return;speechPaused=false;if(fishPlaying){try{Promise.resolve(player.play()).catch(()=>{})}catch(e){}}releaseWaiters()}
-function cancelSpeech(){speechToken++;speechPaused=false;releaseWaiters();try{speechSynthesis.cancel()}catch(e){}try{player.pause()}catch(e){}endSpeech()}
+function cancelSpeech(){speechToken++;speechPaused=false;setTalking(false);releaseWaiters();try{speechSynthesis.cancel()}catch(e){}try{player.pause()}catch(e){}endSpeech()}
+// 嘴巴跟著說話動：有聲音的時候一開一合（大小隨機，偶爾閉一下，看起來像在講話），沒聲音就閉上
+let talkTimer=null;
+function setTalking(on){
+  const f=document.getElementById('face');if(!f)return;
+  if(on){if(talkTimer)return;f.classList.add('talking');
+    const tick=()=>{f.style.setProperty('--open',(Math.random()<.2?.08:.3+Math.random()*.7).toFixed(2));talkTimer=setTimeout(tick,75+Math.random()*95)};tick()}
+  else{clearTimeout(talkTimer);talkTimer=null;f.classList.remove('talking');f.style.setProperty('--open','0')}
+}
+player.addEventListener('playing',()=>{if(fishPlaying)setTalking(true)});
+player.addEventListener('pause',()=>setTalking(false));
+player.addEventListener('ended',()=>setTalking(false));
 // 挑裝置上最好聽的中文聲音：Edge 的「Natural」台灣聲音（免費、不限次數）最優先，再來是 Google，最後才是一般的
 let pickedVoice=null;
 function voiceScore(v){
@@ -703,7 +840,8 @@ function bestVoice(){
 }
 try{speechSynthesis.addEventListener('voiceschanged',()=>{pickedVoice=null;talkVoice=null;bestVoice()})}catch(e){}
 // 說故事的聲音設定：旁白慢一點；對話換聲音，沒有第二個好聲音時就用同一個聲音但音調高一點
-const VOICE_STYLE={narr:{rate:.86,pitch:1.0},talk:{rate:.95,pitch:1.08},talkSame:{rate:.95,pitch:1.28}};
+// （舊版音調拉到 1.28、句子在逗號切開，聽起來一頓一頓、像機器人，所以改成整句唸、音調只拉高一點點）
+const VOICE_STYLE={narr:{rate:.92,pitch:1.0},talk:{rate:.98,pitch:1.06},talkSame:{rate:.98,pitch:1.12}};
 async function speakDevice(text,my,role){
   while(my===speechToken){
     await waitResume(my);if(my!==speechToken)return;
@@ -717,8 +855,8 @@ function speakDeviceOnce(text,my,role){return new Promise(resolve=>{
   const narr=bestVoice(),talk=role==='talk',st=talk?(talkVoice?VOICE_STYLE.talk:VOICE_STYLE.talkSame):VOICE_STYLE.narr;
   const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';u.rate=st.rate;u.pitch=st.pitch;
   u.voice=talk&&talkVoice?talkVoice:narr;
-  let done=false;const fin=()=>{if(done)return;done=true;clearTimeout(tm);if(speechEnd===fin)speechEnd=null;resolve()};
-  const tm=setTimeout(fin,text.length*420+5000);speechEnd=fin;u.onend=fin;u.onerror=fin;
+  let done=false;const fin=()=>{if(done)return;done=true;setTalking(false);clearTimeout(tm);if(speechEnd===fin)speechEnd=null;resolve()};
+  const tm=setTimeout(fin,text.length*420+5000);speechEnd=fin;u.onend=fin;u.onerror=fin;u.onstart=()=>setTalking(true);
   try{speechSynthesis.speak(u)}catch(e){fin()}})}
 async function fetchVoice(text){
   const c=new AbortController(),t=setTimeout(()=>c.abort(),25000);
@@ -740,9 +878,20 @@ async function speakFish(text,my){
   if(blocked&&my===speechToken)await speakDevice(text,my);
 }
 // 「」裡是角色說的話，外面是旁白
+// 只有真的在說話（有句子標點，或前面是「：」）才換聲音；「左邊的小路」「加油」這種名字留在旁白裡，
+// 不然一句話會被切成「想去」…「左邊的小路」…「還是」…，聽起來一頓一頓、聲音忽高忽低
 function storyParts(text){
-  return (String(text).match(/「[^」]*」?|[^「]+/g)||[String(text)]).map(s=>s.trim()).filter(Boolean)
-    .map(s=>s[0]==='「'?{role:'talk',text:s.replace(/^「|」$/g,'')}:{role:'narr',text:s});
+  const raw=String(text).match(/「[^」]*」?|[^「]+/g)||[String(text)],out=[];
+  raw.forEach((s,i)=>{
+    const prev=i?raw[i-1].trim():'';
+    const talk=s[0]==='「'&&(/[，。！？!?…～~]/.test(s.slice(1,-1))||/[：:]$/.test(prev)||!prev);
+    const part=talk?{role:'talk',text:s.replace(/^「|」$/g,'').trim()}:{role:'narr',text:s.trim()};
+    if(!part.text)return;
+    const last=out[out.length-1];
+    if(last&&part.role==='narr'&&/^[，。！？!?…、～\s]+$/.test(part.text)){last.text+=part.text;return}   // 只剩標點：黏在前一句後面
+    if(last&&last.role==='narr'&&part.role==='narr')last.text+=part.text;else out.push(part);
+  });
+  return out;
 }
 // 說故事的停頓：句子結束停久一點，換角色說話前後也停一下。停頓中被暫停或取消都會立刻反應
 async function storyPause(ms,my){const end=performance.now()+ms;while(my===speechToken&&performance.now()<end){await waitResume(my);await new Promise(r=>setTimeout(r,40))}}
@@ -756,12 +905,12 @@ async function speak(text){
   let prev=null;
   for(const part of storyParts(text)){
     if(my!==speechToken)return;
-    if(prev&&prev!==part.role)await storyPause(220,my);
-    for(const p of chunk(part.text,40)){
+    if(prev&&prev!==part.role)await storyPause(260,my);
+    for(const p of chunk(part.text,110)){                      // 一次唸一整句，不在逗號切開
       if(my!==speechToken)return;
       $('caption').textContent=part.role==='talk'?'「'+p+'」':p;
       await speakDevice(p,my,part.role);
-      await storyPause(/[。！？!?…—]$/.test(p)?380:120,my);
+      await storyPause(/[。！？!?…—」]$/.test(p)?420:150,my);
     }
     prev=part.role;
   }
@@ -771,10 +920,15 @@ function prefetch(sc){
   if(voiceMode!=='fish')return;
   const list=[...chunk(sc.text,360)];
   if(sc.move)list.push(sc.move.lead,...sc.move.beats);
-  if(sc.game){list.push(sc.game.lead,...sc.game.steps);for(const ph of sc.game.phases)if(ph.call)list.push(ph.call)}
+  if(sc.game){const g=sc.game;list.push(g.lead,...g.steps);for(const ph of g.phases){if(ph.call)list.push(ph.call);if(ph.hint)list.push(ph.hint)}
+    list.push(g.win,g.help,(g.waits||[])[0])}                   // 結果和等待句也先準備，動作做完不會突然安靜很久
   if(sc.after)list.push(...chunk(sc.after,360));
   if(sc.move)list.push(...sc.move.hints);
-  for(const t of list)prefetchChain=prefetchChain.then(()=>voiceFor(t)).catch(()=>{});
+  prefetchText(list);
+}
+function prefetchText(list){
+  if(voiceMode!=='fish')return;
+  for(const t of list)if(t&&String(t).trim())prefetchChain=prefetchChain.then(()=>voiceFor(String(t).trim())).catch(()=>{});
 }
 
 /* ═════════ 聲音：音效（用程式合成，不需要音檔） ═════════ */
@@ -796,7 +950,7 @@ function sfx(name){
   if(name==='ding'){tone(1568,0,.6,.24);tone(2350,0,.35,.08);return}
   if(name==='wobble'){tone(392,0,.18,.12);tone(330,.14,.28,.12);return}
   if(name==='pop'){tone(660,0,.08,.14);tone(990,.06,.14,.12);return}                 // 舉高：往上的「啵」
-  if(name==='click'){noise(.04,'bandpass',2600,2,.5);return}                          // 轉手腕：「喀」            // 「咦？」：該停住的時候動到了                 // 「聽口令搖」的口令聲，要和其他聲音分得出來
+  if(name==='click'){noise(.04,'bandpass',2600,2,.5);return}                          // 轉手腕：「喀」
   if(now-lastSfx<170)return;lastSfx=now;
   if(name==='step')noise(.09,'lowpass',380,.7,.5);
   else if(name==='splash'){const f=noise(.28,'bandpass',1500,.9,.42);if(f&&actx)f.frequency.exponentialRampToValueAtTime(500,actx.currentTime+.26)}
@@ -841,7 +995,8 @@ async function connectBand(){
     ch.addEventListener('characteristicvaluechanged',e=>{const t=new TextDecoder().decode(e.target.value).trim().toUpperCase();
       if(t.startsWith('CAL:LIST:')){bandGestures=gesturesFromCal(t.slice(9));bandUI();return}
       if(t)engine.signal(t)});
-    cmd('MODE_CHILD');cmd('GAME_ACTIVE');cmd('PAUSE');cmd('CAL?');                 // 問手環哪些新動作校正好了bandUI();notice('手環連上了。');
+    cmd('MODE_CHILD');cmd('GAME_ACTIVE');cmd('PAUSE');cmd('CAL?');                 // 問手環哪些新動作校正好了
+    bandUI();notice('手環連上了。');
   }catch(e){band.connected=false;band.ch=null;bandUI();
     const m=String(e&&e.message||e);
     notice(/cancel/i.test(m)?'沒有選擇手環。':'沒有連上手環：'+m+'。請確認手環有開機、沒有被其他分頁或手機連著，再按一次「連接手環」。')}
@@ -855,7 +1010,35 @@ async function connectBand(){
    CHEER  孩子完成了，歡呼      ASK  等孩子選路      WAVE  故事結束，揮手說明天見 */
 const robotLog=[];
 function robot(c){robotLog.push(c);if(robotLog.length>60)robotLog.shift();
-  try{window.dispatchEvent(new CustomEvent('sdq-robot',{detail:c}))}catch(e){}}
+  try{window.dispatchEvent(new CustomEvent('sdq-robot',{detail:c}))}catch(e){}
+  botFromCmd(c)}
+// 畫面上的機器人也跟著做：示範動作時手會動，歡呼會跳，選路時兩隻手指向左右
+const POSES={up:'up',reach:'up',down:'down',low:'down',shake:'shake',swim:'swim',flap:'flap',swing:'swing',dash:'swing',wave:'wave',
+  freeze:'freeze',twist:'twist',steer:'steer',stir:'stir',jump:'jump',knock:'stir',push:'ask'};
+let poseTimer=null,basePose='';
+// ms：短暫的動作（歡呼、提醒），做完回到原本正在示範的動作
+function botPose(p,ms){const b=document.getElementById('bot');if(!b)return;clearTimeout(poseTimer);
+  if(!ms)basePose=p||'';b.dataset.pose=p||'';if(ms)poseTimer=setTimeout(()=>{b.dataset.pose=basePose},ms)}
+function botFromCmd(c){
+  c=String(c||'');
+  if(c.startsWith('DEMO:'))botPose(POSES[c.slice(5)]||'swing');
+  else if(c==='CHEER')botPose('cheer',1800);
+  else if(c==='NUDGE')botPose('nudge',1000);
+  else if(c==='ASK')botPose('ask');
+  else if(c==='WAVE')botPose('wave',4000);
+}
+// 眼睛偶爾東看看、西看看，偶爾連眨兩下，看起來像活的
+function lookAround(){
+  for(const f of document.querySelectorAll('.face')){
+    if(f.offsetParent===null)continue;
+    const r=Math.random();
+    if(r<.3){f.style.setProperty('--lx','0em');f.style.setProperty('--ly','0em')}
+    else{f.style.setProperty('--lx',((Math.random()*2-1)*.28).toFixed(2)+'em');f.style.setProperty('--ly',((Math.random()*2-1)*.14).toFixed(2)+'em')}
+    if(Math.random()<.22){f.classList.add('blink2');setTimeout(()=>f.classList.remove('blink2'),520)}
+  }
+  setTimeout(lookAround,1800+Math.random()*2600);
+}
+setTimeout(lookAround,1500);
 
 /* ═════════ 把上面的東西接進故事流程 ═════════ */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -882,16 +1065,16 @@ function fmtTime(s){return s>=60?Math.floor(s/60)+' 分 '+(s%60)+' 秒':s+' 秒'
 function ui(ev,data){
   if(ev==='dark'){show('setup',false);show('finale',false);show('stage',true);show('fork',false);show('resume',false);show('sheet',false);
     $('caption').textContent='';show('caption',$('subs').checked);sceneNo=0;storyTitle='';sceneEmo='happy';
-    face.dataset.emo='calm';face.classList.add('thinking');face.classList.remove('moving');sheetInfo();window.scrollTo(0,0)}
+    face.dataset.emo='calm';botPose('');$('meter').classList.remove('on');face.classList.add('thinking');face.classList.remove('moving');sheetInfo();window.scrollTo(0,0)}
   else if(ev==='story'){storyTitle=data.title;if(data.libId)rememberLibId(data.libId);face.classList.remove('thinking');face.dataset.emo='happy';sheetInfo()}
   else if(ev==='line'){$('caption').textContent=data}
   else if(ev==='level'){face.style.setProperty('--glow',Math.min(1,data/7).toFixed(2))}
-  else if(ev==='progress'){$('smileFill').style.strokeDashoffset=String(100*(1-data));$('smileFill').style.opacity=data>0.01?'1':'0'}
+  else if(ev==='progress'){$('meterFill').style.width=(Math.max(0,Math.min(1,data))*100).toFixed(1)+'%';$('meter').classList.toggle('on',data>0.01)}
   else if(ev==='move'){face.classList.remove('thinking');face.classList.add('moving');face.dataset.emo='excited'}
-  else if(ev==='rest'){face.classList.remove('moving');face.dataset.emo=sceneEmo;if(!storyTitle)face.classList.add('thinking')}
+  else if(ev==='rest'){face.classList.remove('moving');basePose='';if(!/cheer|nudge/.test($('bot').dataset.pose||''))botPose('');face.dataset.emo=sceneEmo;if(!storyTitle)face.classList.add('thinking')}
   else if(ev==='scene'){sceneNo=data.index;sceneEmo=data.emotion||'calm';face.dataset.emo=sceneEmo;sheetInfo()}
   else if(ev==='branch'){$('forkL').textContent=data.left.label;$('forkR').textContent=data.right.label;show('fork',true);show('caption',false);face.dataset.emo='surprised'}
-  else if(ev==='chosen'){show('fork',false);show('caption',$('subs').checked);face.dataset.emo='happy'}
+  else if(ev==='chosen'){show('fork',false);botPose('cheer',1500);show('caption',$('subs').checked);face.dataset.emo='happy'}
   else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事'}
   else if(ev==='end'){leaveStage();show('finale',true);window.scrollTo(0,0);
     $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion.name+'說：「明天見！」';
@@ -912,7 +1095,8 @@ function sourceNote(src){
 const RECENT_KEY='sdq-lib-recent';
 function recentLibIds(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]')}catch(e){return []}}
 function rememberLibId(id){try{const l=recentLibIds().filter(x=>x!==id);l.unshift(id);localStorage.setItem(RECENT_KEY,JSON.stringify(l.slice(0,20)))}catch(e){}}
-function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' 幕':'故事準備中')+(storySource.length?'　·　'+storySource.map(s=>SOURCE_NAME[s]||s).join('＋'):'')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')}
+function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' 幕':'故事準備中')+(storySource.length?'　·　'+storySource.map(s=>SOURCE_NAME[s]||s).join('＋'):'')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')+'　·　聲音：'+voiceName()}
+function voiceName(){if(voiceMode==='fish')return 'Fish 配音';const v=bestVoice();return v?v.name:'裝置內建'}
 function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech()}
 // 聽過的故事：名稱和運動時間，加上整篇故事（兩條路的下半段都有），只存在這台裝置上。
 // 「再聽一次」不用再問 AI，配音的句子也一模一樣，所以 Fish 會直接播存好的音檔，不用額度。
@@ -953,7 +1137,7 @@ $('pastList').addEventListener('click',e=>{const b=e.target.closest('[data-repla
 
 // 用哪一版故事引擎：預設 v5；網址加 ?api=v4 可以換回 v4 比較
 const API_VERSION=(()=>{try{const v=new URLSearchParams(location.search).get('api');return /^v[345]$/.test(v||'')?v:'v5'}catch(e){return 'v5'}})();
-const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,sleep,now:()=>performance.now(),cfg:{api:API_VERSION}});
+const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,prefetchText,sleep,now:()=>performance.now(),cfg:{api:API_VERSION}});
 
 /* 螢幕不要自己鎖起來（鎖了故事會被系統暫停） */
 let wake=null;
@@ -1000,7 +1184,7 @@ $('sensSeg').addEventListener('click',e=>{const b=e.target.closest('[data-sens]'
 function setAge(a){ageValue=String(a);document.querySelectorAll('#ages button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.age===ageValue)))}
 $('ages').addEventListener('click',e=>{const b=e.target.closest('[data-age]');if(b)setAge(b.dataset.age)});
 $('connect').onclick=connectBand;
-try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voice==='fish';if(s.sens&&SENS[s.sens])setSens(s.sens);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voiceV===2?s.voice==='fish':true;   /* v5.6 起預設用 Fish 配音 */if(s.sens&&SENS[s.sens])setSens(s.sens);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
 function begin(replay){
   notice('');
   if(!(replay&&replay.start&&replay.start.scenes)){replay=null;replayId=null}   // 一般開始；replay 是「再聽一次」存下來的故事
@@ -1013,7 +1197,7 @@ function begin(replay){
   // 用按鈕玩或手環沒校正：不用新動作。跳不用校正，但坐著玩不跳
   const gestures=band.connected?bandGestures.concat($('seated').checked?[]:['JUMP']):[];
   Object.assign(engine.cfg,SENS[sensValue]||SENS.mid,{seated,gestures});
-  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,voice:voiceMode,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
+  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,voice:voiceMode,voiceV:2,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
   simStart();
   engine.start({mode:'child',player:'solo',posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[],gestures,recent:recentLibIds()},replay||undefined);
 }
