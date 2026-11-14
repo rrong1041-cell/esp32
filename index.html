@@ -403,6 +403,7 @@ function createEngine(d){
 
   // v4 玩法：照 phases 判斷進度，進度旁白照「孩子做了多少」一句一句往下唸。
   // 孩子沒動時故事停著等，但一直有聲音（等待句 → 示範 → 輪流），不會自動跳過；大人可以按右鍵跳過。
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
   const LV={strong:l=>l>=cfg.strongMin,any:l=>l>=cfg.moveMin,light:l=>l>=cfg.lightMin&&l<=cfg.lightMax};
   const phaseSize=ph=>ph.mode==='count'?ph.n:ph.mode==='cue'?ph.rounds:ph.seconds;
   const phaseDemo=ph=>ph.mode==='still'?'freeze':(ph.mode==='count'||ph.mode==='cue')?'shake':ph.band==='light'?'wave':'swing';
@@ -426,10 +427,16 @@ function createEngine(d){
       let progressed=false;
       if(ph.mode==='level'){
         if(LV[ph.band](lv)){phDone+=dt;moved+=dt;progressed=true}
-        else if(ph.oops&&lv>=cfg.tooHard&&now-oopsAt>5000&&q.idle){oopsAt=now;q.push(ph.oops);progressed=true}
+        else if(ph.band==='light'&&lv>cfg.lightMax){                        // 要輕輕的卻太大力：進度倒退，不是亂動也能過
+          phDone=Math.max(0,phDone-dt*1.5);progressed=true;
+          if(now-oopsAt>4000&&q.idle){oopsAt=now;q.push(ph.oops||'輕一點，慢慢來……')}
+        }
       }else if(ph.mode==='still'){
         if(fresh&&lv<=cfg.stillMax){phDone+=dt;progressed=true}
-        else if(lv>=cfg.moveMin)phDone=Math.max(0,phDone-dt);
+        else if(lv>=cfg.moveMin){                                             // 要停住卻明顯在動：這一次重來
+          if(phDone>0.8&&now-oopsAt>4000&&q.idle){oopsAt=now;q.push(pick(['哎呀，動到了！我們再停一次。','噓……動了喔，再當一次木頭人。']))}
+          phDone=0;
+        }
       }else if(ph.mode==='count'){
         const c=A.sCount-sMark;if(c>phDone){moved+=(c-phDone)*0.8;phDone=c;progressed=true}
       }else if(ph.mode==='cue'){
