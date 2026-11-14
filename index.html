@@ -1,975 +1,870 @@
-// 聲動奇境 Cloudflare Worker v3（作家→導演故事引擎；保留 v2 的 /api/start、/api/next 給舊網頁）
-// Bindings: AI (Workers AI). Optional: FISH_API_KEY, FISH_VOICE_ID, STORY_DB (D1).
-// 新網頁用：/api/v3/start /api/v3/next；舊網頁仍可用：/api/start /api/next；另有 /api/senior-session /api/voice
-// 建議先部署成新的 Worker 測試，再把網頁的 WORKER_URL 換過去。
-// v3.4：作家寫法規則（短句、每段有事件、少形容詞）、靈感動物就是夥伴、選項由作家給、修正下半段導演 JSON 判斷
-// v4.0：新增 /api/v4/start、/api/v4/next。程式決定故事骨架和玩法（手環偵測得到的 7 種），AI 只照骨架寫句子。
-// v4.1：夥伴名字由程式抽、進度旁白不能是口令、目標留到高潮才完成
-// v4.2：可以換作家模型（WRITER_MODEL）並設定思考程度（WRITER_REASONING）
-// v4.3：配合較慢的大模型（等待 80 秒、小問題直接修不重寫）、簡體字自動換繁體
-const VERSION='Story-v4.3-20261114';
-const MODEL='@cf/google/gemma-4-26b-a4b-it';
-const TOTAL=8;
-const ALLOWED=['SWIPE_LEFT','SWIPE_RIGHT','JUMP','RUN','SHAKE','ARM_UP','ARM_DOWN','TILT_LEFT','TILT_RIGHT','HOLD_UP'];
-const SEATED=ALLOWED.filter(x=>!['RUN','JUMP'].includes(x));
-const OPTIONS={SWIPE_LEFT:'向左揮動',SWIPE_RIGHT:'向右揮動',JUMP:'輕輕跳躍',RUN:'原地跑步',SHAKE:'輕搖手臂',ARM_UP:'舉起手臂',ARM_DOWN:'放低手臂',TILT_LEFT:'左傾手腕',TILT_RIGHT:'右傾手腕',HOLD_UP:'保持舉手姿勢'};
-
-// ───────────── 工具 ─────────────
-function reply(obj,status=200){return new Response(JSON.stringify(obj),{status,headers:{'Content-Type':'application/json; charset=utf-8','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Cache-Control':'no-store'}})}
-function clean(v,n=250){return typeof v==='string'?v.trim().slice(0,n):''}
-function limited(v,min,max,defaultValue){const n=Number(v);return Number.isFinite(n)?Math.max(min,Math.min(max,Math.floor(n))):defaultValue}
-async function bodyJSON(req){const raw=await req.text();if(raw.length>32000)throw Error('請求內容太長');try{return JSON.parse(raw)}catch{throw Error('JSON 格式不正確')}}
-function jsonFromModel(result){if(result?.errors?.length)throw Error('Workers AI：'+(result.errors[0].message||'失敗'));let text=result?.choices?.[0]?.message?.content??result?.response??result?.text??result;
- if(result?.choices?.[0]?.finish_reason==='length')throw Error('AI 回答過長遭截斷，請重試');
- if(Array.isArray(text))text=text.map(x=>x.text||'').join('');if(typeof text==='object'&&text!==null&&(text.scenes||text.plan||text.items||text.title||text.moves))return text;
- if(typeof text!=='string')throw Error('AI 未提供文字');text=text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');try{return JSON.parse(text)}catch{const first=text.indexOf('{'),last=text.lastIndexOf('}');if(first>=0&&last>first)return JSON.parse(text.slice(first,last+1));throw Error('AI 回答不是有效 JSON')}}
-async function askAI(env,prompt,timeout=90000,systemOverride=null,opts={}){if(!env.AI)throw Error('沒有 AI Binding。Cloudflare Worker 必須綁定名稱 AI 的 Workers AI。');const c=new AbortController();const timer=setTimeout(()=>c.abort(),timeout);try{
- const result=await Promise.race([env.AI.run(env.MODEL||MODEL,{messages:[{role:'system',content:systemOverride||'你是繁體中文兒童故事作家。只輸出合法且完整的 JSON。'},{role:'user',content:prompt}],response_format:{type:'json_object'},max_completion_tokens:opts.tokens||3300,temperature:opts.temp??0.8,top_p:0.93,stream:false,chat_template_kwargs:{enable_thinking:false}}),new Promise((_,reject)=>c.signal.addEventListener('abort',()=>reject(Error('AI 等待超過 '+Math.floor(timeout/1000)+' 秒，請再試一次')),{once:true}))]);return jsonFromModel(result)
- }finally{clearTimeout(timer)}}
-// 帶重試與總時限的生成：驗證失敗會把原因告訴 AI 重寫
-async function generate(env,prompt,system,tokens,validate,o){
- let lastErr='';
- for(let i=0;i<o.attempts;i++){
-  const left=o.deadline-Date.now();if(left<12000)break;
-  try{
-   const raw=await askAI(env,i?prompt+'\n\n（上次輸出不合格：'+lastErr+'。請完全依照格式與字數重寫。）':prompt,Math.min(o.timeout,left),system,{tokens,temp:i?0.65:(o.temp||0.8)});
-   return validate(raw);
-  }catch(e){lastErr=e.message||String(e)}
- }
- throw Error(lastErr||'AI 生成時間不足，請再試一次');
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E0D24">
+<title>聲動奇境｜關燈，開始說故事</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@500;800&family=Huninn&display=swap" rel="stylesheet">
+<style>
+:root{
+  --dusk:#2B2A5C; --plum:#5A3F8E; --peach:#FFB48A; --cream:#FFF7E6; --paper-line:#EBDDBF;
+  --moon:#FFD86B; --mint:#8FE8CC; --berry:#FF7E96; --ink:#2B2A5C; --soft:#6E6C92;
+  --story:"Huninn","Chiron GoRound TC","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --round:"Chiron GoRound TC","Huninn","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --ui:"Chiron GoRound TC","Huninn",system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
 }
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--ui);font-weight:500;line-height:1.7;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--berry);outline-offset:3px;border-radius:8px}
+[hidden]{display:none!important}
 
-// ───────────── 故事設計：每篇隨機安排動作與起點，AI 只負責編理由 ─────────────
-const ROLE={
- RUN:'必須跑起來才來得及的時刻（追上、逃開、趕路）',
- JUMP:'要跳過或跳起來的時刻（跳過小水坑、倒下的樹幹、摘高處的東西）',
- SHAKE:'要搖一搖的時刻（搖樹、搖鈴鐺、搖掉身上的水）',
- SWIPE_LEFT:'要向左揮手或撥開東西的時刻',
- SWIPE_RIGHT:'要向右揮手或撥開東西的時刻'
-};
-const VERB={RUN:'跑',JUMP:'跳',SHAKE:'搖一搖',SWIPE_LEFT:'向左揮手',SWIPE_RIGHT:'向右揮手'};
-function pick(a){return a[Math.floor(Math.random()*a.length)]}
-function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-// 舊版備援（只在網頁沒傳回 actionPlan 時使用）
-const ACTION_FALLBACK={
- general:{2:{code:'RUN',seconds:3},5:{code:'JUMP',count:2},7:{code:'SHAKE',seconds:3}},
- seated:{2:{code:'SHAKE',seconds:3},5:{code:'SWIPE_RIGHT',count:2},7:{code:'SWIPE_LEFT',count:2}}
-};
-const POSE_ACTIONS={general:['RUN','JUMP','SHAKE','SWIPE_LEFT','SWIPE_RIGHT'],seated:['SHAKE','SWIPE_LEFT','SWIPE_RIGHT']};
-// 第4幕固定是選路，第5幕固定有動作（選路的後果）。其餘動作落在哪幕每篇不同。
-const SLOT_SETS=[[2,5,7],[3,5,7],[2,5,6],[3,5,6]];
-function makeActionPlan(posture){
- let pool=shuffle(posture==='general'?['RUN','JUMP','SHAKE']:POSE_ACTIONS.seated);
- if(posture==='general'&&Math.random()<0.35)pool[2]=pick(['SWIPE_LEFT','SWIPE_RIGHT']);   // 跑、跳、搖為主，揮手偶爾出現
- const slots=pick(SLOT_SETS);
- const ap={};
- slots.forEach((s,i)=>{const code=pool[i%pool.length];ap[s]=(code==='RUN'||code==='SHAKE')?{code,seconds:2+Math.floor(Math.random()*3)}:{code,count:2+Math.floor(Math.random()*2)}});
- return ap}
-function cleanActionPlan(raw){
- const out={};
- if(raw&&typeof raw==='object')for(const k of Object.keys(raw)){const i=Number(k),v=raw[k];if(i>=1&&i<=7&&i!==4&&v&&ROLE[v.code])out[i]={code:v.code,count:limited(v.count,1,3,1),seconds:limited(v.seconds,0,6,0)}}
- return out}
+/* ── 夥伴的臉：兩顆會眨、會變表情的眼睛。準備畫面的小機器人和故事畫面的大臉共用 ── */
+.face{position:relative;--glow:0}
+.face .eye{position:absolute;top:.5em;width:1.5em;height:1.9em;border-radius:.62em;background:var(--moon);border:.3em solid transparent;
+  box-shadow:0 0 calc(.5em + 1.1em*var(--glow)) rgba(255,216,107,calc(.35 + .5*var(--glow)));
+  transition:width .3s,height .3s,top .3s,border-radius .3s,transform .3s,background-color .3s;animation:blink 5.2s infinite}
+.face .eye.l{left:.5em}.face .eye.r{right:.5em;animation-delay:.06s}
+@keyframes blink{0%,93%,100%{scale:1 1}96%{scale:1 .12}}
+.face[data-emo=happy] .eye,.face[data-emo=proud] .eye{width:1.75em;height:1.7em;top:.8em;border-radius:50%;background:transparent;border-top-color:var(--moon);box-shadow:none;animation:none}
+.face[data-emo=proud] .eye{transform:translateY(-.12em) scale(1.08)}
+.face[data-emo=excited] .eye{width:1.7em;height:1.9em;top:.45em;border-radius:50%}
+.face[data-emo=surprised] .eye{width:1.75em;height:1.75em;top:.55em;border-radius:50%;animation:none}
+.face[data-emo=worried] .eye{height:1.6em;top:.7em}
+.face[data-emo=worried] .eye.l{transform:rotate(14deg)}.face[data-emo=worried] .eye.r{transform:rotate(-14deg)}
+.face[data-emo=sad] .eye{height:1.3em;top:.95em;border-radius:.5em .5em .7em .7em}
+.face[data-emo=sad] .eye.l{transform:rotate(-16deg)}.face[data-emo=sad] .eye.r{transform:rotate(16deg)}
+.face[data-emo=calm] .eye{height:1em;top:1.1em;border-radius:.45em}
+.face[data-emo=scared] .eye{width:1.1em;height:1.1em;top:.9em;border-radius:50%;animation:shiver .22s infinite}
+.face[data-emo=scared] .eye.l{left:.8em}.face[data-emo=scared] .eye.r{right:.8em}
+@keyframes shiver{0%,100%{transform:translateX(-.03em)}50%{transform:translateX(.03em)}}
+.face.thinking .eye{animation:look 2.6s ease-in-out infinite}
+@keyframes look{0%,100%{transform:translateX(-.22em)}50%{transform:translateX(.22em)}}
+.face.moving{animation:hop .5s ease-in-out infinite}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-.22em)}}
 
-// 故事起點：地點 × 角色 × 物品 × 麻煩 隨機組合，每次都不同
-const THINGS=['紅氣球','鈴鐺','小帽子','風箏','信','果乾籃','小鑰匙','圍巾','小鼓','蛋','地圖','小燈籠','麵包','日記本'];
-const TROUBLES=['被風吹走了','滾走了','不見了','卡在很高的地方','掉進了水裡','被一隻小鳥叼走了','壞掉了','被送錯地方了','被水沖走了'];
-const BANK={
- '自由冒險':{who:['小熊','小企鵝','小狐狸','小兔子','小刺蝟','小松鼠','小狗郵差','小貓咪','小河馬'],place:['草地','雪坡','小河邊','市集','山丘','海邊','森林','小鎮']},
- '奇幻':{who:['小龍','小巫婆','獨角獸寶寶','小精靈','會說話的小蘑菇','城堡裡的小廚師'],place:['雲朵上的城堡','彩虹橋下','魔法森林','藏著秘密的山洞','星星池塘']},
- '太空':{who:['小太空狗','小機器人','外星小朋友','小太空人','會發光的小星星'],place:['月球','太空站','紅色小行星','彗星尾巴旁','星星市集']},
- '海洋':{who:['小海龜','小章魚','小水母','小海豚','寄居蟹','小海馬'],place:['珊瑚礁','沙灘','海底洞穴','小島','漁港']},
- '神祕':{who:['小偵探','小貓','小浣熊','會寫字的小老鼠','夜貓子'],place:['老閣樓','夜晚的博物館','霧裡的小鎮','舊火車站','後院的大樹下']},
- '搞笑':{who:['愛打嗝的小恐龍','打噴嚏的大象','愛睡覺的國王','怕癢的小獅子','愛唱歌的青蛙'],place:['村子廣場','國王的城堡','大象的浴缸旁','池塘邊','麵包店']}
-};
-function startPoint(topic){
- const b=BANK[topic];
- if(b)return '故事起點（請照這個發展，不要換成別的）：在'+pick(b.place)+'，'+pick(b.who)+'的'+pick(THINGS)+pick(TROUBLES)+'。';
- return '孩子想聽的主題是「'+topic+'」。請把它變成一個具體、簡單、孩子一聽就懂的小情境（有角色、有東西、有地點）。';
-}
-const BANNED=/能量|感應|節奏|音符|重力|系統|感測|藍牙|裝置|機關|啟動|喚醒|原地|動作/;
-const STORY_SYSTEM='你是替 5～8 歲孩子寫「有聲故事」的作家，使用台灣口語的繁體中文。寫法：短句、具體畫面、擬聲詞、對話；一幕只講一件事；故事用第二人稱「你」，聽故事的孩子就是主角，故事起點裡的動物是你的夥伴，需要你幫忙，夥伴說話時稱呼孩子「你」，絕不把孩子叫成動物的名字；上一幕的人物、物品、地點要延續，不憑空換場景。禁止：抽象設定（能量、魔法裝置、感應、節奏、音符、重力、系統）、說教、嚇人情節、真實危險。需要動作的幕，scene 只寫到「必須動作、還沒成功」為止，成功後的結果只放在 result。只輸出合法 JSON，不要 markdown。';
-const STYLE_EXAMPLE='風格參考（只學語氣和句型，範例裡的蝸牛、雨傘絕對不能出現在故事裡）：scene「呼——一陣大風！小蝸牛的藍雨傘被吹上了天，越飄越遠，快要飄過小橋了！」；cue「快跑，我們追上去！」；result「你們衝到橋邊，雨傘剛好卡在欄杆上。小蝸牛一把抱住它，笑得眼睛都彎了。」';
+/* ── 準備畫面：黃昏的天空，下面是一張米色的紙 ── */
+.sky{position:relative;height:292px;overflow:hidden;color:#FFF7E6;
+  background:linear-gradient(180deg,#2B2A5C 0%,#4A3A86 38%,#8A4F96 66%,#F09E82 90%,#FFC59A 100%)}
+.sky .star{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);border-radius:50%;background:#FFF3C4;opacity:.85;animation:twinkle 3.4s ease-in-out infinite;animation-delay:var(--d,0s)}
+@keyframes twinkle{0%,100%{opacity:.85}50%{opacity:.25}}
+.sky .crescent{position:absolute;right:30px;top:calc(26px + env(safe-area-inset-top));width:54px;height:54px;border-radius:50%;box-shadow:-13px 8px 0 0 var(--moon);transform:rotate(-18deg)}
+.sky .hills{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:112px;display:block}
+.titles{position:relative;max-width:560px;margin:0 auto;padding:calc(34px + env(safe-area-inset-top)) 24px 0}
+.mark{font-family:var(--story);font-weight:700;font-size:2.9rem;letter-spacing:.08em;margin:0;line-height:1.15;text-shadow:0 3px 0 rgba(27,24,66,.35)}
+.lede{font-family:var(--story);font-size:1.18rem;margin:8px 0 0;color:#FFE9C9}
+.buddy{position:absolute;right:max(26px,calc(50% - 250px));bottom:20px;width:104px;height:84px;border-radius:30px 30px 26px 26px;background:#211F4D;border:4px solid #FFF7E6;font-size:22px;animation:peek 4.5s ease-in-out infinite}
+.buddy::before{content:"";position:absolute;left:50%;top:-20px;width:4px;height:18px;margin-left:-2px;background:#FFF7E6;border-radius:2px}
+.buddy::after{content:"";position:absolute;left:50%;top:-30px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--berry)}
+@keyframes peek{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-7px) rotate(3deg)}}
 
-function branchNorm(value){const left=clean(value?.left?.label,40),right=clean(value?.right?.label,40);if(!left||!right||left===right)throw Error('選路必須提供兩個不同選項');return {left:{label:left,impact:clean(value?.left?.impact,150)},right:{label:right,impact:clean(value?.right?.impact,150)}}}
-function planNorm(raw,topic){const p=raw||{};const o=p.outline||{};
- const plan={title:clean(p.title,40),world:clean(p.world,120),goal:clean(p.goal,120),companion:clean(p.companion,100),secret:clean(p.secret,150),openingTruth:clean(p.openingTruth,120),
-  outline:{setup:clean(o.setup,150),rise:clean(o.rise,150),reversal:clean(o.reversal,150),climax:clean(o.climax,150),ending:clean(o.ending,150)},branch:branchNorm(p.branch),topic,actionPlan:cleanActionPlan(p.actionPlan)};
- if(!plan.title||!plan.world||!plan.goal||!plan.companion||!plan.outline.climax||!plan.outline.ending)throw Error('主線計畫不完整');
- if(BANNED.test(JSON.stringify({...plan,actionPlan:null})))throw Error('主線出現抽象設定，請改成具體日常情境');
- if(!/蝸牛|雨傘/.test(topic)&&/蝸牛|雨傘/.test(JSON.stringify(plan)))throw Error('照抄了風格範例的角色或物品，請用故事起點裡的角色和物品');
- return plan}
+#setup main{max-width:560px;margin:0 auto;padding:6px 22px calc(44px + env(safe-area-inset-bottom))}
+.ask{font-family:var(--story);font-weight:700;font-size:1.5rem;margin:0 0 10px;display:block}
+#idea{display:block;width:100%;min-height:100px;resize:none;border:3px solid #FFD3DC;border-radius:26px;padding:16px 20px;background:#fff;
+  font-family:var(--story);font-size:1.4rem;line-height:1.6;color:var(--ink);box-shadow:0 5px 0 #FFD3DC;transition:border-color .15s,box-shadow .15s}
+#idea::placeholder{color:#B5AA90}
+#idea:focus{border-color:var(--berry);box-shadow:0 5px 0 var(--berry);outline:none}
+.ideas{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0 30px;padding:0;list-style:none}
+.ideas button{font-family:var(--story);font-size:1.04rem;line-height:1.4;padding:8px 14px;border-radius:999px;background:#fff;border:2px solid var(--paper-line);box-shadow:0 3px 0 var(--paper-line);transition:transform .12s,box-shadow .12s}
+.ideas li:nth-child(4n+1) button{background:#FFE7EC;border-color:#FFC6D1;box-shadow:0 3px 0 #FFC6D1}
+.ideas li:nth-child(4n+2) button{background:#E2F8F0;border-color:#B6EBD9;box-shadow:0 3px 0 #B6EBD9}
+.ideas li:nth-child(4n+3) button{background:#FFF1CC;border-color:#F6DC94;box-shadow:0 3px 0 #F6DC94}
+.ideas li:nth-child(4n+4) button{background:#EAE6FF;border-color:#CEC6F7;box-shadow:0 3px 0 #CEC6F7}
+.ideas button:active{transform:translateY(3px);box-shadow:none}
 
-function biblePrompt(topic,ap){
- const key={2:'outline.rise（第2幕）',3:'outline.rise（第3幕）',6:'outline.reversal（第6幕）',7:'outline.climax（第7幕）'};
- const lines=Object.keys(ap).map(k=>{const i=Number(k);return i===5?`- branch.left.impact 與 branch.right.impact 各自都要出現一個「${ROLE[ap[5].code]}」。`:`- ${key[i]}要出現一個「${ROLE[ap[i].code]}」。`}).join('\n');
- return `${startPoint(topic)}
-請設計一個簡單、完整的小冒險：主角是「你」（聽故事的孩子本人）。故事起點裡的動物是你的夥伴（有名字、有個性），牠遇到了麻煩，需要你幫忙。
-要有：一個清楚的目標、開頭的小意外、中途一個溫暖的小轉折、結局達成目標。
-全部要具體、日常、孩子看得懂（動物、東西、天氣、地點）。第4幕後孩子會選左路或右路：兩條路是兩個具體地點，各有不同的小狀況。
-動作安排（很重要）：
-${lines}
-輸出 JSON：{"title":"故事名","world":"一句話交代地點","companion":"夥伴名字＋一句個性","goal":"你和夥伴要做成什麼","secret":"中途的小轉折（一句）","openingTruth":"開頭的小意外（一句）","outline":{"setup":"","rise":"","reversal":"","climax":"","ending":""},"branch":{"left":{"label":"12字內的地點","impact":"走這條路遇到的狀況（一句）"},"right":{"label":"12字內的地點","impact":"走這條路遇到的狀況（一句）"}}}`}
+.field{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:2px dashed var(--paper-line)}
+.field>span:first-child{font-family:var(--story);font-size:1.16rem;font-weight:700}
+.ages{display:flex;gap:8px}
+.ages button{width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid var(--paper-line);font-family:var(--story);font-weight:700;font-size:1.25rem}
+.ages button[aria-pressed=true]{background:var(--berry);border-color:var(--berry);color:#fff;transform:scale(1.08)}
+.band{border-bottom:2px dashed var(--paper-line);margin-bottom:26px}
+.band small{display:block;font-family:var(--ui);font-weight:400;font-size:.82rem;color:var(--soft)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9CDB0;margin-right:7px}
+.dot.on{background:#39C99B;box-shadow:0 0 0 4px #D2F5E8}
+.ghost{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:9px 16px;min-height:48px;white-space:nowrap;font-weight:600;box-shadow:0 3px 0 var(--ink);transition:transform .12s,box-shadow .12s}
+.ghost:active{transform:translateY(3px);box-shadow:none}
 
-function actionFields(code){return `"cue":"夥伴對你說的一句話，20字內，用故事裡的說法叫你${VERB[code]}（例如「快跑，追上去！」），不要說「原地」或「動作」，也不要叫你動物的名字","during":"動作進行時看到的景象，20字內","result":"成功後局勢怎麼改變，25~60字，要接到下一幕","fail":["溫柔有趣的小意外，20字內","另一個不同的小意外，20字內"]`}
-function slotClause(i,ap,player){const s=ap[i];if(!s)return '不需要動作。';return `結尾卡在「${ROLE[s.code]}」，還沒成功。需要 ${actionFields(s.code)}${player==='coop'?',"partner_cue":"另一位玩家也要一起做的那句話，20字內"':''}。`}
-function scenesPrompt(plan,ap,player,age){
- return `續寫為 ${age} 歲孩子聽的故事《${plan.title}》。
-背景：${plan.world}。夥伴：${plan.companion}。目標：${plan.goal}。開頭小意外：${plan.openingTruth}。
-${STYLE_EXAMPLE}
-請寫第1~4幕。每幕 scene 是 2~3 個短句、40~80 字，要有對話或擬聲詞，並承接上一幕。
-第1幕：交代地點、夥伴與開頭小意外。不需要動作。
-第2幕：事情變急（${plan.outline.rise}）。${slotClause(2,ap,player)}
-第3幕：承接上一幕的結果，${ap[3]?'事情繼續發展（'+plan.outline.rise+'）':'發現新線索'}。${slotClause(3,ap,player)}
-第4幕：來到岔路。scene 要說清楚：向左是「${plan.branch.left.label}」，向右是「${plan.branch.right.label}」，最後問「你要走哪一邊？」。不替孩子選，不需要動作。
-輸出 JSON：{"scenes":[{"index":1,"title":"6字內","scene":""},{"index":2,"title":"","scene":"",...},{"index":3,...},{"index":4,...}]}`}
+/* 最大的按鈕本身就是「夜晚」：按下去，燈就關了 */
+#begin{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:72px;border-radius:24px;
+  background:var(--dusk);color:var(--moon);font-family:var(--story);font-weight:700;font-size:1.5rem;letter-spacing:.05em;
+  box-shadow:0 6px 0 #17163A,0 14px 26px rgba(43,42,92,.28);transition:transform .12s,box-shadow .12s}
+#begin::before{content:"";width:26px;height:26px;border-radius:50%;box-shadow:-7px 4px 0 0 var(--moon);transform:rotate(-18deg) translate(4px,-4px)}
+#begin:active{transform:translateY(5px);box-shadow:0 1px 0 #17163A}
+#notice{min-height:1.7em;margin:14px 0 0;color:#C2334F;font-size:.95rem;font-weight:600}
 
-function buildAction(spec,v,posture,coop){
- const cue=clean(v.cue,45),result=clean(v.result,140);
- if(cue.length<3||result.length<12)throw Error('動作幕缺少 cue 或 result');
- if(BANNED.test(cue+result+clean(v.during,40)))throw Error('動作內容出現抽象或現實用語（如「原地」「動作」）');
- const fail=(Array.isArray(v.fail)?v.fail:[]).map(x=>clean(x,60)).filter(Boolean).slice(0,2);
- const defaults=['差一點點，再試一次！','別急，慢慢來，再一次！'];while(fail.length<2)fail.push(defaults[fail.length]);
- const action={code:spec.code,count:spec.count||1,seconds:spec.seconds||0,purpose:'',cue,during:clean(v.during,40)||'做得很好，繼續！',result,fail,label:OPTIONS[spec.code],posture:posture==='seated'?'seated':'general'};
- const family=coop?{...action,cue:clean(v.partner_cue,45)||'你也一起來幫忙！',result:'',fail:[]}:null;
- return {action,family}}
-function buildScenes(raw,start,end,ap,posture,player){
- if(!Array.isArray(raw)||raw.length!==end-start+1)throw Error('幕數不完整：需要第 '+start+' 至 '+end+' 幕');
- return raw.map((v,i)=>{const index=start+i;if(Number(v.index)!==index)throw Error('幕數順序錯誤，第 '+index+' 幕');
-  const title=clean(v.title,24),scene=clean(v.scene,200);
-  if(!title||scene.length<28||scene.length>130)throw Error('第 '+index+' 幕長度不合（要 40~80 字）');
-  if(BANNED.test(title+scene))throw Error('第 '+index+' 幕出現抽象或現實用語');
-  let action=null,family=null;
-  if(ap[index]){const b=buildAction(ap[index],v,posture,player==='coop');action=b.action;family=b.family}
-  if(index===8&&!/。|！|!/.test(scene))throw Error('結局不完整');
-  return {index,title,scene,action,family}})}
+.how{list-style:none;margin:26px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;counter-reset:how}
+.how li{counter-increment:how;position:relative;background:#fff;border:2px solid var(--paper-line);border-radius:18px;padding:30px 10px 12px;text-align:center;font-family:var(--story);font-size:1rem;line-height:1.45}
+.how li::before{content:counter(how);text-align:center;position:absolute;left:50%;top:-14px;margin-left:-15px;width:30px;height:30px;line-height:30px;border-radius:50%;background:var(--moon);font-weight:700;font-family:var(--ui);font-size:.95rem}
+.past{margin-top:28px}
+.past h2,.grown summary{font-family:var(--story);font-size:1.16rem;font-weight:700;margin:0 0 8px}
+.past ul{list-style:none;margin:0;padding:0}
+.past li{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:8px 0;border-bottom:2px dashed var(--paper-line);font-family:var(--story);font-size:1.06rem}
+.past li span:last-child{font-family:var(--ui);font-size:.8rem;color:var(--soft);white-space:nowrap}
+.grown{margin-top:26px;background:#fff;border:2px solid var(--paper-line);border-radius:22px;padding:4px 18px}
+.grown summary{cursor:pointer;margin:0;padding:12px 0;list-style:none;display:flex;justify-content:space-between;align-items:center}
+.grown summary::-webkit-details-marker{display:none}
+.grown summary::after{content:"＋";color:var(--berry);font-size:1.3rem;line-height:1}
+.grown[open] summary::after{content:"－"}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:2px dashed var(--paper-line)}
+.sw b{display:block;font-family:var(--round);font-weight:800;font-size:1.06rem}
+.sw small{display:block;color:var(--soft);font-size:.84rem;line-height:1.5}
+.sw input{appearance:none;-webkit-appearance:none;flex:none;width:56px;height:32px;margin:0;border-radius:999px;background:#E8DEC6;position:relative;cursor:pointer;transition:background .2s}
+.sw input::after{content:"";position:absolute;left:4px;top:4px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(43,42,92,.25);transition:transform .2s}
+.sw input:checked{background:var(--berry)}
+.sw input:checked::after{transform:translateX(24px)}
+.seg{display:flex;gap:6px;flex:none}
+.seg button{width:44px;height:44px;border-radius:50%;background:#fff;border:2px solid var(--paper-line)}
+.seg button[aria-pressed=true]{background:var(--berry);border-color:var(--berry);color:#fff}
+.grown p{font-family:var(--story);font-size:.95rem;color:var(--soft);margin:0;padding:14px 0;border-top:2px dashed var(--paper-line)}
+.grown a{color:var(--ink)}
 
-async function start(body,env){
- const mode=body.mode==='senior'?'senior':'child',player=body.player==='coop'?'coop':'solo';
- const posture=(mode==='senior'||body.posture==='seated')?'seated':'general',age=limited(body.age,5,8,6);
- const topic=clean(body.topic,110)||'自由冒險';
- const ap=makeActionPlan(posture);
- const deadline=Date.now()+100000;
- const plan=await generate(env,biblePrompt(topic,ap),STORY_SYSTEM,900,raw=>planNorm(raw,topic),{deadline,attempts:2,timeout:35000,temp:0.95});
- plan.actionPlan=ap;
- const scenes=await generate(env,scenesPrompt(plan,ap,player,age),STORY_SYSTEM,2000,raw=>buildScenes(raw.scenes,1,4,ap,posture,player),{deadline,attempts:2,timeout:45000,temp:0.8});
- return reply({ok:true,version:VERSION,mode,player,posture,age,plan,scenes,nextIndex:5,total:TOTAL})}
+/* ── 故事畫面：燈關掉，只剩夥伴的眼睛 ── */
+#stage{position:fixed;inset:0;background:#000;color:#CFC8B4;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);touch-action:manipulation;user-select:none;-webkit-user-select:none;animation:lightsOff 1.1s ease-out both}
+@keyframes lightsOff{from{background:#3A3272;opacity:0}to{background:#000;opacity:1}}
+#face{width:5.2em;height:3.4em;font-size:34px;margin-top:-70px;opacity:.9}
+#smile{width:150px;height:44px;margin-top:8px;overflow:visible}
+#smile path{fill:none;stroke-width:5;stroke-linecap:round}
+#smile .track{stroke:#26233F}
+#smileFill{stroke:var(--moon);stroke-dasharray:100;stroke-dashoffset:100;opacity:0;transition:stroke-dashoffset .25s linear,opacity .2s}
+#caption{width:100%;max-width:520px;min-height:5.4em;text-align:center;font-family:var(--story);font-size:1.22rem;line-height:1.8;color:#D9D1BA;margin:22px 0 0}
+#fork{width:100%;max-width:520px;display:flex;gap:12px;justify-content:center;margin-top:26px}
+#fork button{flex:1;min-height:84px;border:2px solid #4A4670;border-radius:20px;background:#12112A;font-family:var(--story);font-size:1.16rem;color:#E9E1C8;padding:10px;line-height:1.4}
+#fork small{display:block;font-family:var(--ui);font-size:.74rem;color:#8480A8;margin-top:2px}
+#hush{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));left:20px;right:20px;text-align:center;color:#55526F;font-size:.82rem;margin:0}
+#sheet{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;background:#1B1A3D;border:2px solid #3A3870;border-radius:22px;padding:14px;color:#EDE6D0}
+#sheet .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#sheet button{border:2px solid #3A3870;border-radius:14px;min-height:50px;padding:8px;background:#232150}
+#sheet button.hold{grid-column:1/-1;background:#2E2B6B;border-color:#57539E}
+#sheet p{margin:10px 2px 0;color:#9C98C4;font-size:.78rem}
+#resume{position:absolute;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center}
+#resume button{font-family:var(--story);font-weight:700;font-size:1.4rem;color:#2B2A5C;background:var(--moon);border-radius:22px;padding:18px 30px}
 
-function trimLog(raw){return Array.isArray(raw)?raw.slice(-10).map(v=>({index:limited(v?.index,1,8,1),what:clean(v?.what,170)})):[]}
-// AI 失敗時的固定備援（會在回應裡標示 fallbackUsed）
-function safeContinuation(plan,choice,recap){
- const label=plan.branch[choice]?.label||(choice==='left'?'左邊的路':'右邊的路');
- const impact=plan.branch[choice]?.impact||'';
- const companion=plan.companion||'夥伴';
- const goal=plan.goal||'完成這次冒險';
- const turning=plan.outline?.reversal||plan.secret||'原來事情和大家起初想的不一樣';
- const climax=plan.outline?.climax||'大家終於找到解決問題的辦法';
- const ending=plan.outline?.ending||'大家一起解決了原本的難題';
- const last=recap.length?recap[recap.length-1].what:'';
- const effect=impact?`這個選擇帶來了變化：${impact}。`:'';
- return [
-  {index:5,title:'選擇帶來的變化',scene:`你選了「${label}」。${companion}跟著你走了過去。${effect}${last?'大家想起剛才發生的事，決定小心往前走。':''}眼前的情況和想像中不太一樣，但你們沒有放棄。`,action:null,family:null},
-  {index:6,title:'終於知道了',scene:`${companion}停下腳步，仔細看了看四周。「等等，我好像明白了！」原來，${turning}。你們終於知道該怎麼繼續完成原本的目標。`,action:null,family:null},
-  {index:7,title:'最後的難題',scene:`眼前還剩最後一個難題。${companion}說：「我想到辦法了！我們一起來。」${climax}。大家互相提醒，仔細完成眼前的事情。`,action:null,family:null},
-  {index:8,title:'這場冒險的結局',scene:`經過一路上的努力，${ending}。你和${companion}終於完成了最初想做的事：${goal}。${companion}笑著說：「謝謝你和我一起走到最後！」這場冒險有了一個完整的結局。`,action:null,family:null}]}
-function nextPrompt(plan,choice,ap,player,recap,age){
- const ch=plan.branch[choice];
- return `續寫為 ${age} 歲孩子聽的故事《${plan.title}》第5~8幕。
-背景：${plan.world}。夥伴：${plan.companion}。目標：${plan.goal}。開頭小意外：${plan.openingTruth}。中途小轉折：${plan.secret}。
-孩子剛按實體按鈕選了「${choice==='left'?'左':'右'}路」：${ch.label}。這條路的狀況：${ch.impact}。第5幕必須直接承接這個選擇，不能當成選了另一邊。
-前面已發生的事：${JSON.stringify(recap)}。
-${STYLE_EXAMPLE}
-每幕 scene 是 2~3 個短句、40~80 字，要有對話或擬聲詞，承接前一幕。
-第5幕：到達${ch.label}，遇到狀況。${slotClause(5,ap,player)}
-第6幕：揭開小轉折（${plan.outline.reversal}）。夥伴說出重要的事，或犯了小錯並道歉。${slotClause(6,ap,player)}
-第7幕：最後的難題（${plan.outline.climax}）。${slotClause(7,ap,player)}
-第8幕：溫暖完整的結局（${plan.outline.ending}），達成目標，收回開頭的小意外。不要「未完待續」。不需要動作。
-輸出 JSON：{"scenes":[{"index":5,"title":"6字內","scene":"",...},{"index":6,...},{"index":7,...},{"index":8,...}]}`}
-async function next(body,env){
- const p=body.plan;
- if(!p||typeof p!=='object'||!p.outline)throw Error('缺少原始故事計畫，請從同一篇故事繼續');
- const plan=planNorm(p,clean(p.topic,110)||'自由冒險');
- const startIndex=limited(body.nextIndex,5,8,5);
- if(startIndex!==5)throw Error('續寫幕數不正確，請先完成已生成的故事');
- const mode=body.mode==='senior'?'senior':'child',player=body.player==='coop'?'coop':'solo';
- const posture=(mode==='senior'||body.posture==='seated')?'seated':'general';
- const choice=body.choice==='left'||body.choice==='right'?body.choice:null;
- if(!choice)throw Error('第四幕後請先按左右按鈕選路');
- const ap=Object.keys(plan.actionPlan).length?{...plan.actionPlan}:{...ACTION_FALLBACK[posture]};
- if(!ap[5])ap[5]=ACTION_FALLBACK[posture][5];
- for(const k of [1,2,3,4])delete ap[k];   // 前四幕已生成，這裡只看第5~8幕
- const recap=trimLog(body.log);const age=limited(body.age,5,8,6);
- try{
-  const deadline=Date.now()+80000;
-  const scenes=await generate(env,nextPrompt(plan,choice,ap,player,recap,age),STORY_SYSTEM,2000,raw=>buildScenes(raw.scenes,5,8,ap,posture,player),{deadline,attempts:2,timeout:40000,temp:0.8});
-  return reply({ok:true,version:VERSION,scenes,nextIndex:9,total:TOTAL,fallbackUsed:false});
- }catch(error){
-  console.warn('AI continuation failed; local fallback:',String(error?.message||error));
-  return reply({ok:true,version:VERSION,scenes:safeContinuation(plan,choice,recap),nextIndex:9,total:TOTAL,fallbackUsed:true,fallbackReason:clean(error?.message||String(error),180),notice:'AI 續寫未完成，已改用固定備援結局（不是 AI 即時生成）。'});
- }}
+/* ── 結束畫面：天亮了 ── */
+#finale{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;color:#FFF7E6;
+  background:linear-gradient(180deg,#2B2A5C 0%,#6A4594 42%,#F09E82 80%,#FFD9A8 100%);animation:dawn 1.4s ease-out both}
+@keyframes dawn{from{opacity:0}to{opacity:1}}
+#finale .face{width:5.2em;height:3.2em;font-size:30px}
+#finale h2{font-family:var(--story);font-size:2.4rem;margin:8px 0 2px;text-shadow:0 3px 0 rgba(27,24,66,.35)}
+#finale .title{font-family:var(--story);font-size:1.2rem;margin:0 0 4px;color:#FFE9C9}
+#bye{font-family:var(--story);font-size:1.5rem;margin:0 0 22px}
+#stat{display:inline-block;background:rgba(255,247,230,.92);color:var(--ink);font-family:var(--story);font-size:1.08rem;border-radius:999px;padding:8px 18px;margin:0 0 26px}
+#stat:empty{display:none}
+#again{background:var(--cream);color:var(--ink);border-radius:20px;min-height:60px;padding:12px 28px;font-family:var(--story);font-weight:700;font-size:1.25rem;box-shadow:0 5px 0 #D9B98E}
+#again:active{transform:translateY(5px);box-shadow:none}
 
-// ───────────── v3 故事引擎：作家先自由寫故事，導演再把動作織進去 ─────────────
-// 路徑：POST /api/v3/start、POST /api/v3/next（舊的 /api/start、/api/next 仍可用，給舊網頁）
-// 想換模型不用改程式：在 Worker 設定環境變數 WRITER_MODEL、DIRECTOR_MODEL 即可。
-const V3_KINDS={body:'全身動',jump:'跳',arm:'手臂動',still:'不動'};
-const V3_EMOTIONS=['happy','excited','worried','surprised','sad','calm','proud','scared'];
-const V3_SOUNDS=['step','splash','rustle','clap','wind','none'];
-const V3_DEMO={body:'swing',jump:'up',arm:'wave',still:'freeze'};        // 機器人示範用的手勢
-const V3_DEFAULT_SOUND={body:'step',jump:'splash',arm:'rustle',still:'none'};
-// do 是孩子實際要做的事：必須安全、不用離開原地
-const V3_UNSAFE_DO=/轉圈|旋轉|翻滾|翻跟斗|倒立|閉(上|著)?眼|爬上|爬到|跳下|跳上|衝出|跑出|跑去|樓梯|陽台|窗|椅|桌|沙發|床|推|撞|丟|踢|跪|趴|躺/;
-// 故事敘述裡也不讓孩子做的事
-const V3_UNSAFE_STORY=/轉圈圈|翻跟斗|倒立|閉(上|著)眼(睛)?(跑|跳|走)/;
-// 不該跑進旁白的「遊戲用語」和數字
-const V3_META=/原地|感應|感測|手環|裝置|任務|關卡|進度條|螢幕|手機|○/;
-const V3_NUMBERS=/[0-9０-９]+\s*(秒|下|次)/;
-const V3_COMMAND=/^請|請你|現在請|開始做/;
-const V3_WRITER_SYS='你是很會說故事的兒童繪本作家，用台灣口語的繁體中文，寫給孩子「聽」的故事。你的故事有畫面、有聲音、有對話，句子短、有節奏，偶爾好笑，結尾溫暖。你只寫故事本文，不寫標題、編號、說明，也不寫任何給大人看的字。';
-// 作家共用的寫法規則：短、每段有事件、少堆形容詞
-const V3_STYLE=`寫法（很重要）：
-- 每段 120～160 字。句子要短，一句不超過 20 個字。
-- 每一段都要「發生一件事」，讓故事往前走。不要整段都在形容外表、表情和衣服。
-- 每段至少兩句對話，用「」標出來。一句話最多一個形容詞，同一個形容詞（像「圓滾滾」）整篇只能用一次。
-- 多用擬聲詞（咻——、撲通、沙沙）和重複的節奏，讓故事唸起來好聽。`;
-const V3_DIRECTOR_SYS='你是兒童互動故事的導演。故事已經寫好，你不改寫故事，只找出角色活動身體、孩子可以跟著一起動的時刻，並寫動作進行時的旁白。只輸出合法 JSON，不要 markdown。';
+.mark,.ask,.field>span:first-child,.ages button,.seg button,#begin,.ghost,.past h2,.grown summary,#resume button,#again,#finale h2,.how li::before{font-family:var(--round);font-weight:800}
 
-function v3Text(result){
- if(result?.errors?.length)throw Error('Workers AI：'+(result.errors[0].message||'失敗'));
- let t=result?.choices?.[0]?.message?.content??result?.response??result?.text??result;
- if(Array.isArray(t))t=t.map(x=>x.text||'').join('');
- if(typeof t!=='string')throw Error('AI 未提供文字');
- return t.trim().replace(/^```[a-z]*\s*/i,'').replace(/\s*```$/,'').trim();
-}
-async function v3Ask(env,model,system,user,timeout,opts){
- if(!env.AI)throw Error('沒有 AI Binding。Cloudflare Worker 必須綁定名稱 AI 的 Workers AI。');
- const params={messages:[{role:'system',content:system},{role:'user',content:user}],max_completion_tokens:opts.tokens,temperature:opts.temp,top_p:0.95,stream:false,chat_template_kwargs:{enable_thinking:false}};
- if(opts.json)params.response_format={type:'json_object'};
- // 換模型時的「思考」設定：在 Worker 設定 WRITER_REASONING（none / low ...）。不同模型關思考的方法不一樣
- const effort=model===env.WRITER_MODEL?env.WRITER_REASONING:model===env.DIRECTOR_MODEL?env.DIRECTOR_REASONING:'';
- if(effort){
-  params.reasoning_effort=effort;
-  if(effort!=='none')params.max_completion_tokens=opts.tokens+4000;   // 思考也會用掉字數，不加會被截斷
- }
- if(/kimi/i.test(model))params.chat_template_kwargs={thinking:!!effort&&effort!=='none'};
- let timer;
- try{
-  const result=await Promise.race([env.AI.run(model,params),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('AI 等待超過 '+Math.floor(timeout/1000)+' 秒，請再試一次')),timeout)})]);
-  return opts.json?jsonFromModel(result):v3Text(result);
- }finally{clearTimeout(timer)}
-}
-// 重試：把上一次不合格的原因告訴 AI；受總時限保護
-async function v3Try(o){
- let lastErr='';
- for(let i=0;i<o.attempts;i++){
-  const left=o.deadline-Date.now();if(left<10000)break;
-  try{
-   const raw=await v3Ask(o.env,o.model,o.system,i?o.prompt+'\n\n（上一次的輸出不合格：'+lastErr+'。請修正後重新輸出。）':o.prompt,Math.min(o.timeout,left),{tokens:o.tokens,temp:i?Math.max(0.5,o.temp-0.25):o.temp,json:o.json});
-   return o.validate(raw);
-  }catch(e){lastErr=e.message||String(e)}
- }
- throw Error(lastErr||'AI 生成時間不足，請再試一次');
-}
+/* ── RGB 電競燈：慢慢流動的彩虹，不閃爍 ── */
+:root{--rgb:linear-gradient(90deg,#FF2D55,#FF9F0A,#FFE60A,#30D158,#00E5FF,#3D5AFE,#BF5AF2,#FF2D55)}
+@keyframes rgbflow{from{background-position:0% 50%}to{background-position:300% 50%}}
+@keyframes rgbborder{from{background-position:0 0,0% 50%}to{background-position:0 0,300% 50%}}
+@keyframes rgbspin{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
+@keyframes rgbedge{0%,100%{border-color:#FF2D55}17%{border-color:#FF9F0A}33%{border-color:#30D158}50%{border-color:#00E5FF}67%{border-color:#3D5AFE}83%{border-color:#BF5AF2}}
+@keyframes rgbfill{0%,100%{background-color:#FF2D55}17%{background-color:#FF9F0A}33%{background-color:#30D158}50%{background-color:#00E5FF}67%{background-color:#3D5AFE}83%{background-color:#BF5AF2}}
+@keyframes rgbglow{0%,100%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(255,45,85,.7)}17%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(255,159,10,.7)}33%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(48,209,88,.7)}50%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(0,229,255,.7)}67%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(61,90,254,.75)}83%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(191,90,242,.7)}}
+/* 彩虹字：標題、結束畫面 */
+.mark,#finale h2{background:var(--rgb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;
+  filter:drop-shadow(0 3px 0 rgba(20,18,50,.45));animation:rgbflow 8s linear infinite}
+/* 開始按鈕：彩虹邊框＋會換顏色的光暈 */
+#begin{border:3px solid transparent;background:linear-gradient(var(--dusk),var(--dusk)) padding-box,var(--rgb) border-box;background-size:100% 100%,300% 100%;
+  animation:rgbborder 6s linear infinite,rgbglow 6s linear infinite}
+/* 小機器人：外框和天線燈跟著變色 */
+.buddy{animation:peek 4.5s ease-in-out infinite,rgbedge 6s linear infinite}
+.buddy::after{animation:rgbfill 6s linear infinite;box-shadow:0 0 10px rgba(255,255,255,.6)}
+/* 選到的按鈕和打開的開關：彩虹流動 */
+.ages button[aria-pressed=true],.seg button[aria-pressed=true],.sw input:checked{background:var(--rgb);background-size:300% 100%;border-color:transparent;animation:rgbflow 6s linear infinite}
+.ages button[aria-pressed=true],.seg button[aria-pressed=true]{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
+#idea:focus{animation:rgbedge 5s linear infinite}
+/* 故事畫面：夥伴的眼睛和笑容慢慢換顏色 */
+#face{animation:rgbspin 12s linear infinite}
+#face.moving{animation:hop .5s ease-in-out infinite,rgbspin 12s linear infinite}
+#smile{animation:rgbspin 12s linear infinite}
+#fork button{animation:rgbedge 6s linear infinite}
+#finale .face{animation:rgbspin 12s linear infinite}
+#finale h2{filter:drop-shadow(0 3px 0 rgba(20,18,50,.6)) drop-shadow(0 0 3px rgba(20,18,50,.45))}
 
-// ── 作家 ──
-function v3Idea(p){
- const custom=p.topic&&!BANK[p.topic];
- let s=custom
-  ?`孩子想聽的故事：「${p.topic}」。請照孩子的想法寫，不要換成別的主題。`
-  :`故事靈感：${startPoint(BANK[p.topic]?p.topic:'自由冒險').replace(/^故事起點（[^）]*）：/,'')}\n靈感裡遇到麻煩的那位，就是你的夥伴。替牠取一個好記的名字（例如「小企鵝波波」），不要再另外加一個夥伴。`;
- if(p.chat.length)s+='\n孩子聊天時說過（請把這些放進故事）：\n'+p.chat.map(c=>'- '+(c.q?c.q+'→':'')+c.a).join('\n');
- return s;
-}
-function v3MoveLine(seated){
- return seated
-  ?'- 這是一場坐著也能參與的冒險：角色們會揮手、划槳、搖晃東西、拍手、躲起來一動也不動……把這些畫面寫得生動。孩子是坐著聽的，所以不要寫奔跑和跳躍。孩子待會會跟著一起動，但你不要對孩子下指令，也不要寫次數或秒數。'
-  :'- 這是一場身體會動起來的冒險：角色們會奔跑、跳躍、攀爬、划水、搖晃東西、揮手、躲起來一動也不動……把這些畫面寫得生動。孩子待會會跟著一起動，但你不要對孩子下指令，也不要寫次數或秒數。';
-}
-function v3WriterPrompt1(p){
- return `聽故事的孩子 ${p.age} 歲。
-${v3Idea(p)}
+/* ── 深色電競主題：取代原本的米色，讓 RGB 燈光更亮 ── */
+:root{--cream:#0E0D24;--ink:#F2EEFF;--soft:#A7A2D2;--paper-line:#2E2B5C;--card:#17153A;--card-2:#1F1C4A}
+body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),transparent 38%) fixed,
+  radial-gradient(circle at 90% 75%,rgba(0,229,255,.10),transparent 40%) fixed;background-color:#0E0D24}
+#idea{background:var(--card);border-color:#3A3670;box-shadow:0 5px 0 #3A3670;color:var(--ink)}
+#idea::placeholder{color:#6E69A0}
+#idea:focus{box-shadow:0 5px 0 #3A3670,0 0 18px rgba(0,229,255,.25)}
+.ideas button{background:var(--card)!important;color:var(--ink)}
+.ideas li:nth-child(4n+1) button{border-color:#FF2D55!important;box-shadow:0 3px 0 #FF2D55,0 0 12px rgba(255,45,85,.3)!important}
+.ideas li:nth-child(4n+2) button{border-color:#30D158!important;box-shadow:0 3px 0 #30D158,0 0 12px rgba(48,209,88,.3)!important}
+.ideas li:nth-child(4n+3) button{border-color:#FFE60A!important;box-shadow:0 3px 0 #FFE60A,0 0 12px rgba(255,230,10,.25)!important}
+.ideas li:nth-child(4n+4) button{border-color:#BF5AF2!important;box-shadow:0 3px 0 #BF5AF2,0 0 12px rgba(191,90,242,.3)!important}
+.ideas button:active{box-shadow:none!important}
+.ages button,.seg button{background:var(--card);border-color:#3A3670;color:var(--ink)}
+.ghost{background:var(--card);border-color:#00E5FF;color:var(--ink);box-shadow:0 3px 0 #00A8BD,0 0 12px rgba(0,229,255,.25)}
+.how li,.grown{background:var(--card);border-color:#2E2B5C}
+.how li::before{color:#1B1940}
+.sw input{background:#3A3670}
+#notice{color:#FF6B86}
+/* 結束畫面：夜空，彩虹字 */
+#finale{background:radial-gradient(circle at 50% 30%,#2A2066 0,#0E0D24 70%);color:var(--ink)}
+#finale .title{color:#C9C3F2}
+#stat{background:var(--card-2);color:var(--ink);border:2px solid #3A3670}
+#again{background:var(--card);color:var(--ink);border:3px solid transparent;
+  background:linear-gradient(var(--card),var(--card)) padding-box,var(--rgb) border-box;background-size:100% 100%,300% 100%;
+  animation:rgbborder 6s linear infinite;box-shadow:0 0 18px rgba(0,229,255,.25)}
+#again:active{transform:translateY(3px)}
+@media (max-width:400px){.mark{font-size:2.5rem}.how{grid-template-columns:1fr}.how li{padding:14px 12px 12px 52px;text-align:left}.how li::before{left:12px;top:50%;margin:-15px 0 0}.ages button{width:44px;height:44px}}
+@media (min-width:700px){.sky{height:330px}.mark{font-size:3.4rem}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
 
-請寫這個故事的「上半段」，分成 4 段，段與段之間空一行。
-- 用「你」稱呼聽故事的孩子。孩子就在故事裡，跟夥伴一起冒險。夥伴叫孩子「你」。
-- 夥伴整篇都用同一個名字。用牠說的話和小動作讓孩子聽出牠的心情，不要只描寫長相。
-${v3MoveLine(p.seated)}
-- 可以有一句朗朗上口、會重複出現的口號。
-- 不要嚇人，不要真實的危險，不要說教。
-${V3_STYLE}
+<div id="setup">
+  <header class="sky">
+    <i class="star" style="--x:9%;--y:16%;--s:4px"></i><i class="star" style="--x:24%;--y:52%;--s:3px;--d:.8s"></i><i class="star" style="--x:41%;--y:11%;--s:3px;--d:1.6s"></i>
+    <i class="star" style="--x:58%;--y:34%;--s:4px;--d:.4s"></i><i class="star" style="--x:71%;--y:58%;--s:3px;--d:2.1s"></i><i class="star" style="--x:88%;--y:44%;--s:3px;--d:1.1s"></i>
+    <i class="star" style="--x:15%;--y:70%;--s:3px;--d:2.6s"></i><i class="star" style="--x:50%;--y:62%;--s:2px;--d:1.9s"></i>
+    <div class="crescent" aria-hidden="true"></div>
+    <div class="titles">
+      <h1 class="mark">聲動奇境</h1>
+      <p class="lede">放下手機，跟故事一起動起來。</p>
+    </div>
+    <svg class="hills" viewBox="0 0 400 112" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 62 Q70 18 150 54 T300 44 T400 30 V112 H0Z" fill="#3B3276"/>
+      <path d="M0 92 Q90 50 190 84 T400 66 V112 H0Z" fill="#0E0D24"/>
+    </svg>
+    <div class="buddy face" data-emo="happy" id="buddy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+  </header>
 
-每一段要發生的事：
-第 1 段：你和夥伴在哪裡，出了什麼麻煩。第三句以前就要讓孩子知道麻煩是什麼。
-第 2 段：你們想到第一個辦法，身體動起來（追、划、搖、跳……），差一點就成功。
-第 3 段：發生一件好笑或意外的事，又要動起來，最後找到一條新線索。
-第 4 段：來到兩個不同的去處，各用一句話形容，最後問孩子要選哪一個。不要替孩子選，也不要寫選了之後的事。
+  <main>
+    <label class="ask" for="idea">今天想聽什麼故事？</label>
+    <textarea id="idea" maxlength="110" placeholder="例如：怕水的恐龍去海邊"></textarea>
+    <ul class="ideas" id="ideas" aria-label="點一個當作靈感">
+      <li><button type="button" data-idea="會打嗝的企鵝找回家的路">🐧 會打嗝的企鵝</button></li>
+      <li><button type="button" data-idea="月亮上的麵包店少了一顆星星">🥐 月亮上的麵包店</button></li>
+      <li><button type="button" data-idea="不敢睡覺的小貓頭鷹">🦉 不敢睡覺的貓頭鷹</button></li>
+      <li><button type="button" data-idea="">🎲 讓故事自己決定</button></li>
+    </ul>
 
-輸出格式：前三行固定這樣寫，空一行後才開始寫故事本文：
-夥伴：名字
-左：第一個去處（12 字內）
-右：第二個去處（12 字內）`}
-function v3WriterPrompt2(p,story,choiceLabel){
- return `聽故事的孩子 ${p.age} 歲。這是故事《${story.title}》的上半段：
-"""
-${story.half1}
-"""
-孩子選了：「${choiceLabel}」。
+    <div class="field">
+      <span>孩子幾歲</span>
+      <div class="ages" id="ages" role="group" aria-label="孩子幾歲">
+        <button type="button" data-age="5" aria-pressed="false">5</button><button type="button" data-age="6" aria-pressed="true">6</button>
+        <button type="button" data-age="7" aria-pressed="false">7</button><button type="button" data-age="8" aria-pressed="false">8</button>
+      </div>
+    </div>
+    <div class="field band">
+      <span><span id="bandState"><i class="dot"></i>手環還沒連上</span><small>沒有手環也可以用畫面上的按鈕玩</small></span>
+      <button type="button" class="ghost" id="connect">連接手環</button>
+    </div>
 
-請接著寫「下半段」，分成 4 段，段與段之間空一行。
-- 夥伴一律叫「${story.companion.name}」，不要換名字；延續同樣的語氣和物品${story.chant?`，口號「${story.chant}」可以再出現`:''}。不要換主角，不要重講上半段。
-${v3MoveLine(p.seated)}
-- 用「你」稱呼孩子。不要嚇人，不要真實的危險，不要說教。
-${V3_STYLE}
+    <button type="button" id="begin">關燈，開始說故事</button>
+    <p id="notice" role="status" aria-live="polite"></p>
 
-每一段要發生的事：
-第 1 段：直接從「${choiceLabel}」開始，遇到這條路特有的狀況。不要當成選了另一邊。
-第 2 段：一個溫暖或好笑的小轉折（例如夥伴犯了小錯、說出心裡話）。
-第 3 段：整個故事最精彩的身體冒險，終於解決開頭的麻煩。
-第 4 段：好好收尾，回應開頭的麻煩，讓孩子安心。不要「未完待續」。
-只輸出故事本文。`}
-// 系統用語換成故事用語；其他詞（任務、手機、原地…）在故事裡很正常，不擋
-const V3_SYSTEM_WORDS=[[/手環/g,'手鍊'],[/感測器|感應器/g,'小機關'],[/進度條/g,'']];
-function v3Scrub(t){let s=String(t||'');for(const [r,b] of V3_SYSTEM_WORDS)s=s.replace(r,b);return s}
-function v3TrimTo(t,max){
- if(v3Len(t)<=max)return t;
- const parts=t.match(/[^。！？!?]+[。！？!?]+[」』]?|[^。！？!?]+$/g)||[t];let out='';
- for(const p of parts){if(v3Len(out+p)>max)break;out+=p}
- return out||t.slice(0,max);
-}
-// 讀出作家開頭的「夥伴／左／右」三行，剩下的是故事本文
-function v3ParseProse(raw){
- let s=String(raw).replace(/\r/g,'');const head={name:'',left:'',right:''};
- const re=/^\s*[#*]*\s*(夥伴|左|右)\s*[:：]\s*([^\n]*)\n/;let m;
- while((m=s.match(re))){
-  const v=m[2].replace(/[「」『』*]/g,'').trim();
-  if(m[1]==='夥伴')head.name=(v.match(/^[^，。！？、\s（(]{1,8}/)||[''])[0];
-  else head[m[1]==='左'?'left':'right']=clean(v.replace(/[（(][^）)]*[）)]$/,''),24);
-  s=s.slice(m[0].length);
- }
- return {text:v3CleanProse(s),...head};
-}
-// 故事裡最常說話的角色（作家沒寫名字時才用）
-function v3GuessName(prose){
- const c={};
- for(const m of String(prose||'').matchAll(/([\u4e00-\u9fff]{2,3})(?:說|大喊|小聲地說|笑著說|點點頭|眨眨眼)/g)){
-  if(!/^(你們|我們|他們|她們|大家|然後|這時|突然|於是|可是|終於)/.test(m[1]))c[m[1]]=(c[m[1]]||0)+1}
- return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
-}
-function v3Rename(x,from,to){
- if(!from||!to||from===to||!x)return x;
- try{return JSON.parse(JSON.stringify(x).split(from).join(to))}catch{return x}
-}
-function v3CleanProse(raw){
- let t=String(raw).replace(/\r/g,'').replace(/^[ \t]*[#>*]+[ \t]*/gm,'').replace(/\*\*/g,'').replace(/[ \t]+$/gm,'').trim();
- const lines=t.split('\n');
- // 去掉模型自己加的標題或開場白
- while(lines.length>1&&lines[0].trim().length<24&&!/[。！？」]$/.test(lines[0].trim()))lines.shift();
- t=v3Scrub(lines.join('\n')).replace(/\n{3,}/g,'\n\n').trim();
- const n=v3Len(t);
- if(n<300)throw Error('故事太短（只有 '+n+' 字），請寫 4 段、每段 120～160 字');
- return v3TrimTo(t,2200);
-}
+    <ol class="how" aria-label="怎麼玩">
+      <li>說出想聽的故事</li>
+      <li>把手機放下，聽夥伴說</li>
+      <li>夥伴動，你也跟著動</li>
+    </ol>
 
-// ── 導演 ──
-function v3DirectorPrompt(paras,first,seated,story,knownName){
- const kinds=seated?'arm|still':'body|jump|arm|still';
- const a=first?1:5;
- const list=paras.map((t,i)=>`【第 ${a+i} 幕】\n${t}`).join('\n\n');
- const head=first?`"title":"故事名，10字內","companion":{"name":"夥伴的名字","desc":"牠是什麼，一句話"},"chant":"故事裡的口號，沒有就依故事想一句，14字內","branch":{"left":"第 4 幕的第一個選擇，12字內","right":"第二個選擇，12字內"},`:'';
- return `下面是一篇兒童故事${first?'的上半段':`《${story.title}》的下半段（夥伴是${story.companion.name}）`}，已經分成 4 幕，會照原文唸給孩子聽。
+    <section class="past" id="past" hidden>
+      <h2>聽過的故事</h2>
+      <ul id="pastList"></ul>
+    </section>
 
-${list}
+    <details class="grown">
+      <summary>更多設定</summary>
+      <label class="sw"><span><b>坐著玩</b><small>故事不會出現跑和跳</small></span><input type="checkbox" id="seated"></label>
+      <label class="sw"><span><b>顯示字幕</b><small>讓旁邊的人看到故事在說什麼</small></span><input type="checkbox" id="subs"></label>
+      <label class="sw"><span><b>用 Fish 配音</b><small>聲音比較好聽，但要等久一點</small></span><input type="checkbox" id="fish"></label>
+      <div class="sw"><span><b>手環靈敏度</b><small>孩子動了卻沒反應，就調高</small></span>
+        <div class="seg" id="sensSeg" role="group" aria-label="手環靈敏度"><button type="button" data-sens="low" aria-pressed="false">低</button><button type="button" data-sens="mid" aria-pressed="true">中</button><button type="button" data-sens="high" aria-pressed="false">高</button></div>
+      </div>
+      <p>沒有手環？故事開始後長按畫面，會出現代替手環的按鈕。長輩的坐姿活動在<a href="./">原本的頁面</a>。</p>
+    </details>
+  </main>
+</div>
 
-${knownName?`故事裡的夥伴叫「${knownName}」，所有句子都一律用這個名字。\n\n`:''}請找出 2 個（最多 3 個）角色正在活動身體、孩子可以跟著一起做的時刻。只輸出 JSON：
-{${head}"emotions":["第 ${a} 幕夥伴的心情","第 ${a+1} 幕","第 ${a+2} 幕","第 ${a+3} 幕"],"moves":[{"scene":${a+1},"cut":"…","kind":"…","do":"…","lead":"…","beats":["…","…","…"],"nudge":"…","sound":"…"}]}
+<section id="stage" hidden aria-label="故事進行中">
+  <div class="face" id="face" data-emo="calm" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+  <svg id="smile" viewBox="0 0 150 44" aria-hidden="true"><path class="track" d="M12 8 Q75 50 138 8"/><path id="smileFill" pathLength="100" d="M12 8 Q75 50 138 8"/></svg>
+  <p id="caption" hidden></p>
+  <div id="fork" hidden>
+    <button type="button" data-choice="left"><span id="forkL"></span><small>◀ 左邊的按鈕</small></button>
+    <button type="button" data-choice="right"><span id="forkR"></span><small>右邊的按鈕 ▶</small></button>
+  </div>
+  <p id="hush">故事進行中，可以把手機放下了。長按畫面可以暫停。</p>
+  <div id="sheet" hidden>
+    <div class="grid">
+      <button type="button" id="pauseBtn">暫停故事</button>
+      <button type="button" id="skipBtn">跳過這段動作</button>
+      <button type="button" class="hold" id="simMove">按住＝在動（代替手環）</button>
+      <button type="button" id="simJump">跳一下</button>
+      <button type="button" id="quitBtn">結束故事</button>
+    </div>
+    <p id="sheetInfo"></p>
+  </div>
+  <div id="resume" hidden><button type="button" id="resumeBtn">點一下，故事繼續</button></div>
+</section>
 
-規則：
-1. moves 只能放在第 ${a}～${a+2} 幕，第 ${a+3} 幕不要放。不要改寫或重抄故事。
-2. cut：從那一幕原文一字不改地複製「動作開始的那一小句」（6～15 字）。唸到這裡時會改唸你的 lead，孩子開始動，做完再接回原文 cut 後面的句子。
-3. kind：${seated?'':'body=全身大動作（跑、游泳、攀爬、跳舞）；jump=跳躍；'}arm=只動手臂（揮手、搖晃、划槳）；still=一動也不動。只能填 ${kinds}。
-4. do：孩子實際要做的事，10 字內，要安全、不用離開站的位置。
-5. lead：動作開始的一句，用「你」描述正在發生的事，不是命令。
-6. beats：剛好 3 句。孩子動到三分之一、三分之二、完成的時候各唸一句，讓故事在動作中往前走；第 3 句說出結果，而且要能自然接上原文 cut 後面的句子。
-7. nudge：孩子還沒動的時候，夥伴說的一句鼓勵，像朋友在等他。
-8. sound：step、splash、rustle、clap、wind、none 選一個。
-9. emotions：每一幕一個，從這些選：${V3_EMOTIONS.join(', ')}。
-10. 動作的句子裡不要有數字、秒數或次數。`}
+<section id="finale" hidden>
+  <div class="face" data-emo="happy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i></div>
+  <h2>故事說完了</h2>
+  <p class="title" id="endTitle"></p>
+  <p id="bye">明天見。</p>
+  <p id="stat"></p>
+  <button type="button" id="again">再聽一個故事</button>
+</section>
 
-function v3Len(s){return Array.from(String(s||'').replace(/\s/g,'')).length}
-// 動作旁白要唸給孩子聽：拿掉系統用語和阿拉伯數字的次數秒數，換上夥伴名字；不因為這種小事整篇重寫
-const V3_META_FIX=/原地|感應器?|感測器?|手環|裝置|任務|關卡|進度條|螢幕|手機/g;
-function v3Fix(v,max,name){
- let s=String(v||'').replace(/○+|〇〇|XX|ＸＸ/g,name||'夥伴');
- s=s.replace(/[0-9０-９]+\s*(秒鐘?|下|次)/g,'').replace(V3_META_FIX,'').replace(/^(現在)?(請你|請)/,'').replace(/\s{2,}/g,' ').trim();
- return clean(s,max);
-}
-function v3Target(kind,order,age){
- const f=age<=5?0.8:age===6?0.9:1,at=a=>a[Math.min(order,a.length-1)];
- if(kind==='jump')return {type:'count',value:Math.round(at([8,10,12,12,14,14])*f)};
- if(kind==='still')return {type:'seconds',value:at([6,8,8,10,10,10])};
- if(kind==='arm')return {type:'seconds',value:Math.round(at([12,15,18,20,20,20])*f)};
- return {type:'seconds',value:Math.round(at([20,25,30,40,45,45])*f)};
-}
-const V3_DEFAULT_DO={body:'原地跑步',jump:'原地跳',arm:'揮動雙手',still:'像木頭人一樣不動'};
-function v3Kind(k,ctx){
- k=String(k||'').toLowerCase();
- let kind=V3_KINDS[k]?k:/jump|跳/.test(k)?'jump':/still|freeze|stop|不動|靜/.test(k)?'still':/arm|hand|wave|手/.test(k)?'arm':'body';
- if(!ctx.kinds.includes(kind))kind='arm';           // 坐姿模式：跑、跳都改成手臂動
- return kind;
-}
-function v3Move(raw,ctx){
- raw=raw||{};const name=ctx.name,kind=v3Kind(raw.kind,ctx),seated=!ctx.kinds.includes('body');
- let act=clean(raw.do,24);
- if(v3Len(act)<2||v3Len(act)>14||V3_UNSAFE_DO.test(act)||(seated&&/跑|跳/.test(act))||(kind==='still'&&!/不動|停|木頭|石頭|靜/.test(act)))act=V3_DEFAULT_DO[kind];
- let lead=v3Fix(raw.lead,110,name);if(v3Len(lead)<4)lead=`你和${name}一起動了起來！`;
- let beats=(Array.isArray(raw.beats)?raw.beats:[]).map(b=>v3Fix(b,90,name)).filter(b=>v3Len(b)>=2);
- const pad=['加油，繼續！','快到了，再一下下！','做到了！'];
- if(beats.length>3)beats=[beats[0],beats[1],beats[beats.length-1]];
- else if(beats.length===2)beats=[beats[0],pad[1],beats[1]];
- else if(beats.length===1)beats=[pad[0],pad[1],beats[0]];
- else if(!beats.length)beats=pad.slice();
- let nudge=v3Fix(raw.nudge,70,name);if(v3Len(nudge)<4)nudge=`${name}回頭看著你：「快跟上呀，我們一起！」`;
- const sound=V3_SOUNDS.includes(raw.sound)?raw.sound:V3_DEFAULT_SOUND[kind];
- const target=v3Target(kind,ctx.order++,ctx.age);
- return {kind,kindLabel:V3_KINDS[kind],do:act,lead,beats,
-  // 三段提示：先是夥伴的鼓勵，再是清楚的說明，最後是夥伴願意等
-  hints:[nudge,`${name}說：「看我，像這樣${act}！換你囉！」`,`${name}說：「沒關係，我等你。準備好了，我們再一起出發！」`],
-  hintAt:ctx.age<=5?[2,6,14]:[3,8,16],sound,demo:V3_DEMO[kind],target};
-}
-function v3Paras(prose){
- const parts=prose.split(/\n\s*\n/).map(t=>t.trim()).filter(Boolean);
- if(parts.length===4)return parts;
- const sents=prose.replace(/\n+/g,'').match(/[^。！？!?]+[。！？!?]+[」』]?|[^。！？!?]+$/g)||[prose];
- const total=v3Len(prose),out=[];let cur='',acc=0,k=1;
- for(const t of sents){cur+=t;acc+=v3Len(t);if(k<4&&acc>=total*k/4){out.push(cur);cur='';k++}}
- if(cur)out.push(cur);
- while(out.length<4)out.push('');
- return out.slice(0,3).concat(out.slice(3).join(''));
-}
-function v3Build(paras,raw,first,ctx,branch){
- raw=raw&&typeof raw==='object'?raw:{};
- const start=first?1:5,last=start+3,emo=Array.isArray(raw.emotions)?raw.emotions:[];
- const scenes=paras.map((t,i)=>({index:start+i,title:'第 '+(start+i)+' 幕',emotion:V3_EMOTIONS.includes(emo[i])?emo[i]:'calm',text:v3Scrub(t),move:null,after:''}));
- let used=0;
- for(const m of (Array.isArray(raw.moves)?raw.moves:[])){
-  if(!m||typeof m!=='object'||used>=3)continue;
-  let sc=Math.round(Number(m.scene));if(!Number.isFinite(sc))sc=start+1+used;
-  if(sc<start)sc=start;
-  if(sc>=last)continue;                            // 最後一幕不放動作
-  const s=scenes[sc-start];if(s.move)continue;      // 一幕最多一段動作
-  s.move=v3Move(m,ctx);used++;
-  // 依 cut 切開：cut 所在的那一小句由 lead 取代；前面的故事先唸，動作做完再接後面的故事
-  const c=clean(m.cut,40),pos=c?s.text.indexOf(c):-1;
-  if(pos>=0){
-   let a=pos;while(a>0&&!/[，、；。！？!?\n」』]/.test(s.text[a-1]))a--;
-   let b=pos+c.length;const tail=s.text.slice(b).match(/^[^，、；。！？!?\n]*[，、；。！？!?]?[」』]?/);if(tail)b+=tail[0].length;
-   s.after=s.text.slice(b).trim();s.text=s.text.slice(0,a).trim().replace(/[，、；]$/,'……');   // 動作前不要停在逗號上
+<script>
+'use strict';
+/* ═════════ 設定 ═════════ */
+const WORKER_URL='https://lucky-waterfall-f8a2.shopcom2009.workers.dev'; // 換 Worker 網址時只改這一行
+const BLE={service:'4fa8691a-136d-4560-84ed-01354051b785',characteristic:'beb5483e-36e1-4688-b7f5-ea07361b26a8'};
+// 門檻依 2026/11/14 手環實測：不動 0～1、輕擺 2～3、揮手 4～10、用力跑 7～10
+// strong＝衝刺；any＝有在動；light＝輕輕的（太大力會 ≥ tooHard）；stillMax＝不動
+const SENS={low:{bodyMin:4,armMin:3,stillMax:1,strongMin:6,moveMin:4,lightMin:1,lightMax:4,tooHard:7},
+  mid:{bodyMin:3,armMin:2,stillMax:1,strongMin:5,moveMin:3,lightMin:1,lightMax:4,tooHard:6},
+  high:{bodyMin:2,armMin:1,stillMax:1,strongMin:4,moveMin:2,lightMin:1,lightMax:3,tooHard:5}};
+
+/* ENGINE-BEGIN —— 故事流程核心（不碰畫面、聲音、藍牙，全部由外面傳進來，方便測試） */
+function createEngine(d){
+  const cfg=Object.assign({bodyMin:3,armMin:2,stillMax:1,strongMin:5,moveMin:3,lightMin:1,lightMax:4,tooHard:6,
+    tick:100,autoContinue:60,practiceAuto:14,reHint:20,prefetchBoth:true,seated:false,
+    waitFirst:4,waitDemo:9,waitEvery:7,cueMin:2000,cueMax:4500,cueWindow:2500},d.cfg||{});
+  const S={run:0,phase:'idle',paused:false,pauses:0,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0};
+  const alive=r=>r===S.run;
+  const CMD={body:'ACT:BODY',jump:'ACT:JUMP',arm:'ACT:ARM',still:'ACT:STILL',shake:'ACT:BODY',game:'ACT:BODY'};
+  const P_HINT=a=>['跟我一起試試看！','跟我一起'+a+'！','沒關係，我們等一下再試。'];
+  const PRACTICE=[
+    {kind:'body',do:'原地跑步',lead:'跟我一起，在原地跑一跑！',beats:['跑、跑、跑！','好棒，再一下下！','哇，你跑得好快！'],sound:'step',demo:'swing',target:{type:'seconds',value:5}},
+    {kind:'shake',do:'搖一搖',lead:'手一上一下，跟我一起搖一搖！',beats:['搖！','再搖！','搖得好棒！'],sound:'clap',demo:'shake',target:{type:'count',value:3}},
+    {kind:'arm',do:'揮動雙手',lead:'把手舉起來，跟我一起揮一揮！',beats:['揮呀揮！','再大力一點！','揮得好漂亮！'],sound:'rustle',demo:'wave',target:{type:'seconds',value:4}},
+    {kind:'still',do:'像木頭人一樣不動',lead:'現在變成木頭人，一動也不要動……',beats:['噓……','很好，繼續不動……','好厲害，你完全沒動！'],sound:'none',demo:'freeze',target:{type:'seconds',value:3}}
+  ].map(m=>Object.assign(m,{hints:P_HINT(m.do),hintAt:[3,7,11]}));
+
+  async function hold(r){while(alive(r)&&S.paused)await d.sleep(cfg.tick)}
+  // 唸一段。聲音層支援暫停時，暫停後會從停下的那一句接著唸；不支援時才整段重唸
+  async function say(r,text){
+    text=String(text||'').trim();if(!text)return;
+    while(alive(r)){await hold(r);if(!alive(r))return;const pc=S.pauses;d.ui('line',text);await d.speak(text);if(d.pauseSpeech||S.pauses===pc)return}
   }
- }
- if(!used)scenes[1].move=v3Move({kind:ctx.kinds[0]},ctx);
- const mv=scenes.filter(s=>s.move);
- if(mv.every(s=>s.move.kind==='still'))mv[0].move=v3Move({kind:ctx.kinds[0]==='body'?'body':'arm'},ctx);
- if(first&&branch&&!/[？?]/.test(scenes[3].text.slice(-60)))scenes[3].text=(scenes[3].text+(scenes[3].text?'\n':'')+`你想去「${branch.left.label}」，還是「${branch.right.label}」呢？`).trim();
- if(!first&&scenes[3].text&&!/[。！!」』～~？?]$/.test(scenes[3].text.trim()))scenes[3].text=scenes[3].text.trim()+'。';
- return scenes;
-}
-// 導演完全失敗時：照段落切，放進兩段通用的動作，故事和運動都不中斷
-function v3Generic(paras,first,ctx,branch){
- const n=ctx.name,kind=ctx.kinds[0],start=first?1:5;
- const gm=sc=>({scene:sc,kind,lead:`你和${n}一起動了起來，往前出發！`,beats:[`${n}就在你旁邊，跟你一起努力。`,'快到了，再加把勁！','做到了！你們一起做到了！'],nudge:`${n}看著你：「我們一起，好不好？」`});
- return v3Build(paras,{moves:[gm(start+1),gm(start+2)]},first,ctx,branch);
-}
-// w：作家開頭給的選項。選項優先用作家寫的，才會跟故事內容對得上
-function v3Head(raw,idea,prose,writerName,w){
- raw=raw||{};w=w||{};
- const title=clean(raw.title,24)||clean(idea,14)||'今天的冒險';
- const dirName=clean(raw?.companion?.name,12)||clean(typeof raw.companion==='string'?raw.companion:'',12);
- const inStory=x=>!!x&&(!prose||prose.includes(x));
- const name=inStory(writerName)?writerName:inStory(dirName)?dirName:(v3GuessName(prose)||writerName||dirName||'小夥伴');
- let left=w.left,right=w.right;
- if(!left||!right||left===right){
-  left=clean(typeof raw?.branch?.left==='string'?raw.branch.left:raw?.branch?.left?.label,24);
-  right=clean(typeof raw?.branch?.right==='string'?raw.branch.right:raw?.branch?.right?.label,24);
- }
- if(!left||!right||left===right){left='左邊的小路';right='右邊的小路'}
- const chant=v3Fix(raw.chant,24,name);
- return {title,companion:{name,desc:clean(raw?.companion?.desc,60)},chant,branch:{left:{label:left},right:{label:right}},dirName};
-}
-
-// ── 暖身：開頭先教孩子「聽到叮鈴就一起動」，並練習這篇會用到的動作 ──
-const V3_PRACTICE={
- body:{do:'原地跑步',lead:'先來練習一次：跟我一起，在原地跑一跑！',done:'哇，你跑得好快！',target:{type:'seconds',value:5}},
- jump:{do:'原地跳',lead:'再來，跟我一起跳、跳、跳！',done:'跳得好高！',target:{type:'count',value:3}},
- arm:{do:'揮動雙手',lead:'跟我一起，把手舉起來揮一揮！',done:'揮得好漂亮！',target:{type:'seconds',value:4}},
- still:{do:'像木頭人一樣不動',lead:'最後一個最難：像木頭人一樣，一動也不要動……',done:'好厲害，你完全沒動！',target:{type:'seconds',value:3}}
-};
-function v3Warmup(story,scenes){
- const n=story.companion.name;
- const kinds=[...new Set(scenes.filter(s=>s.move).map(s=>s.move.kind))].slice(0,3);
- const lines=[`嗨，我是${n}！今天的故事，要請你當我的冒險夥伴。`,`等一下只要聽到「叮鈴」的聲音，就是輪到我們動起來了。我做什麼，你就跟我一起做！`];
- if(story.chant)lines.push(`我們的口號是「${story.chant}」。跟我大聲唸一次：「${story.chant}」！`);
- return {lines,steps:kinds.map(k=>({kind:k,kindLabel:V3_KINDS[k],demo:V3_DEMO[k],sound:V3_DEFAULT_SOUND[k],...V3_PRACTICE[k]})),outro:'準備好了嗎？故事開始囉！'};
-}
-function v3Estimate(chars,scenes){
- let move=0;for(const s of scenes)if(s.move)move+=s.move.target.type==='count'?Math.round(s.move.target.value*1.5):s.move.target.value;
- return {storyChars:chars,moveSeconds:move};
-}
-
-// ── 輸入整理 ──
-function v3Params(body){
- const mode=body.mode==='senior'?'senior':'child',player=body.player==='coop'?'coop':'solo';
- const seated=mode==='senior'||body.posture==='seated';
- const chat=(Array.isArray(body.chat)?body.chat:[]).slice(0,8).map(c=>typeof c==='string'?{q:'',a:clean(c,80)}:{q:clean(c?.q,60),a:clean(c?.a,80)}).filter(c=>c.a);
- return {mode,player,seated,posture:seated?'seated':'general',age:limited(body.age,5,8,6),topic:clean(body.topic,110)||'自由冒險',chat,kinds:seated?['arm','still']:['body','jump','arm','still']};
-}
-function v3Models(env){return {writer:env.WRITER_MODEL||env.MODEL||MODEL,director:env.DIRECTOR_MODEL||env.MODEL||MODEL}}
-
-async function v3Start(body,env){
- // 總時間控制在 90 秒內：太久的請求會被 Cloudflare 切斷，網頁只會看到 Failed to fetch
- const p=v3Params(body),m=v3Models(env),deadline=Date.now()+88000;
- const w1=await v3Try({env,model:m.writer,system:V3_WRITER_SYS,prompt:v3WriterPrompt1(p),tokens:1600,temp:0.95,json:false,attempts:2,timeout:45000,deadline,validate:r=>v3ParseProse(r)});
- const prose=w1.text;
- const paras=v3Paras(prose),proseLen=v3Len(prose);
- let head,scenes,order=0,fallback='';
- try{
-  const out=await v3Try({env,model:m.director,system:V3_DIRECTOR_SYS,prompt:v3DirectorPrompt(paras,true,p.seated,null,w1.name||v3GuessName(prose)),tokens:1500,temp:0.5,json:true,attempts:2,timeout:35000,deadline,validate:raw=>{
-   if(!raw||typeof raw!=='object'||(!raw.title&&!Array.isArray(raw.moves)))throw Error('JSON 缺少 title 和 moves');
-   const h=v3Head(raw,p.topic,prose,w1.name,w1),ctx={name:h.companion.name,age:p.age,kinds:p.kinds,order:0};
-   const fixed=v3Rename(raw,h.dirName,h.companion.name);delete h.dirName;
-   return {h,s:v3Build(paras,fixed,true,ctx,h.branch),o:ctx.order}}});
-  head=out.h;scenes=out.s;order=out.o;
- }catch(e){
-  fallback='導演：'+(e.message||e);
-  head=v3Head({},p.topic,prose,w1.name,w1);delete head.dirName;const ctx={name:head.companion.name,age:p.age,kinds:p.kinds,order:0};
-  scenes=v3Generic(paras,true,ctx,head.branch);order=ctx.order;
- }
- const story={api:3,...head,half1:prose,idea:p.topic,age:p.age,posture:p.posture,moveCount:order};
- return reply({ok:true,version:VERSION,api:3,mode:p.mode,player:p.player,posture:p.posture,age:p.age,story,
-  warmup:v3Warmup(story,scenes),scenes,nextIndex:5,total:8,estimate:v3Estimate(proseLen,scenes),
-  fallbackUsed:!!fallback,...(fallback?{fallbackReason:clean(fallback,180)}:{})});
-}
-
-// 作家也失敗時的固定結局
-function v3SafeEnding(story,label){
- const n=story.companion.name;
- return `你選了「${label}」。${n}點點頭，跟著你一起走過去。路上的風輕輕地吹，${n}的眼睛亮亮的。
-
-走著走著，${n}停下來，小聲地說：「其實，我剛剛有一點點害怕。可是有你在，我就不怕了。」你笑了，${n}也笑了。
-
-前面就是最後一段路了。你和${n}互相看了一眼，一起加快腳步，一路往前。
-
-終於到了！你們一起完成了這場冒險。${n}舉起手，開心地說：「今天謝謝你陪我。我們明天再一起玩，好不好？」`;
-}
-function v3StoryIn(raw){
- if(!raw||typeof raw!=='object')throw Error('缺少故事資料，請從同一篇故事繼續');
- const title=clean(raw.title,24),name=clean(raw?.companion?.name,12),half1=clean(raw.half1,2600);
- const left=clean(raw?.branch?.left?.label,24),right=clean(raw?.branch?.right?.label,24);
- if(!title||!name||!half1||!left||!right)throw Error('故事資料不完整，請從同一篇故事繼續');
- return {api:3,title,companion:{name,desc:clean(raw?.companion?.desc,60)},chant:clean(raw.chant,24),branch:{left:{label:left},right:{label:right}},half1,idea:clean(raw.idea,110),age:limited(raw.age,5,8,6),posture:raw.posture==='seated'?'seated':'general',moveCount:limited(raw.moveCount,0,6,2)};
-}
-async function v3Next(body,env){
- const story=v3StoryIn(body.story);
- const choice=body.choice==='left'||body.choice==='right'?body.choice:null;
- if(!choice)throw Error('請先用左右按鈕選路');
- const p=v3Params({...body,age:story.age,posture:story.posture,topic:story.idea});
- const m=v3Models(env),deadline=Date.now()+88000,label=story.branch[choice].label;
- const ctx={name:story.companion.name,age:story.age,kinds:p.kinds,order:story.moveCount};
- let prose,scenes,fallback='';
- try{
-  prose=await v3Try({env,model:m.writer,system:V3_WRITER_SYS,prompt:v3WriterPrompt2(p,story,label),tokens:1600,temp:0.9,json:false,attempts:2,timeout:45000,deadline,validate:r=>v3CleanProse(r)});
- }catch(e){prose=v3SafeEnding(story,label);fallback='作家：'+(e.message||e)}
- const paras=v3Paras(prose),proseLen=v3Len(prose);
- if(!fallback){
-  try{
-   scenes=await v3Try({env,model:m.director,system:V3_DIRECTOR_SYS,prompt:v3DirectorPrompt(paras,false,p.seated,story,story.companion.name),tokens:1500,temp:0.5,json:true,attempts:2,timeout:35000,deadline,validate:raw=>{
-    if(!raw||typeof raw!=='object'||!Array.isArray(raw.moves))throw Error('JSON 缺少 moves');
-    const c={...ctx};const s=v3Build(paras,raw,false,c,null);ctx.order=c.order;return s}});
-  }catch(e){fallback='導演：'+(e.message||e)}
- }
- if(!scenes)scenes=v3Generic(paras,false,ctx,null);
- return reply({ok:true,version:VERSION,api:3,scenes,nextIndex:9,total:8,estimate:v3Estimate(proseLen,scenes),fallbackUsed:!!fallback,
-  ...(fallback?{fallbackReason:clean(fallback,180),notice:'AI 續寫有一部分沒完成，這一段改用備援內容。'}:{})});
-}
-
-// ───────────── v4 故事引擎：程式決定骨架和玩法，AI 照骨架寫句子（每半段一次 AI 呼叫） ─────────────
-// 手環只偵測得到三件事：晃動強度（A:0~10）、搖一下（S）、不動。所有玩法都由這三件事組成。
-// 網頁收到的每個 game 都已經展開成 phases，網頁只要照 phases 判斷進度，不需要懂故事。
-const V4_GAMES={
- dash:{label:'衝刺',demo:'swing',sound:'step',
-  idea:'需要趕快衝過去、追上去的情況（例如追上被風吹走的東西、趕在下雨前跑回去）'},
- gentle:{label:'輕輕的',demo:'wave',sound:'rustle',
-  idea:'要非常輕、非常小心才行的情況（例如捧著快破的東西慢慢走、經過睡著的動物旁邊）'},
- freeze:{label:'木頭人',demo:'freeze',sound:'step',
-  idea:'像「一二三木頭人」：有個東西轉過頭來看時要馬上停住，沒在看的時候才能往前（例如會轉頭的稻草人、守門的大鵝）'},
- shake:{label:'搖一搖',demo:'shake',sound:'clap',
-  idea:'要搖一搖的情況（例如搖鈴鐺叫醒大家、搖樹把東西搖下來、把身上的水甩掉）'},
- cue:{label:'聽口令搖',demo:'shake',sound:'clap',
-  idea:'要等對的時機才搖的情況（例如等鈴聲一響才搖旗子、等大浪來的那一刻才搖）。聽到「叮」才搖，太早搖不算'},
- hold:{label:'憋住不動',demo:'freeze',sound:'none',
-  idea:'要躲起來、一動也不動的情況（例如躲在草叢裡等誰走過去、不要吵醒睡著的大熊）'},
- alternate:{label:'快慢交替',demo:'swing',sound:'step',
-  idea:'一下要慢、一下要快的路（例如晃來晃去的小橋要慢慢走，到了平地就要快跑）'}
-};
-// 每種玩法的具體情境：每一幕由程式抽一個，避免 AI 每篇都寫一樣的事
-const V4_SITUATIONS={
- dash:['趕在下雨前跑到屋簷下','追上一顆滾下山坡的球','跟上一群跑得飛快的小鴨子','趕在吊橋收起來之前衝過去','追上快要開走的小火車','在太陽下山前跑到山丘頂'],
- gentle:['捧著一碗快滿出來的水','經過一排正在睡覺的小雞','手上停了一隻小蝴蝶','抱著剛烤好、軟軟的蛋糕','提著一瓶滿滿的泡泡水','護著一根快熄掉的小蠟燭'],
- freeze:['會突然轉頭的稻草人','守門的大鵝','愛玩一二三木頭人的小松鼠們','巡邏的玩具機器人','會突然回頭的大象','手電筒照過來的時候'],
- shake:['搖樹讓果子掉下來','搖鈴鐺叫醒大家','把身上的水甩乾','搖沙鈴開始演奏','搖一搖瓶子做出泡泡','搖旗子跟遠方的朋友打招呼'],
- cue:['等鐘聲響才敲門','等大浪來的那一刻搖槳','跟著指揮的口令搖鈴','等煙火點亮的時候搖旗子','等青蛙叫的時候搖草叢','等燈亮起來的時候搖手電筒'],
- hold:['躲在草叢裡等小貓走過去','不要吵醒睡著的大熊','當雕像讓小鳥停在手上','躲在箱子裡玩捉迷藏','等害羞的小鹿走過來','安安靜靜地看流星'],
- alternate:['晃來晃去的小橋要慢、平地要快','冰面要慢、草地要快','經過花圃要慢、大路要快','走過獨木橋要慢、下坡要快']
-};
-// 故事的目標：每篇抽一種，故事的開頭、高潮、結局都跟著變
-const V4_GOALS=[
- {key:'find',open:s=>`${s.species}的${s.thing}${s.trouble}`,goal:s=>`把${s.thing}找回來`,climax:s=>`你們終於拿回了${s.thing}`},
- {key:'deliver',open:s=>`${s.species}要在天黑前，把${s.thing}送給住在${s.place}另一頭的好朋友`,goal:s=>`趕在天黑前把${s.thing}送到`,climax:()=>'你們終於趕在天黑前送到了'},
- {key:'surprise',open:s=>`${s.species}想偷偷用${s.thing}準備一個驚喜，送給今天生日的朋友`,goal:()=>'偷偷把驚喜準備好，不能被發現',climax:()=>'驚喜終於準備好了，而且沒有被發現'},
- {key:'rescue',open:s=>`一隻小小的${pick(['小雞','小青蛙','小瓢蟲','小麻雀'])}被困住了，只有${s.thing}幫得上忙`,goal:()=>'把被困住的小朋友救出來',climax:()=>'你們終於把牠救出來了'},
- {key:'race',open:s=>`${s.place}今天有一場特別的比賽，${s.species}要帶著${s.thing}一起參加`,goal:()=>'完成這場比賽',climax:()=>'你們一起衝過了終點線'},
- {key:'fix',open:s=>`${s.species}的${s.thing}壞掉了，要找到三樣東西才能修好`,goal:s=>`找齊東西，把${s.thing}修好`,climax:s=>`${s.thing}終於修好了`}
-];
-// 程式固定的口令和示範說明：孩子實際要做什麼，一律由這裡說，AI 不能改（同一個意思有幾種說法，每篇隨機）
-function v4Calls(seated){
- return {
-  strong:seated?pick(['兩隻手用力擺，衝呀！','手用力擺，快快快！']):pick(['原地跑起來，衝呀！','手用力擺，跑跑跑！','用最快的速度，原地跑！']),
-  strongHint:seated?'看我，兩隻手用力前後擺！':'看我，手用力擺，原地跑跑跑！',
-  light:'輕輕的、慢慢的……',lightHint:'看我，手輕輕地、慢慢地擺，像捧著一碗湯。',
-  go:'動起來！',goHint:seated?'聽到「動起來」，就用力擺手！':'聽到「動起來」，就原地跑！',
-  stop:'停！木頭人！',stopHint:'停住，像木頭人一樣，一動也不要動。',
-  shake:'搖一搖！',shakeHint:'看我，手一上一下，搖搖搖！',
-  cue:'搖！',cueEarly:'還沒喔，等「叮」的聲音再搖！',cueHint:'聽到「叮」的聲音，再搖一下喔！',
-  hold:'噓……一動也不要動。',holdHint:'看我，一動也不動，像石頭一樣。',
-  slow:'慢慢的……',fast:seated?'快！用力擺！':'快！用力跑！'
- };
-}
-// 每種玩法展開成 phases。size：M＝一般，L＝高潮。f：年齡係數
-function v4Game(type,size,age,seated,sit){
- const g=v4GameCore(type,size,age,seated);g.sit=clean(sit,40)||pick(V4_SITUATIONS[g.type]);return g;
-}
-function v4GameCore(type,size,age,seated){
- const f=age<=5?0.8:age===6?0.9:1,c=v4Calls(seated),s=x=>Math.max(3,Math.round(x*f)),G=V4_GAMES[type];
- let phases,steps;
- if(type==='dash'){phases=[{mode:'level',band:'strong',seconds:s(size==='L'?40:18),call:c.strong,hint:c.strongHint}];steps=size==='L'?7:4}
- else if(type==='gentle'){phases=[{mode:'level',band:'light',seconds:s(12),call:c.light,hint:c.lightHint,oops:true}];steps=4}
- else if(type==='freeze'){phases=[];for(let i=0;i<3;i++)phases.push({mode:'level',band:'any',seconds:4,call:c.go,hint:c.goHint},{mode:'still',seconds:3,call:c.stop,hint:c.stopHint});steps=3}
- else if(type==='shake'){phases=[{mode:'count',n:age<=5?8:10,call:c.shake,hint:c.shakeHint}];steps=5}
- else if(type==='cue'){phases=[{mode:'cue',rounds:3,call:c.cue,early:c.cueEarly,hint:c.cueHint}];steps=3}
- else if(type==='hold'){phases=[{mode:'still',seconds:age<=5?6:8,call:c.hold,hint:c.holdHint}];steps=3}
- else {phases=[];for(let i=0;i<2;i++)phases.push({mode:'level',band:'light',seconds:5,call:c.slow,hint:c.lightHint},{mode:'level',band:'strong',seconds:s(7),call:c.fast,hint:c.strongHint});type='alternate';steps=4}
- return {type,label:G.label,demo:G.demo,sound:G.sound,phases,nSteps:steps};
-}
-// 這篇故事的玩法：開頭有活力、第 6 幕安靜、第 7 幕高潮一定是衝刺，其他不重複
-function v4Plan(){
- const s2=pick(['dash','alternate','shake']),calm=pick(['hold','freeze','cue']);
- const pool=shuffle(['gentle','shake','freeze','cue','alternate'].filter(x=>x!==s2&&x!==calm));
- const types={2:s2,3:pool[0],5:pool[1],6:calm,7:'dash'};
- // 兩次 dash 不用同一個情境
- const used=new Set(),plan={};
- for(const i of [2,3,5,6,7]){const opts=V4_SITUATIONS[types[i]].filter(x=>!used.has(x));const sit=pick(opts.length?opts:V4_SITUATIONS[types[i]]);used.add(sit);plan[i]={type:types[i],sit}}
- return plan;
-}
-// 故事的骨架：你、夥伴、東西、地點，加上這篇的目標
-function v4Skeleton(topic){
- const b=BANK[topic]||null;
- if(!b&&topic&&topic!=='自由冒險')return {custom:topic};
- const bank=b||BANK['自由冒險'];
- const s={species:pick(bank.who),place:pick(bank.place),thing:pick(THINGS),trouble:pick(TROUBLES)};
- const G=pick(V4_GOALS);
- return {...s,name:pick(V4_NAMES),goalKey:G.key,opening:G.open(s),goal:G.goal(s),climax:G.climax(s)};
-}
-// 夥伴名字由程式抽（AI 自己取名常常每篇都一樣）
-const V4_NAMES=['豆豆','波波','圓圓','咕咕','米米','嘟嘟','球球','樂樂','果果','點點','咚咚','奇奇','妮妮','阿福','糖糖','噗噗','小麥','泡泡','小葵','喵喵'];
-const V4_BAN=/爬|扭|翻滾|翻跟斗|倒立|轉圈|游泳|蹲|踢|跳(過|上|下|起|進|出|躍|高|呀|跳|一跳|了起來)/;
-const V4_SYS='你是替 5～8 歲孩子寫「有聲互動故事」的作家，用台灣口語的繁體中文（只用繁體字，動物用「牠」）。句子短、畫面具體、有對話和擬聲詞，偶爾好笑，結尾溫暖。故事前後要連貫，孩子一聽就懂。只輸出合法 JSON，不要 markdown。';
-const V4_RULES=`寫法規則（很重要）：
-- 每一幕 text 寫 60～110 字。句子要短，一句不超過 20 個字。要有對話（用「」）和擬聲詞。
-- 每一幕的第一句要接著上一幕的結果，讓孩子聽得懂前後的關係。開頭的說法要有變化，不要每一幕都用「因為」開頭。
-- 故事裡只有：你、夥伴、那樣東西、那個地點（加上玩法需要的一個小角色也可以）。不要突然冒出新的東西或新地點。
-- 故事裡的人只做三種動作：快跑或用力揮手、搖一搖、停住不動。不要寫爬、跳、翻、扭、游泳、轉圈、蹲。
-- 不要嚇人，不要真實的危險，不要說教。不要寫數字、次數、秒數。
-- 用「你」稱呼聽故事的孩子；夥伴也叫孩子「你」。`;
-function v4GameSpec(i,g){
- const G=V4_GAMES[g.type];
- return `第 ${i} 幕：〔玩法：${G.label}。這一幕的情境：${g.sit}。（玩法說明：${G.idea}）〕
-  text：用上面這個情境。最後停在事情還沒解決、需要大家一起動的地方（不要寫出「正要開始」這種說明文字）。
-  lead：一句話（20 字內），說出為什麼現在要這樣做。
-  steps：剛好 ${g.nSteps} 句，每句 25 字內。孩子做動作時會一句一句唸出來。這是「旁白」：描述故事裡正在發生的事（東西越來越近、誰說了什麼、發出什麼聲音），讓事情一步一步往前；最後一句是做完的結果。不要寫口令，也不要叫孩子做動作（像「快跑！」「停住！」「搖一搖！」「揮揮手」），口令系統會自己說。${g.type==='freeze'?'每一句是一次「停住」成功後的結果，例如「大鵝沒發現，我們又往前了一點」。':g.type==='cue'?'每一句是一次「在對的時機搖」成功後發生的事。':g.type==='gentle'||g.type==='alternate'?'不要用「搖」這個字（搖一搖是另一種玩法）。':''}
-  waits：3 句，每句 20 字內。孩子停下來沒動時唸，讓孩子知道故事還在等他（例如「蛋蛋晃了一下……還好沒掉」「豆豆在前面等你喔」）。${g.type==='gentle'?'\n  oops：一句 15 字內，太大力時發生的小狀況（例如「哎呀，晃了一下，輕一點！」）。':''}`;
-}
-function v4Who(sk){
- return sk.custom
-  ?`孩子想聽的故事：「${sk.custom}」。請依這個想法，自己決定一位夥伴（某種動物）、一樣東西、一個地點和開頭的麻煩，之後只能用這些。`
-  :`故事的四樣東西（不要換）：
-- 主角：「你」（聽故事的孩子）
-- 夥伴：一隻${sk.species}，名字叫「${sk.name}」（一定要用這個名字），牠一直陪在你身邊。
-- 東西：${sk.thing}
-- 地點：${sk.place}
-故事的開頭：${sk.opening}。你們的目標：${sk.goal}。`;
-}
-const V4_JSON_TAIL='emotion 從這些選：'+V3_EMOTIONS.join(', ')+'。';
-function v4Prompt1(p,sk,plan,games){
- return `聽故事的孩子 ${p.age} 歲。請寫一個有聲互動故事的「上半段」（第 1～4 幕）。孩子戴著手環，會一邊聽一邊跟著動。
-${v4Who(sk)}
-
-${V4_RULES}
-
-每一幕要寫的：
-第 1 幕：開場。交代地點、夥伴是誰、出了什麼麻煩、你們要去做什麼。
-${v4GameSpec(2,games[2])}
-${v4GameSpec(3,games[3])}
-第 4 幕：接著上一幕，來到兩個不同的去處，各用一句話形容，最後問孩子要去哪一邊。不要替孩子選，也不要寫選了之後的事。
-上半段不能完成目標（目標要留到故事最後的高潮才完成）。
-
-只輸出 JSON：
-{"title":"10 字內","companion":{"name":"2～3 字","what":"什麼動物"},"chant":"14 字內、朗朗上口的口號","branch":{"left":"第一個去處，12 字內","right":"第二個去處，12 字內"},"scenes":[{"index":1,"emotion":"","text":""},{"index":2,"emotion":"","text":"","lead":"","steps":[],"waits":[]${games[2].type==='gentle'?',"oops":""':''}},{"index":3,"emotion":"","text":"","lead":"","steps":[],"waits":[]${games[3].type==='gentle'?',"oops":""':''}},{"index":4,"emotion":"","text":""}]}
-${V4_JSON_TAIL}
-口號只在第 1 幕出現一次。`}
-function v4Prompt2(p,story,choiceLabel,games){
- return `聽故事的孩子 ${p.age} 歲。這是有聲互動故事《${story.title}》的上半段：
-"""
-${story.half1}
-"""
-夥伴叫「${story.companion.name}」（${story.companion.what||'動物'}），東西是「${story.thing||'那樣東西'}」。${story.goal?`你們的目標：${story.goal}。`:''}孩子選了：「${choiceLabel}」。
-請接著寫「下半段」（第 5～8 幕）。不要換名字、不要重講上半段。
-
-${V4_RULES}
-
-每一幕要寫的：
-${v4GameSpec(5,games[5])}
-  （第 5 幕的開頭直接從「${choiceLabel}」開始，遇到這條路特有的狀況。）
-${v4GameSpec(6,games[6])}
-  （第 6 幕要有一個溫暖或好笑的小轉折，例如夥伴說出心裡話，或犯了小錯。）
-${v4GameSpec(7,games[7])}
-  （第 7 幕是最精彩的高潮：steps 的最後一句是「${story.climax||'你們終於完成了目標'}」。不要再讓東西又弄丟一次。）
-第 5、6 幕都不能完成目標，目標要留到第 7 幕的最後一句才完成。
-第 8 幕：結局。目標完成後大家的樣子，回應故事開頭，讓孩子安心。${story.chant?`最後大家一起喊一次口號「${story.chant}」。`:''}不要「未完待續」。
-
-只輸出 JSON：
-{"scenes":[{"index":5,"emotion":"","text":"","lead":"","steps":[],"waits":[]${games[5].type==='gentle'?',"oops":""':''}},{"index":6,"emotion":"","text":"","lead":"","steps":[],"waits":[]${games[6].type==='gentle'?',"oops":""':''}},{"index":7,"emotion":"","text":"","lead":"","steps":[],"waits":[]},{"index":8,"emotion":"","text":""}]}
-${V4_JSON_TAIL}`}
-
-// ── 檢查和整理 AI 的輸出 ──
-const V4_PAD={steps:['你們一起往前，越來越近了！','加油，快到了！','就差一點點了！','做到了！'],waits:['我們還在這裡等你喔。','準備好了嗎？我們一起來！','沒關係，慢慢來，我陪著你。']};
-// 有些模型（例如 Qwen）偶爾會混進簡體字：常見又不會有歧義的字直接換成繁體
-const V4_S2T='边邊这這个個们們说說时時来來会會没沒过過还還对對让讓听聽声聲头頭风風门門树樹鸟鳥鱼魚马馬龙龍长長开開关關东東车車点點见見现現发發动動样樣着著爱愛欢歡乐樂线線叶葉话話谢謝吗嗎应應该該实實气氣种種带帶帮幫别別宝寶贝貝绿綠红紅蓝藍黄黃亲親处處远遠进進转轉钟鐘铃鈴灯燈桥橋岛島云雲阳陽惊驚礼禮鸡雞鸭鴨猫貓狮獅虫蟲结結终終经經给給纸紙写寫读讀书書画畫场場坏壞块塊万萬与與为為么麼习習觉覺两兩问問间間闹鬧闪閃轻輕软軟脚腳脸臉张張弹彈响響戏戲欢歡体體';
-const V4_S2T_MAP=(()=>{const m={},a=Array.from(V4_S2T);for(let i=0;i+1<a.length;i+=2)m[a[i]]=a[i+1];return m})();
-function v4Trad(s){return String(s||'').replace(/[一-鿿]/g,ch=>V4_S2T_MAP[ch]||ch)}
-function v4Sent(t){return String(t||'').match(/[^。！？!?…\n]+[。！？!?…]*[」』]?|\n/g)||[]}
-function v4DropBanned(t){return v4Sent(t).filter(s=>!V4_BAN.test(s)).join('').trim()}
-function v4Line(v,max,name,strict,label){
- let s=v4Trad(v3Fix(v,max,name));
- if(V4_BAN.test(s)){if(strict)throw Error(label+'出現不能做的動作：'+s.slice(0,20));s=''}
- return s;
-}
-function v4Text(v,name,strict,idx){
- let t=v4Trad(v3Scrub(clean(v,320))).replace(/○+|〇〇/g,name)
-  .replace(/[，,]?\s*正要開始(做|了)?(\.{2,}|…+)?/g,'').replace(/\s*(\.{3,}|…{2,})\s*$/,'。');   // AI 把說明文字寫進故事
- if(idx>1)t=t.replace(/^因為/,'');                                                            // 不要每一幕都用「因為」開頭
- const n=v3Len(t);
- if(strict&&(n<40||n>200))throw Error('第 '+idx+' 幕 text 長度不合（要 60～110 字，現在 '+n+' 字）');
- if(V4_BAN.test(t)){if(strict)throw Error('第 '+idx+' 幕出現不能做的動作');t=v4DropBanned(t)}
- if(v3Len(t)<10)throw Error('第 '+idx+' 幕沒有內容');
- return v3TrimTo(t,240);
-}
-function v4Lines(arr,n,max,name,strict,label,pad){
- let a=(Array.isArray(arr)?arr:[]).map((x,i)=>v4Line(x,max,name,strict,label+(i+1))).filter(x=>v3Len(x)>=2);
- if(a.length>n)a=a.slice(0,n-1).concat(a[a.length-1]);
- if(a.length<n){
-  if(strict&&n-a.length>1)throw Error(label+'要剛好 '+n+' 句，只有 '+a.length+' 句');
-  const last=a.length?a.pop():pad[pad.length-1];   // 最後一句是結果，保留在最後
-  let k=0;while(a.length<n-1)a.push(pad[k++%(pad.length-1)]);
-  a.push(last);
- }
- return a;
-}
-function v4Name(raw,fallback){
- let n=clean(typeof raw==='string'?raw:raw?.name,12).replace(/[「」『』\s]/g,'');
- if(v3Len(n)>3)n=Array.from(n).slice(-2).join('');            // 「小狗郵差豆豆」→「豆豆」
- return n||fallback||'豆豆';
-}
-function v4Scenes(raw,idxs,games,ctx,strict){
- const list=Array.isArray(raw?.scenes)?raw.scenes:[];
- const out=idxs.map((idx,k)=>{
-  const v=list.find(x=>Number(x?.index)===idx)||list[k];
-  if(!v||typeof v!=='object')throw Error('缺少第 '+idx+' 幕');
-  const sc={index:idx,title:'第 '+idx+' 幕',emotion:V3_EMOTIONS.includes(v.emotion)?v.emotion:'calm',text:v4Text(v.text,ctx.name,strict,idx),game:null};
-  const g=games[idx];
-  if(g){
-   let lead=v4Line(v.lead,60,ctx.name,strict,'lead');if(v3Len(lead)<4)lead=`${ctx.name}看著你：「我們一起來！」`;
-   const steps=v4Lines(v.steps,g.nSteps,60,ctx.name,strict,'第 '+idx+' 幕 steps 第',V4_PAD.steps);
-   // 慢的玩法不要用「搖」：直接換字，不為這種小事請 AI 重寫（大模型重寫一次要 30～60 秒）
-   if(g.type==='gentle'||g.type==='alternate'){
-    for(let k=0;k<steps.length;k++)steps[k]=steps[k].replace(/搖一搖/g,'往前走').replace(/搖啊搖|搖呀搖/g,'走呀走').replace(/搖晃/g,'晃動');
-   }
-   const waits=v4Lines(v.waits,3,50,ctx.name,false,'waits',V4_PAD.waits);
-   let oops='';if(g.type==='gentle'){oops=v4Line(v.oops,40,ctx.name,false,'oops')||'哎呀，太大力了，輕一點！'}
-   sc.game={...g,phases:g.phases.map(ph=>ph.oops?{...ph,oops}:{...ph}),lead,steps,waits};
+  function makeQueue(r){
+    const q=[];let busy=false;
+    async function pump(){if(busy)return;busy=true;while(q.length&&alive(r))await say(r,q.shift());busy=false}
+    return {push(t){if(t){q.push(t);pump()}},clear(){q.length=0},get idle(){return !busy&&!q.length},async drain(){while(busy&&alive(r))await d.sleep(cfg.tick)}};
   }
-  return sc;
- });
- return out;
+
+  // 一段動作：孩子動的時候旁白跟著進度往下講；沒動時提示一層一層變清楚；絕不卡死
+  async function runMove(r,m,opt){
+    opt=opt||{};
+    const name=S.story?S.story.companion.name:'我';
+    const A=S.act={kind:m.kind,sound:m.sound,value:0,target:m.target.value,lastProgress:0,lastPacket:0,skip:false,auto:false};
+    d.ui('move',{move:m,practice:!!opt.practice});
+    d.cmd(CMD[m.kind]);d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+m.demo);
+    const q=makeQueue(r);q.push(m.lead);
+    const said=[false,false];let leadDone=0,stage=0,hintClock=0,lastHint=0;
+    const auto=(opt.practice?cfg.practiceAuto:cfg.autoContinue)*1000;
+    while(alive(r)){
+      await hold(r);if(!alive(r))return null;
+      const now=d.now();
+      if(!leadDone&&q.idle){leadDone=now;hintClock=now}
+      const frac=A.value/A.target;
+      d.ui('progress',Math.min(1,frac));
+      if(A.skip||frac>=1)break;
+      if(!said[0]&&frac>=1/3){said[0]=true;q.push(m.beats[0])}
+      if(!said[1]&&frac>=2/3){said[1]=true;q.push(m.beats[1])}
+      if(A.lastProgress>hintClock){hintClock=A.lastProgress;stage=0}          // 有在動 → 提示重新計時
+      if(leadDone&&q.idle){
+        const idle=(now-hintClock)/1000;
+        if(stage<3&&idle>=m.hintAt[stage]){q.push(m.hints[stage]);d.robot(stage===2?'WAIT':'NUDGE');stage++;lastHint=now}
+        else if(stage>=3&&now-lastHint>=cfg.reHint*1000){q.push(m.hints[1]);d.robot('NUDGE');lastHint=now}
+        if(now-Math.max(A.lastProgress,leadDone)>=auto){A.auto=true;break}
+      }
+      await d.sleep(cfg.tick);
+    }
+    if(!alive(r))return null;
+    S.act=null;d.cmd('PAUSE');q.clear();await q.drain();
+    if(!alive(r))return null;
+    d.ui('progress',1);
+    if(!opt.practice)S.moved+=m.target.type==='count'?Math.round(Math.min(A.value,A.target)*1.5):Math.round(Math.min(A.value,A.target));
+    if(A.auto){
+      d.robot('WAIT');
+      if(!opt.practice)await say(r,name+'牽起你的手：「沒關係，我們一起慢慢走過去。」');
+    }else{d.robot('CHEER');d.sfx('cheer')}
+    if(!(opt.practice&&A.auto))await say(r,m.beats[2]);
+    d.ui('progress',0);d.ui('level',0);d.ui('rest');
+    return {auto:A.auto,skipped:A.skip};
+  }
+
+  // v4 玩法：照 phases 判斷進度，進度旁白照「孩子做了多少」一句一句往下唸。
+  // 孩子沒動時故事停著等，但一直有聲音（等待句 → 示範 → 輪流），不會自動跳過；大人可以按右鍵跳過。
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const LV={strong:l=>l>=cfg.strongMin,any:l=>l>=cfg.moveMin,light:l=>l>=cfg.lightMin&&l<=cfg.lightMax};
+  const phaseSize=ph=>ph.mode==='count'?ph.n:ph.mode==='cue'?ph.rounds:ph.seconds;
+  const phaseDemo=ph=>ph.mode==='still'?'freeze':(ph.mode==='count'||ph.mode==='cue')?'shake':ph.band==='light'?'wave':'swing';
+  async function runGame(r,g){
+    const A=S.act={kind:'game',sound:g.sound,level:0,levelAt:0,sCount:0,skip:false,lastProgress:0,lastPacket:0};
+    d.ui('move',{move:g});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+g.demo);
+    const q=makeQueue(r);q.push(g.lead);
+    while(alive(r)&&!q.idle&&!A.skip){await hold(r);await d.sleep(cfg.tick)}     // 先唸完「為什麼要動」
+    if(!alive(r))return null;
+    const total=g.phases.reduce((s,ph)=>s+phaseSize(ph),0);
+    let pi=-1,ph=null,phDone=0,before=0,said=0,last=d.now(),idleSince=d.now(),stage=0,lastLine=0,wi=0,oopsAt=0,moved=0,cue=null,sMark=0,misses=0;
+    const nextPhase=()=>{pi++;ph=g.phases[pi];phDone=0;cue=null;sMark=A.sCount;idleSince=d.now();stage=0;
+      if(ph.mode==='cue')q.push(ph.hint);else if(ph.call)q.push(ph.call);      // 聽口令搖：開頭只說「等叮再搖」，「搖！」留到叮的時候
+      d.robot('DEMO:'+phaseDemo(ph))};
+    nextPhase();
+    while(alive(r)){
+      await hold(r);if(!alive(r))return null;
+      const now=d.now(),dt=Math.min(0.3,(now-last)/1000);last=now;
+      if(A.skip)break;
+      const fresh=now-A.levelAt<800,lv=fresh?A.level:0;
+      let progressed=false;
+      if(ph.mode==='level'){
+        if(LV[ph.band](lv)){phDone+=dt;moved+=dt;progressed=true}
+        else if(ph.band==='light'&&lv>cfg.lightMax){                        // 要輕輕的卻太大力：進度倒退，不是亂動也能過
+          phDone=Math.max(0,phDone-dt*1.5);progressed=true;
+          if(now-oopsAt>4000&&q.idle){oopsAt=now;q.push(ph.oops||'輕一點，慢慢來……')}
+        }
+      }else if(ph.mode==='still'){
+        if(fresh&&lv<=cfg.stillMax){phDone+=dt;progressed=true}
+        else if(lv>=cfg.moveMin){                                             // 要停住卻明顯在動：這一次重來
+          if(phDone>0.8&&now-oopsAt>4000&&q.idle){oopsAt=now;q.push(pick(['哎呀，動到了！我們再停一次。','噓……動了喔，再當一次木頭人。']))}
+          phDone=0;
+        }
+      }else if(ph.mode==='count'){
+        const c=A.sCount-sMark;if(c>phDone){moved+=(c-phDone)*0.8;phDone=c;progressed=true}
+      }else if(ph.mode==='cue'){
+        progressed=true;                                      // 等口令時本來就要停著，不算「沒動」
+        const wait=()=>now+cfg.cueMin+Math.random()*(cfg.cueMax-cfg.cueMin);
+        if(!cue){if(q.idle)cue={state:'arm',until:wait(),mark:A.sCount}}
+        else if(cue.state==='arm'){
+          if(A.sCount>cue.mark){cue.mark=A.sCount;cue.until=wait();if(now-oopsAt>3000&&q.idle){oopsAt=now;q.push(ph.early)}}
+          else if(now>=cue.until){d.sfx('ding');d.robot('DEMO:shake');q.push(ph.call);cue={state:'go',until:now+cfg.cueWindow,mark:A.sCount}}
+        }else if(A.sCount>cue.mark){phDone+=1;moved+=1;misses=0;d.sfx('cheer');cue=null}
+        else if(now>=cue.until){misses++;cue=null;if(misses>=2){misses=0;q.push(ph.hint);d.robot('DEMO:shake')}else q.push('沒關係，再一次！')}
+      }
+      const frac=Math.min(1,(before+Math.min(phDone,phaseSize(ph)))/total);
+      d.ui('progress',frac);
+      while(said<g.steps.length-1&&frac>=(said+1)/g.steps.length){q.push(g.steps[said]);said++}
+      if(phDone>=phaseSize(ph)){before+=phaseSize(ph);if(pi+1>=g.phases.length)break;nextPhase();continue}
+      if(progressed){stage=0;idleSince=now}
+      else if(q.idle){
+        const idle=(now-idleSince)/1000;
+        if(stage===0&&idle>=cfg.waitFirst){q.push(g.waits[wi++%g.waits.length]);d.robot('NUDGE');stage=1;lastLine=now}
+        else if(stage===1&&idle>=cfg.waitDemo){q.push(ph.hint);d.robot('DEMO:'+phaseDemo(ph));stage=2;lastLine=now}
+        else if(stage>=2&&now-lastLine>=cfg.waitEvery*1000){
+          if(stage%2){q.push(ph.hint);d.robot('DEMO:'+phaseDemo(ph))}else{q.push(g.waits[wi++%g.waits.length]);d.sfx('wind')}
+          stage++;lastLine=now}
+      }
+      await d.sleep(cfg.tick);
+    }
+    if(!alive(r))return null;
+    S.act=null;d.cmd('PAUSE');q.clear();await q.drain();if(!alive(r))return null;
+    d.ui('progress',1);S.moved+=Math.round(moved);
+    d.robot('CHEER');d.sfx('cheer');
+    await say(r,g.steps[g.steps.length-1]);
+    d.ui('progress',0);d.ui('level',0);d.ui('rest');
+    return {skipped:A.skip};
+  }
+
+  // 手環（或模擬按鈕）送來的訊號
+  function signal(sig){
+    const now=d.now(),A=S.act;
+    if(sig==='CHOICE_LEFT'||sig==='CHOICE_RIGHT'){if(S.choiceWaiter&&!S.paused){const w=S.choiceWaiter;S.choiceWaiter=null;w(sig==='CHOICE_LEFT'?'left':'right')}return}
+    if(sig==='START'){if(A)A.skip=true;return}                                // 大人可以按右鍵幫孩子跳過
+    if(!A||S.paused)return;
+    if(A.kind==='game'){                                                     // v4 玩法：只記下最新強度和搖的次數，判斷交給 runGame
+      if(sig==='S'){A.sCount++;d.sfx(A.sound==='none'?'clap':A.sound);return}
+      if(sig.length>2&&sig[0]==='A'&&sig[1]===':'){const lv=Number(sig.slice(2));if(Number.isFinite(lv)){A.level=lv;A.levelAt=now;d.ui('level',lv)}}
+      return;
+    }
+    if(sig==='S'&&A.kind==='shake'){A.value+=1;A.lastProgress=now;d.sfx('clap');return}
+    if(sig==='J'){if(A.kind==='jump'){A.value+=1;A.lastProgress=now;d.sfx(A.sound)}else if(A.kind==='body')d.sfx(A.sound);return}
+    if(sig==='S'){if(A.kind==='body'||A.kind==='arm')d.sfx(A.sound);return}
+    if(sig.length>2&&sig[0]==='A'&&sig[1]===':'){
+      const lv=Number(sig.slice(2));if(!Number.isFinite(lv))return;
+      const dt=A.lastPacket?Math.min(0.5,Math.max(0.05,(now-A.lastPacket)/1000)):0.25;A.lastPacket=now;d.ui('level',lv);
+      if(A.kind==='body'){if(lv>=cfg.bodyMin){A.value+=dt;A.lastProgress=now}}
+      else if(A.kind==='arm'){if(lv>=cfg.armMin){A.value+=dt;A.lastProgress=now}}
+      else if(A.kind==='still'){if(lv<=cfg.stillMax){A.value+=dt;A.lastProgress=now}else if(lv>=cfg.bodyMin)A.value=Math.max(0,A.value-1)}
+    }
+  }
+
+  // 等 AI 的時候不讓孩子空等：先唸一句，還沒好就一起做小練習
+  async function waitWith(r,promise,line){
+    let settled=false,val,err;promise.then(v=>{settled=true;val=v},e=>{settled=true;err=e});
+    await d.sleep(300);
+    if(!settled&&line)await say(r,line);
+    const list=cfg.seated?PRACTICE.filter(m=>m.kind!=='body'):PRACTICE;
+    let i=0;
+    while(alive(r)&&!settled){
+      await runMove(r,list[i%list.length],{practice:true});S.practices++;i++;
+      if(alive(r)&&!settled)await say(r,i%2?'故事快到了，我們再玩一個！':'再等一下下，故事就要來囉！');
+    }
+    if(err)throw err;return val;
+  }
+  function fetchHalf(c){const p=d.api(S.story&&S.story.api===4?'/api/v4/next':'/api/v3/next',{story:S.story,choice:c});p.catch(()=>{});return p}
+
+  async function playScenes(r,scenes){
+    for(const sc of scenes){
+      if(!alive(r))return;
+      d.ui('scene',sc);d.robot('EMO:'+sc.emotion);if(d.prefetch)d.prefetch(sc);
+      await say(r,sc.text);
+      if(sc.game&&alive(r))await runGame(r,sc.game);
+      else if(sc.move&&alive(r))await runMove(r,sc.move);
+      if(sc.after&&alive(r))await say(r,sc.after);
+    }
+  }
+  async function askBranch(r){
+    const b=S.story.branch,name=S.story.companion.name;
+    S.phase='branch';d.ui('branch',b);d.cmd('BRANCH_ON');d.robot('ASK');
+    let choice=null;new Promise(res=>{S.choiceWaiter=res}).then(c=>{choice=c});
+    await say(r,'想去「'+b.left.label+'」，就按左邊的按鈕。想去「'+b.right.label+'」，就按右邊的按鈕。');
+    let last=d.now();
+    while(alive(r)&&!choice){
+      await hold(r);
+      if(!choice&&d.now()-last>=15000){await say(r,name+'在等你決定喔。左邊的按鈕是「'+b.left.label+'」，右邊的按鈕是「'+b.right.label+'」。');last=d.now()}
+      await d.sleep(cfg.tick);
+    }
+    if(!alive(r))return null;
+    d.cmd('BRANCH_OFF');S.phase='story';d.sfx('chime');d.ui('chosen',choice);
+    await say(r,'好，我們去「'+b[choice].label+'」！');
+    return choice;
+  }
+
+  async function start(params){
+    const r=++S.run;
+    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0});
+    d.ui('dark');d.robot('EMO:happy');
+    try{
+      const data=await waitWith(r,d.api(cfg.api==='v3'?'/api/v3/start':'/api/v4/start',params),'故事正在路上。等它來的時候，我們先暖暖身！');
+      if(!alive(r))return;
+      S.story=data.story;S.phase='story';d.ui('story',data.story);
+      const name=S.story.companion.name;
+      if(cfg.prefetchBoth){S.pending.left=fetchHalf('left');S.pending.right=fetchHalf('right')}   // 孩子聽上半段時，兩條路都先準備好
+      const w=data.warmup||{lines:[],steps:[],outro:''};
+      for(const l of w.lines)await say(r,l);
+      if(S.practices<2)for(const st of w.steps){
+        if(!alive(r))return;
+        await runMove(r,{kind:st.kind,do:st.do,lead:st.lead,beats:['很好！','就是這樣！',st.done],hints:P_HINT(st.do),hintAt:[3,7,11],sound:st.sound,demo:st.demo,target:st.target},{practice:true});
+      }
+      await say(r,w.outro);
+      await playScenes(r,data.scenes);
+      if(!alive(r))return;
+      const choice=await askBranch(r);if(!alive(r)||!choice)return;
+      let half=null;
+      for(let attempt=0;attempt<2&&!half&&alive(r);attempt++){
+        if(!S.pending[choice]||attempt)S.pending[choice]=fetchHalf(choice);
+        try{half=await waitWith(r,S.pending[choice],name+'正在想接下來的路，我們先動一動等牠！')}catch(e){half=null}
+      }
+      if(!alive(r))return;
+      if(half&&half.scenes)await playScenes(r,half.scenes);
+      else await say(r,name+'說：「今天的路先走到這裡。剩下的冒險，我們明天再繼續！」');
+      if(!alive(r))return;
+      d.robot('WAVE');
+      await say(r,name+'跟你揮揮手：「今天謝謝你陪我冒險。明天見！」');
+      if(!alive(r))return;
+      S.phase='done';d.cmd('PAUSE');d.ui('end',{story:S.story,moved:S.moved});
+    }catch(e){
+      if(!alive(r))return;
+      S.phase='error';S.act=null;d.cmd('PAUSE');d.ui('error',(e&&e.message)||String(e));
+    }
+  }
+  function stop(){S.run++;S.act=null;S.choiceWaiter=null;S.paused=false;S.phase='idle';d.cmd('PAUSE');d.cmd('BRANCH_OFF');if(d.cancelSpeech)d.cancelSpeech()}
+  function pause(){if(S.paused||S.phase==='idle'||S.phase==='done'||S.phase==='error')return;S.paused=true;S.pauses++;d.cmd('PAUSE');if(d.pauseSpeech)d.pauseSpeech();else if(d.cancelSpeech)d.cancelSpeech();d.ui('paused',true)}
+  function resume(){if(!S.paused)return;S.paused=false;if(d.resumeSpeech)d.resumeSpeech();if(S.act){S.act.lastProgress=d.now();S.act.lastPacket=0;d.cmd(CMD[S.act.kind])}else if(S.phase==='branch')d.cmd('BRANCH_ON');d.ui('paused',false)}
+  return {start,stop,pause,resume,signal,skipMove(){if(S.act)S.act.skip=true},state:S,cfg};
 }
-// 口號整篇最多兩次：上半段第一次出現的地方、下半段的結局
-function v4Chant(scenes,chant,keepIndex){
- if(!chant)return scenes;let kept=false;
- for(const s of scenes){
-  if(!s.text.includes(chant))continue;
-  if((keepIndex?s.index===keepIndex:!kept)){kept=true;const first=s.text.indexOf(chant);s.text=s.text.slice(0,first+chant.length)+s.text.slice(first+chant.length).split(chant).join('');continue}
-  s.text=s.text.split(chant).join('').replace(/「」|『』/g,'').replace(/[，、]\s*([。！？])/g,'$1');
- }
- return scenes;
+/* ENGINE-END */
+
+/* ═════════ 畫面小工具 ═════════ */
+const $=id=>document.getElementById(id);
+const show=(id,on)=>{$(id).hidden=!on};
+const notice=t=>{$('notice').textContent=t||''};
+
+/* ═════════ 聲音：語音 ═════════ */
+let voiceMode='device',speechToken=0,speechEnd=null,fishFails=0;
+const player=new Audio();player.preload='auto';player.playsInline=true;
+const voiceCache=new Map();let prefetchChain=Promise.resolve();
+function silentWav(){const n=800,b=new Uint8Array(44+n*2),v=new DataView(b.buffer),w=(o,s)=>{for(let i=0;i<s.length;i++)b[o+i]=s.charCodeAt(i)};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,16000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  let s='';for(const x of b)s+=String.fromCharCode(x);return 'data:audio/wav;base64,'+btoa(s)}
+function chunk(text,max){
+  const parts=String(text).match(/[^。！？!?\n]+[。！？!?…」』]*|\n+/g)||[text];const out=[];let cur='';
+  const add=t=>{if(cur&&(cur+t).length>max){out.push(cur);cur=''}cur+=t};
+  for(const p of parts){const t=p.replace(/\n+/g,'');if(!t)continue;
+    if(t.length<=max){add(t);continue}
+    // 句子太長：先在逗號處分開，真的還太長才硬切
+    for(const c of t.match(/[^，、；：,]+[，、；：,」』]*/g)||[t]){
+      if(c.length<=max){add(c);continue}
+      if(cur){out.push(cur);cur=''}
+      for(let i=0;i<c.length;i+=max)out.push(c.slice(i,i+max))}}
+  if(cur)out.push(cur);return out}
+function endSpeech(){if(speechEnd){const f=speechEnd;speechEnd=null;f()}}
+// 暫停：Fish 音檔停在原位；裝置語音停掉這一句，繼續時只重唸這一句
+let speechPaused=false,fishPlaying=false;const resumeWaiters=[];
+function releaseWaiters(){resumeWaiters.splice(0).forEach(f=>f())}
+function waitResume(my){return new Promise(res=>{if(!speechPaused||my!==speechToken)return res();resumeWaiters.push(res)})}
+function pauseSpeech(){if(speechPaused)return;speechPaused=true;try{player.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}
+function resumeSpeech(){if(!speechPaused)return;speechPaused=false;if(fishPlaying){try{Promise.resolve(player.play()).catch(()=>{})}catch(e){}}releaseWaiters()}
+function cancelSpeech(){speechToken++;speechPaused=false;releaseWaiters();try{speechSynthesis.cancel()}catch(e){}try{player.pause()}catch(e){}endSpeech()}
+// 挑裝置上最好聽的中文聲音：Edge 的「Natural」台灣聲音（免費、不限次數）最優先，再來是 Google，最後才是一般的
+let pickedVoice=null;
+function voiceScore(v){
+  const n=v.name||'',lang=(v.lang||'').replace('_','-');
+  if(!/^zh/i.test(lang))return -1;
+  let s=0;
+  if(/zh-TW/i.test(lang))s+=100;else if(/zh-HK/i.test(lang))s+=20;else s+=10;
+  if(/Natural|Neural|Online/i.test(n))s+=60;           // Edge 的自然語音
+  if(/HsiaoChen|曉臻|HsiaoYu|曉雨/i.test(n))s+=15;       // 適合說故事的女聲
+  if(/Google/i.test(n))s+=30;
+  if(/Hanhan|Yating|Zhiwei/i.test(n))s-=10;              // Windows 舊的機器聲音
+  return s;
 }
-// AI 完全失敗時的備援：照骨架用固定句子，故事和運動都不中斷
-function v4Fallback(idxs,games,ctx){
- const n=ctx.name,t=ctx.thing||'那樣東西';
- const T={
-  1:ctx.opening?`「哎呀，怎麼辦！」${n}著急地說。原來，${ctx.opening}。你拍拍${n}：「別擔心，我們一起想辦法。」`
-    :`「哎呀，糟糕了！」${n}著急地說。「我的${t}${ctx.trouble||'不見了'}！」你拍拍${n}：「別擔心，我們一起把它找回來。」`,
-  4:`前面有兩條路。${n}看看左邊，又看看右邊。「你覺得我們要走哪一邊呢？」`,
-  8:`你們終於回來了！${n}緊緊抱著${t}，笑得好開心。「謝謝你一路陪著我。」${ctx.chant?`大家一起喊：「${ctx.chant}」`:''}`
- };
- const G={dash:`「快看，${t}就在前面！」${n}大喊。我們要快一點，才追得上！`,gentle:`前面的路好窄，要輕輕的、慢慢的走。${n}小聲說：「小心喔。」`,
-  freeze:`前面有一隻大鵝在看守。牠轉過頭時，我們就要停住。${n}說：「準備好了嗎？」`,shake:`${t}卡在高高的樹枝上。${n}說：「我們把它搖下來！」`,
-  cue:`大鐘就快響了。${n}說：「聽到『叮』的時候，我們一起搖！」`,hold:`噓——前面有一隻大熊在睡覺。${n}小聲說：「我們不要吵醒牠。」`,
-  alternate:`前面是一座晃來晃去的小橋，過了橋就是平地。${n}說：「橋上慢慢走，平地快快跑！」`};
- const raw={scenes:idxs.map(i=>{const g=games[i];
-  const text=!g?'':i===7?`看！${t}就在最前面了。${n}大喊：「這是最後一次機會，我們衝過去！」`:G[g.type];
-  return g?{index:i,emotion:'excited',text,lead:`${n}說：「我們一起來！」`,steps:[],waits:[]}:{index:i,emotion:i===8?'happy':'calm',text:T[i]||`${n}跟著你，一步一步往前走。`}})};
- return v4Scenes(raw,idxs,games,ctx,false);
+function bestVoice(){
+  if(pickedVoice)return pickedVoice;
+  let vs=[];try{vs=speechSynthesis.getVoices()}catch(e){}
+  const list=vs.map(v=>[voiceScore(v),v]).filter(x=>x[0]>=0).sort((a,b)=>b[0]-a[0]);
+  if(list.length)pickedVoice=list[0][1];
+  return pickedVoice;
 }
-function v4Warmup(story,games){
- const n=story.companion.name,uses=new Set();
- for(const g of Object.values(games)){
-  if(['dash','alternate','freeze'].includes(g.type))uses.add('move');
-  if(['shake','cue'].includes(g.type))uses.add('shake');
-  if(['hold','freeze'].includes(g.type))uses.add('still');
- }
- const P={
-  move:{kind:'body',do:'原地跑',lead:story.posture==='seated'?'先來練習：跟我一起，兩隻手用力擺！':'先來練習：跟我一起，手用力擺，原地跑一跑！',done:'哇，好快！',demo:'swing',sound:'step',target:{type:'seconds',value:4}},
-  shake:{kind:'shake',do:'搖一搖',lead:'再來，手一上一下，跟我一起搖一搖！',done:'搖得好棒！',demo:'shake',sound:'clap',target:{type:'count',value:3}},
-  still:{kind:'still',do:'像木頭人一樣不動',lead:'最後，變成木頭人，一動也不要動……',done:'好厲害，完全沒動！',demo:'freeze',sound:'none',target:{type:'seconds',value:3}}
- };
- const lines=[`嗨，我是${n}！今天要請你當我的冒險夥伴。`,'等一下聽到「叮鈴」的聲音，就是輪到我們動起來了。我做什麼，你就跟我一起做！'];
- if(story.chant)lines.push(`我們的口號是「${story.chant}」。跟我大聲唸一次：「${story.chant}」！`);
- return {lines,steps:['move','shake','still'].filter(k=>uses.has(k)).map(k=>P[k]),outro:'準備好了嗎？故事開始囉！'};
+try{speechSynthesis.addEventListener('voiceschanged',()=>{pickedVoice=null;bestVoice()})}catch(e){}
+async function speakDevice(text,my){
+  while(my===speechToken){
+    await waitResume(my);if(my!==speechToken)return;
+    await speakDeviceOnce(text,my);
+    if(!speechPaused)return;          // 唸完了；若是被暫停打斷，繼續後重唸這一句
+  }
 }
-function v4Estimate(scenes){
- let sec=0;for(const s of scenes)for(const ph of s.game?.phases||[])sec+=ph.mode==='count'?ph.n:ph.mode==='cue'?ph.rounds*4:ph.seconds;
- return {moveSeconds:sec};
+function speakDeviceOnce(text,my){return new Promise(resolve=>{
+  if(my!==speechToken)return resolve();
+  if(!('speechSynthesis' in window)){const fin=()=>{clearTimeout(tm0);if(speechEnd===fin)speechEnd=null;resolve()};const tm0=setTimeout(fin,text.length*230+400);speechEnd=fin;return}
+  const u=new SpeechSynthesisUtterance(text);u.lang='zh-TW';u.rate=.92;u.pitch=1.05;
+  u.voice=bestVoice();
+  let done=false;const fin=()=>{if(done)return;done=true;clearTimeout(tm);if(speechEnd===fin)speechEnd=null;resolve()};
+  const tm=setTimeout(fin,text.length*420+5000);speechEnd=fin;u.onend=fin;u.onerror=fin;
+  try{speechSynthesis.speak(u)}catch(e){fin()}})}
+async function fetchVoice(text){
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),25000);
+  try{const r=await fetch(WORKER_URL+'/api/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:c.signal});
+    if(!r.ok||!(r.headers.get('Content-Type')||'').includes('audio/'))throw Error('voice');
+    return URL.createObjectURL(await r.blob())}finally{clearTimeout(t)}}
+function voiceFor(text){if(!voiceCache.has(text))voiceCache.set(text,fetchVoice(text).catch(()=>null));return voiceCache.get(text)}
+async function speakFish(text,my){
+  const url=await voiceFor(text);if(my!==speechToken)return;
+  if(!url){if(++fishFails>=3)voiceMode='device';return speakDevice(text,my)}
+  fishFails=0;
+  await waitResume(my);if(my!==speechToken)return;
+  let blocked=false;
+  await new Promise(resolve=>{let done=false,tm=null,budget=text.length*450+12000;
+    const fin=()=>{if(done)return;done=true;fishPlaying=false;clearTimeout(tm);player.onended=player.onerror=null;if(speechEnd===fin)speechEnd=null;resolve()};
+    const guard=()=>{if(!speechPaused)budget-=1000;if(budget<=0)return fin();tm=setTimeout(guard,1000)};   // 暫停的時間不算進逾時
+    tm=setTimeout(guard,1000);speechEnd=fin;player.onended=fin;player.onerror=fin;player.src=url;fishPlaying=true;
+    Promise.resolve(player.play()).catch(()=>{if(speechPaused)return;blocked=true;fin()})});
+  if(blocked&&my===speechToken)await speakDevice(text,my);
+}
+async function speak(text){
+  const my=++speechToken;
+  // 裝置語音一句一句唸（暫停後只重唸那一句）；字幕跟著目前唸的這一段走
+  for(const p of chunk(text,voiceMode==='fish'?360:40)){if(my!==speechToken)return;$('caption').textContent=p;await(voiceMode==='fish'?speakFish(p,my):speakDevice(p,my))}
+}
+// Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
+function prefetch(sc){
+  if(voiceMode!=='fish')return;
+  const list=[...chunk(sc.text,360)];
+  if(sc.move)list.push(sc.move.lead,...sc.move.beats);
+  if(sc.game){list.push(sc.game.lead,...sc.game.steps);for(const ph of sc.game.phases)if(ph.call)list.push(ph.call)}
+  if(sc.after)list.push(...chunk(sc.after,360));
+  if(sc.move)list.push(...sc.move.hints);
+  for(const t of list)prefetchChain=prefetchChain.then(()=>voiceFor(t)).catch(()=>{});
 }
 
-async function v4Start(body,env){
- const p=v3Params(body),m=v3Models(env),deadline=Date.now()+88000;
- const sk=v4Skeleton(p.topic),plan=v4Plan(),games={};
- for(const i of [2,3,5,6,7])games[i]=v4Game(plan[i].type,i===7?'L':'M',p.age,p.seated,plan[i].sit);
- const g1={2:games[2],3:games[3]};
- let raw=null,scenes,fallback='',attempt=0;
- try{
-  raw=await v3Try({env,model:m.writer,system:V4_SYS,prompt:v4Prompt1(p,sk,plan,g1),tokens:2200,temp:0.85,json:true,attempts:2,timeout:80000,deadline,validate:r=>{
-   const strict=attempt++===0,aiName=v4Name(r?.companion,'');
-   const ctx={name:sk.name||aiName||'豆豆'};
-   if(sk.name&&aiName&&aiName!==sk.name)r=v3Rename(r,aiName,sk.name);            // AI 自己改了名字：換回程式抽的
-   return {r,scenes:v4Scenes(r,[1,2,3,4],g1,ctx,strict),ctx}}});
-  scenes=raw.scenes;
- }catch(e){fallback='作家：'+(e.message||e)}
- const r=raw?.r||{};
- const name=raw?.ctx?.name||sk.name||'豆豆';
- const title=v4Trad(clean(r.title,24))||(sk.thing?`找回${sk.thing}`:'今天的冒險');
- let left=v4Trad(clean(typeof r?.branch?.left==='string'?r.branch.left:r?.branch?.left?.label,24)),right=v4Trad(clean(typeof r?.branch?.right==='string'?r.branch.right:r?.branch?.right?.label,24));
- if(!left||!right||left===right){left='左邊的小路';right='右邊的小路'}
- const chant=v4Trad(v3Fix(r.chant,24,name));
- const ctx={name,thing:sk.thing||'',trouble:sk.trouble||'',chant,opening:sk.opening||''};
- if(!scenes)scenes=v4Fallback([1,2,3,4],g1,ctx);
- v4Chant(scenes,chant,0);
- if(!/[？?]/.test(scenes[3].text.slice(-40)))scenes[3].text=(scenes[3].text+`你想去「${left}」，還是「${right}」呢？`).trim();
- const story={api:4,title,companion:{name,what:clean(r?.companion?.what,20)||sk.species||''},chant,branch:{left:{label:left},right:{label:right}},
-  thing:sk.thing||'',trouble:sk.trouble||'',goal:sk.goal||'',climax:sk.climax||'',plan:{5:plan[5],6:plan[6],7:plan[7]},half1:scenes.map(s=>s.text).join('\n'),idea:p.topic,age:p.age,posture:p.posture};
- return reply({ok:true,version:VERSION,api:4,mode:p.mode,posture:p.posture,age:p.age,story,warmup:v4Warmup(story,games),scenes,nextIndex:5,total:8,
-  estimate:v4Estimate(scenes),fallbackUsed:!!fallback,...(fallback?{fallbackReason:clean(fallback,180)}:{})});
-}
-function v4StoryIn(raw){
- if(!raw||typeof raw!=='object'||raw.api!==4)throw Error('缺少 v4 故事資料，請從同一篇故事繼續');
- const s=v3StoryIn({...raw,companion:{name:raw?.companion?.name,desc:''}});
- const plan={};
- for(const i of [5,6,7]){const v=raw?.plan?.[i],t=typeof v==='string'?v:v?.type;
-  plan[i]={type:V4_GAMES[t]?t:(i===7?'dash':i===6?'hold':'shake'),sit:clean(typeof v==='object'?v?.sit:'',40)}}
- return {...s,api:4,companion:{name:s.companion.name,what:clean(raw?.companion?.what,20)},thing:clean(raw.thing,20),trouble:clean(raw.trouble,30),
-  goal:clean(raw.goal,60),climax:clean(raw.climax,60),plan};
-}
-async function v4Next(body,env){
- const story=v4StoryIn(body.story);
- const choice=body.choice==='left'||body.choice==='right'?body.choice:null;
- if(!choice)throw Error('請先用左右按鈕選路');
- const seated=story.posture==='seated',m=v3Models(env),deadline=Date.now()+88000,label=story.branch[choice].label;
- const games={};for(const i of [5,6,7])games[i]=v4Game(story.plan[i].type,i===7?'L':'M',story.age,seated,story.plan[i].sit);
- const ctx={name:story.companion.name,thing:story.thing,trouble:story.trouble,chant:story.chant};
- let scenes,fallback='',attempt=0;
- try{
-  scenes=await v3Try({env,model:m.writer,system:V4_SYS,prompt:v4Prompt2({age:story.age},story,label,games),tokens:2200,temp:0.85,json:true,attempts:2,timeout:80000,deadline,validate:r=>{
-   const strict=attempt++===0;return v4Scenes(r,[5,6,7,8],games,ctx,strict)}});
- }catch(e){fallback='作家：'+(e.message||e);scenes=v4Fallback([5,6,7,8],games,ctx)}
- v4Chant(scenes,story.chant,8);
- return reply({ok:true,version:VERSION,api:4,scenes,nextIndex:9,total:8,estimate:v4Estimate(scenes),fallbackUsed:!!fallback,
-  ...(fallback?{fallbackReason:clean(fallback,180),notice:'AI 續寫沒完成，這一段改用備援內容。'}:{})});
+/* ═════════ 聲音：音效（用程式合成，不需要音檔） ═════════ */
+let actx=null,lastSfx=0;
+function audio(){if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}if(actx&&actx.state==='suspended')actx.resume();return actx}
+function noise(dur,type,freq,q,gain,attack){
+  const a=audio();if(!a)return;const n=Math.floor(a.sampleRate*dur),buf=a.createBuffer(1,n,a.sampleRate),ch=buf.getChannelData(0);
+  for(let i=0;i<n;i++)ch[i]=Math.random()*2-1;
+  const src=a.createBufferSource();src.buffer=buf;const f=a.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;
+  const g=a.createGain(),t=a.currentTime;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+(attack||0.006));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f);f.connect(g);g.connect(a.destination);src.start(t);src.stop(t+dur+0.02);return f}
+function tone(freq,at,dur,gain){const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.type='sine';o.frequency.value=freq;
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+0.05)}
+function sfx(name){
+  if(!name||name==='none')return;
+  const now=performance.now();
+  if(name==='chime'){tone(880,0,.5,.18);tone(1320,.14,.7,.16);return}
+  if(name==='cheer'){tone(660,0,.18,.14);tone(880,.12,.18,.14);tone(1100,.24,.4,.16);return}
+  if(name==='ding'){tone(1568,0,.6,.24);tone(2350,0,.35,.08);return}                 // 「聽口令搖」的口令聲，要和其他聲音分得出來
+  if(now-lastSfx<170)return;lastSfx=now;
+  if(name==='step')noise(.09,'lowpass',380,.7,.5);
+  else if(name==='splash'){const f=noise(.28,'bandpass',1500,.9,.42);if(f&&actx)f.frequency.exponentialRampToValueAtTime(500,actx.currentTime+.26)}
+  else if(name==='rustle')noise(.14,'highpass',3200,.5,.2);
+  else if(name==='clap')noise(.05,'bandpass',1900,1.2,.55);
+  else if(name==='wind')noise(.7,'lowpass',620,.4,.16,.3);
 }
 
-// ───────────── 以下沿用原版：長輩坐姿活動、Fish 配音、路由 ─────────────
-const SENIOR_BLUEPRINT=[
- {title:'準備與放鬆',code:null},
- {title:'舒適舉手',code:'ARM_UP',seconds:3},
- {title:'緩緩放低',code:'ARM_DOWN',seconds:3},
- {title:'向左輕揮',code:'SWIPE_LEFT',count:2},
- {title:'向右輕揮',code:'SWIPE_RIGHT',count:2},
- {title:'短暫休息',code:null},
- {title:'向左活動手腕',code:'TILT_LEFT',count:2},
- {title:'向右活動手腕',code:'TILT_RIGHT',count:2},
- {title:'小幅搖動手臂',code:'SHAKE',seconds:3},
- {title:'放鬆與結束',code:null}
-];
-const SENIOR_FOCUS={relax:'呼吸放鬆與慢節奏',arms:'肩膀手臂的溫和活動',wrists:'手腕與協調的舒適動作'};
-const SENIOR_SAFE_CUES={ARM_UP:'坐穩後，慢慢抬起戴裝置的手臂，在舒服的高度保持三秒。',ARM_DOWN:'保持坐穩，慢慢放低戴裝置的手臂，在舒服的位置保持三秒。',SWIPE_LEFT:'戴裝置的手向左小幅揮動兩次，每次都回到中間。',SWIPE_RIGHT:'戴裝置的手向右小幅揮動兩次，每次都回到中間。',TILT_LEFT:'坐穩後將手腕小幅向左傾斜兩次，每次回到中間。',TILT_RIGHT:'坐穩後將手腕小幅向右傾斜兩次，每次回到中間。',SHAKE:'輕柔地小幅搖動戴裝置的手臂約三秒，不用甩動。'};
-function seniorLine(value,max,label){const s=clean(value,max);if(s.length<6)throw Error('AI 坐姿活動缺少'+label);if(/站起來|站立|快跑|跳躍|深蹲|大力甩|用力扭|抬過頭|快速轉身|強忍|忍痛/.test(s))throw Error('AI 活動出現不適合的動作文字');return s}
-async function seniorSessionAI(input,env){
- const player=input.player==='coop'?'coop':'solo';const focus=Object.hasOwn(SENIOR_FOCUS,input.focus)?input.focus:'relax';
- const steps=SENIOR_BLUEPRINT.map((x,i)=>`${i+1}. ${x.title}：${x.code?`${OPTIONS[x.code]}，${x.seconds?`3 秒`:`${x.count} 次`}`:'僅說明或休息，不需動作'}`).join('\n');
- const prompt=`你是用臺灣繁體中文指導長者居家溫和坐姿活動的友善引導員，不是小說家，也不是醫療人員。只輸出 JSON，內容是活動課表而不是冒險故事。使用者本次重點：${SENIOR_FOCUS[focus]}。固定流程：\n${steps}\n輸出格式：{"title":"簡短的活動名稱","intro":"本次安排簡介","items":[{"index":1,"scene":"20至50字說明這一步的目的或休息方式","purpose":"8至25字，為什麼做這個活動","cue":"10至45字，如何做，僅用本步驟固定動作","during":"6至25字，溫和鼓勵","result":"8至35字，完成後的回饋"},...]}。items 必須精確10筆，每筆index 1到10，內容是自然口語、適合朗讀，不要冒險劇情、不要求站立、不要求任何高強度動作，不要宣稱醫療療效。不勉強、舒適就好。第1/6/10項沒有動作，scene 包含正確休息/坐姿說明。第2-5及7-9項只能描述指定的固定動作，不可更改動作、次數、時間或方向；若動作不適就停止並休息。${player==='coop'?'由長輩和陪同者各持裝置，一起慢慢做相同活動。':'由長輩單人完成。'} 禁止 markdown。`;
- const raw=await askAI(env,prompt,95000,'你是繁體中文的長輩坐姿活動引導員。嚴禁生成冒險故事，不編造醫療療效，只產生固定安全動作的自然語音指引。只輸出合法 JSON。');
- const items=raw.items;
- if(!Array.isArray(items)||items.length!==SENIOR_BLUEPRINT.length)throw Error('AI 坐姿活動項目數不正確');
- const scenes=items.map((v,i)=>{
-  const fixed=SENIOR_BLUEPRINT[i];if(Number(v.index)!==i+1)throw Error('AI 坐姿活動項目順序不正確');
-  const scene=seniorLine(v.scene,160,`第${i+1}項說明`);
-  if(!fixed.code)return {index:i+1,title:fixed.title,scene,action:null,family:null};
-  const purpose=seniorLine(v.purpose,95,'目的'); seniorLine(v.cue,110,'提示'); const cue=SENIOR_SAFE_CUES[fixed.code];
-  const during=seniorLine(v.during,90,'鼓勵'),result=seniorLine(v.result,150,'結果');
-  const action={code:fixed.code,label:OPTIONS[fixed.code],count:fixed.count||1,seconds:fixed.seconds||0,purpose,cue,during,result,fail:['若不舒服，先停止並休息。可在舒適範圍內再試。']};
-  const family=player==='coop'?{...action,purpose:'陪同長輩完成溫和活動',cue:'陪同者按同樣動作輕柔活動，注意長輩的舒適狀況。',result:'陪同者也完成本項活動。'}:null;
-  return {index:i+1,title:fixed.title,scene,action,family};
- });
- return reply({ok:true,version:VERSION,title:clean(raw.title,52)||'AI 坐姿舒展活動',intro:clean(raw.intro,170),scenes,total:scenes.length,aiGenerated:true});
+/* ═════════ 手環（藍牙） ═════════ */
+const band={device:null,ch:null,queue:Promise.resolve(),connected:false};
+function bandUI(){const el=$('bandState');el.replaceChildren();const i=document.createElement('i');i.className='dot'+(band.connected?' on':'');
+  el.append(i,document.createTextNode(band.connected?'手環連上了':'手環還沒連上'));$('connect').textContent=band.connected?'中斷連線':'連接手環'}
+function cmd(c){if(!band.ch||!band.connected)return;const ch=band.ch;
+  band.queue=band.queue.then(()=>ch===band.ch&&band.connected?ch.writeValue(new TextEncoder().encode(c)):null).catch(()=>{})}
+// Windows 的 Chrome 第一次連藍牙常常失敗（Connection attempt failed），自動多試幾次
+async function connectRetry(dev,tries=4){
+  let last;
+  for(let i=0;i<tries;i++){
+    try{if(dev.gatt.connected)return dev.gatt;return await dev.gatt.connect()}
+    catch(e){last=e;notice('正在連接手環……（第 '+(i+2)+' 次）');await new Promise(r=>setTimeout(r,800+i*400))}
+  }
+  throw last;
+}
+async function connectBand(){
+  if(band.connected){try{band.device.gatt.disconnect()}catch(e){}return}
+  if(!navigator.bluetooth||!navigator.bluetooth.requestDevice){notice('這個瀏覽器不能連手環。iPhone 請改用 Bluefy；也可以先用畫面上的按鈕試玩。');return}
+  try{
+    const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE.service]});
+    const server=await connectRetry(dev),svc=await server.getPrimaryService(BLE.service),ch=await svc.getCharacteristic(BLE.characteristic);
+    band.device=dev;band.ch=ch;band.connected=true;band.queue=Promise.resolve();
+    dev.addEventListener('gattserverdisconnected',()=>{if(band.device!==dev)return;band.connected=false;band.ch=null;bandUI();notice('手環斷線了。可以重新連接，或長按畫面用按鈕代替。')});
+    await ch.startNotifications();
+    ch.addEventListener('characteristicvaluechanged',e=>{const t=new TextDecoder().decode(e.target.value).trim().toUpperCase();if(t)engine.signal(t)});
+    cmd('MODE_CHILD');cmd('GAME_ACTIVE');cmd('PAUSE');bandUI();notice('手環連上了。');
+  }catch(e){band.connected=false;band.ch=null;bandUI();
+    const m=String(e&&e.message||e);
+    notice(/cancel/i.test(m)?'沒有選擇手環。':'沒有連上手環：'+m+'。請確認手環有開機、沒有被其他分頁或手機連著，再按一次「連接手環」。')}
 }
 
-async function hexDigest(text){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('')}
-async function cachedAudio(db,key){if(!db)return null;await db.prepare('CREATE TABLE IF NOT EXISTS next_voice_cache (cache_key TEXT PRIMARY KEY, audio_base64 TEXT NOT NULL, created_at INTEGER NOT NULL)').run();const row=await db.prepare('SELECT audio_base64 FROM next_voice_cache WHERE cache_key=?').bind(key).first();if(!row)return null;const chars=atob(row.audio_base64);const arr=Uint8Array.from(chars,c=>c.charCodeAt(0));return arr}
-async function saveAudio(db,key,bytes){if(!db)return;await db.prepare('CREATE TABLE IF NOT EXISTS next_voice_cache (cache_key TEXT PRIMARY KEY, audio_base64 TEXT NOT NULL, created_at INTEGER NOT NULL)').run();let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));await db.prepare('INSERT OR IGNORE INTO next_voice_cache(cache_key,audio_base64,created_at) VALUES(?,?,?)').bind(key,btoa(binary),Date.now()).run()}
-async function reserveQuota(db,req,cost,env){
- if(!db)throw Error('Fish 需綁定 STORY_DB 以控制額度');
- await db.prepare('CREATE TABLE IF NOT EXISTS fish_story_usage(day TEXT PRIMARY KEY,used_chars INTEGER NOT NULL,used_requests INTEGER NOT NULL)').run();
- await db.prepare('CREATE TABLE IF NOT EXISTS fish_story_ip_usage(day TEXT NOT NULL,ip_hash TEXT NOT NULL,used_chars INTEGER NOT NULL,used_requests INTEGER NOT NULL,PRIMARY KEY(day,ip_hash))').run();
- const day=new Date().toISOString().slice(0,10);
- const iphash=await hexDigest(day+':'+(req.headers.get('CF-Connecting-IP')||'unknown')+':fish-voice');
- const dayChars=limited(env.FISH_DAY_CHAR_LIMIT,0,50000,18000),dayCalls=limited(env.FISH_DAY_CALL_LIMIT,0,300,100);
- const ipChars=limited(env.FISH_IP_DAY_CHAR_LIMIT,0,50000,12000),ipCalls=limited(env.FISH_IP_DAY_CALL_LIMIT,0,300,80);
- const global=await db.prepare('INSERT INTO fish_story_usage(day,used_chars,used_requests) VALUES(?,?,1) ON CONFLICT(day) DO UPDATE SET used_chars=used_chars+excluded.used_chars,used_requests=used_requests+1 WHERE used_chars+excluded.used_chars<=? AND used_requests+1<=? RETURNING used_requests').bind(day,cost,dayChars,dayCalls).first();
- if(!global)throw Error('今天的 Fish Audio 額度已滿');
- const ip=await db.prepare('INSERT INTO fish_story_ip_usage(day,ip_hash,used_chars,used_requests) VALUES(?,?,?,1) ON CONFLICT(day,ip_hash) DO UPDATE SET used_chars=used_chars+excluded.used_chars,used_requests=used_requests+1 WHERE used_chars+excluded.used_chars<=? AND used_requests+1<=? RETURNING used_requests').bind(day,iphash,cost,ipChars,ipCalls).first();
- if(!ip)throw Error('此連線今天的 Fish 配音額度已滿');
+/* ═════════ 機器人（預留）═════════
+   之後 SDQ-30 做好，只要在這裡把指令送出去。目前會送出的指令：
+   EMO:<happy|excited|worried|surprised|sad|calm|proud|scared>  換眼睛表情（每一幕開頭）
+   DEMO:<swing|up|wave|freeze|shake>  示範動作（一段動作開始）。shake＝雙手一上一下輪流揮
+   NUDGE  孩子還沒動，動作做大一點、看向孩子      WAIT  表示「我等你」
+   CHEER  孩子完成了，歡呼      ASK  等孩子選路      WAVE  故事結束，揮手說明天見 */
+const robotLog=[];
+function robot(c){robotLog.push(c);if(robotLog.length>60)robotLog.shift();
+  try{window.dispatchEvent(new CustomEvent('sdq-robot',{detail:c}))}catch(e){}}
+
+/* ═════════ 把上面的東西接進故事流程 ═════════ */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function api(path,body){
+  // 連不上（Failed to fetch）通常是 Worker 當下出錯或網路不穩：自動再試一次
+  for(let attempt=0;;attempt++){
+    const c=new AbortController(),t=setTimeout(()=>c.abort(),180000);   // Worker 下半段最多等 2.5 分鐘，這裡要更久
+    try{
+      const r=await fetch(WORKER_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok)throw Object.assign(Error(j.error||(r.status===404?'Worker 還是舊版，請先部署 worker_v4.js':'故事伺服器回傳錯誤（'+r.status+'）')),{server:true});
+      return j;
+    }catch(e){
+      if(e.name==='AbortError')throw Error('故事等太久了，請再試一次');
+      if(e.server)throw e;
+      if(attempt<1){await new Promise(r=>setTimeout(r,2500));continue}
+      throw Error('連不到故事伺服器。請打開 Worker 的 /health 看看有沒有回應，或稍後再試');
+    }finally{clearTimeout(t)}
+  }
 }
-async function voice(req,env,ctx){const origin=req.headers.get('Origin');const self=new URL(req.url).origin;const allowed=String(env.TTS_ALLOWED_ORIGINS||'https://rrong1041-cell.github.io').split(',').map(x=>x.trim());if(origin&&origin!==self&&!allowed.includes(origin))return reply({ok:false,error:'未授權網站'},403);
- if(!env.FISH_API_KEY||!env.FISH_VOICE_ID)return reply({ok:false,error:'尚未設定 Fish API Key 或 FISH_VOICE_ID，請用內建朗讀'},503);
- const body=await bodyJSON(req);const text=clean(body.text,520),cost=Array.from(text).length;if(!cost||cost>480)return reply({ok:false,error:'單段配音限480字'},400);
- const model='s2.1-pro-free',key=await hexDigest([model,env.FISH_VOICE_ID,text].join('|'));
- const cache=typeof caches!=='undefined'?caches.default:null;const cacheReq=new Request(new URL('/__next_voice_cache/'+key,req.url));if(cache){const r=await cache.match(cacheReq);if(r)return r}
- if(env.STORY_DB){try{const hit=await cachedAudio(env.STORY_DB,key);if(hit)return new Response(hit,{headers:{'Content-Type':'audio/mpeg','Access-Control-Allow-Origin':'*','Cache-Control':'public,max-age=86400'}})}catch(e){console.warn('voice cache read:',e.message)}}
- if(body.savedOnly)return reply({ok:false,error:'沒有已保存的音檔'},404);
- try{await reserveQuota(env.STORY_DB,req,cost,env)}catch(e){return reply({ok:false,error:e.message},429)}
- const ac=new AbortController();const t=setTimeout(()=>ac.abort(),45000);try{const r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',signal:ac.signal,headers:{Authorization:'Bearer '+env.FISH_API_KEY,'Content-Type':'application/json',model},body:JSON.stringify({text,format:'mp3',reference_id:env.FISH_VOICE_ID})});if(!r.ok)return reply({ok:false,error:'Fish 配音失敗，HTTP '+r.status},r.status===429?429:502);const bytes=new Uint8Array(await r.arrayBuffer());if(bytes.length<256||bytes.length>1900000||!(bytes[0]===0x49&&bytes[1]===0x44&&bytes[2]===0x33)&&!(bytes[0]===0xff&&(bytes[1]&0xe0)===0xe0))throw Error('Fish 回傳不是 MP3');const out=new Response(bytes,{headers:{'Content-Type':'audio/mpeg','Access-Control-Allow-Origin':'*','Cache-Control':'public,max-age=86400'}});if(cache&&ctx?.waitUntil)ctx.waitUntil(cache.put(cacheReq,out.clone()).catch(()=>{}));if(env.STORY_DB&&ctx?.waitUntil)ctx.waitUntil(saveAudio(env.STORY_DB,key,bytes).catch(()=>{}));return out}catch(e){return reply({ok:false,error:e.name==='AbortError'?'Fish 等待逾時':e.message},503)}finally{clearTimeout(t)}}
-export default {async fetch(request,env,ctx){if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type','Access-Control-Allow-Methods':'GET,POST,OPTIONS'}});const path=new URL(request.url).pathname.replace(/\/+$/,'')||'/';if(path==='/'||path==='/health'||path==='/api/health')return reply({ok:true,version:VERSION,api:3,model:env.MODEL||MODEL,writerModel:env.WRITER_MODEL||env.MODEL||MODEL,directorModel:env.DIRECTOR_MODEL||env.MODEL||MODEL,writerReasoning:env.WRITER_REASONING||'',aiReady:!!env.AI,fishReady:!!env.FISH_API_KEY&&!!env.FISH_VOICE_ID,dbReady:!!env.STORY_DB});if(path==='/fish-voice-status')return reply({voiceId:clean(env.FISH_VOICE_ID,120),fishApiConfigured:!!env.FISH_API_KEY,storyDbConfigured:!!env.STORY_DB,storyVoiceEnabled:!!env.FISH_API_KEY,model:'s2.1-pro-free'});if(request.method!=='POST')return reply({ok:false,error:'請使用 POST'},405);try{if(path==='/api/senior-session')return await seniorSessionAI(await bodyJSON(request),env);if(path==='/api/v3/start')return await v3Start(await bodyJSON(request),env);if(path==='/api/v3/next')return await v3Next(await bodyJSON(request),env);if(path==='/api/v4/start')return await v4Start(await bodyJSON(request),env);if(path==='/api/v4/next')return await v4Next(await bodyJSON(request),env);if(path==='/api/start')return await start(await bodyJSON(request),env);if(path==='/api/next')return await next(await bodyJSON(request),env);if(path==='/api/voice'||path==='/tts-fish-story')return await voice(request,env,ctx);return reply({ok:false,error:'找不到 API'},404)}catch(error){console.error(VERSION,path,error);return reply({ok:false,error:error.message||'伺服器發生問題',version:VERSION},error.message?.includes('AI 等待')?504:400)}}};
+let sceneNo=0,sheetTimer=null,storyTitle='',sceneEmo='calm';
+const face=$('face');
+function fmtTime(s){return s>=60?Math.floor(s/60)+' 分 '+(s%60)+' 秒':s+' 秒'}
+function ui(ev,data){
+  if(ev==='dark'){show('setup',false);show('finale',false);show('stage',true);show('fork',false);show('resume',false);show('sheet',false);
+    $('caption').textContent='';show('caption',$('subs').checked);sceneNo=0;storyTitle='';sceneEmo='happy';
+    face.dataset.emo='calm';face.classList.add('thinking');face.classList.remove('moving');sheetInfo();window.scrollTo(0,0)}
+  else if(ev==='story'){storyTitle=data.title;face.classList.remove('thinking');face.dataset.emo='happy';sheetInfo()}
+  else if(ev==='line'){$('caption').textContent=data}
+  else if(ev==='level'){face.style.setProperty('--glow',Math.min(1,data/7).toFixed(2))}
+  else if(ev==='progress'){$('smileFill').style.strokeDashoffset=String(100*(1-data));$('smileFill').style.opacity=data>0.01?'1':'0'}
+  else if(ev==='move'){face.classList.remove('thinking');face.classList.add('moving');face.dataset.emo='excited'}
+  else if(ev==='rest'){face.classList.remove('moving');face.dataset.emo=sceneEmo;if(!storyTitle)face.classList.add('thinking')}
+  else if(ev==='scene'){sceneNo=data.index;sceneEmo=data.emotion||'calm';face.dataset.emo=sceneEmo;sheetInfo()}
+  else if(ev==='branch'){$('forkL').textContent=data.left.label;$('forkR').textContent=data.right.label;show('fork',true);show('caption',false);face.dataset.emo='surprised'}
+  else if(ev==='chosen'){show('fork',false);show('caption',$('subs').checked);face.dataset.emo='happy'}
+  else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事'}
+  else if(ev==='end'){leaveStage();show('finale',true);window.scrollTo(0,0);
+    $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion.name+'說：「明天見！」';
+    $('stat').textContent=data.moved?'你今天動了 '+fmtTime(data.moved):'';remember(data.story,data.moved)}
+  else if(ev==='error'){leaveStage();show('setup',true);notice('故事沒有說成：'+data+'。請再按一次開始。')}
+}
+function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' / 8 幕':'故事準備中')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')}
+function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech()}
+// 聽過的故事：只記故事名稱和運動時間，而且只存在這台裝置上
+function pastStories(){try{return JSON.parse(localStorage.getItem('sdq-v3-stories')||'[]')}catch(e){return []}}
+function remember(story,moved){try{const list=pastStories();list.unshift({title:story.title,name:story.companion.name,moved:moved||0,t:Date.now()});localStorage.setItem('sdq-v3-stories',JSON.stringify(list.slice(0,6)))}catch(e){}renderPast()}
+function renderPast(){const list=pastStories(),ul=$('pastList');ul.replaceChildren();show('past',list.length>0);
+  for(const s of list){const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');a.textContent='《'+s.title+'》和'+s.name;b.textContent=s.moved?'動了 '+fmtTime(s.moved):'';li.append(a,b);ul.append(li)}}
+
+const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,sleep,now:()=>performance.now(),cfg:{}});
+
+/* 螢幕不要自己鎖起來（鎖了故事會被系統暫停） */
+let wake=null;
+async function keepAwake(){try{if('wakeLock' in navigator)wake=await navigator.wakeLock.request('screen')}catch(e){}}
+function releaseWake(){try{if(wake)wake.release()}catch(e){}wake=null}
+document.addEventListener('visibilitychange',()=>{
+  if($('stage').hidden)return;
+  if(document.hidden){engine.pause();show('resume',true)}else keepAwake();
+});
+$('resumeBtn').onclick=()=>{audio();show('resume',false);keepAwake();engine.resume()};
+
+/* 沒有手環時，用按鈕或鍵盤代替 */
+let simTimer=null,simHeld=false,simStep=0;
+function simStart(){if(simTimer)return;simTimer=setInterval(()=>{if(band.connected)return;engine.signal('A:'+(simHeld?6:0));if(simHeld&&(++simStep%2===0))engine.signal('S')},250)}
+function simStop(){clearInterval(simTimer);simTimer=null;simHeld=false}
+const holdOn=e=>{e.preventDefault();simHeld=true},holdOff=()=>{simHeld=false};
+$('simMove').addEventListener('pointerdown',holdOn);['pointerup','pointerleave','pointercancel'].forEach(t=>$('simMove').addEventListener(t,holdOff));
+$('simJump').onclick=()=>engine.signal('J');
+document.addEventListener('keydown',e=>{
+  if($('stage').hidden)return;
+  if(e.code==='Space'){e.preventDefault();simHeld=true}
+  else if(e.key==='j'||e.key==='J')engine.signal('J');
+  else if(e.key==='ArrowLeft')engine.signal('CHOICE_LEFT');
+  else if(e.key==='ArrowRight')engine.signal('CHOICE_RIGHT');
+  else if(e.key==='Enter')engine.skipMove();
+});
+document.addEventListener('keyup',e=>{if(e.code==='Space')simHeld=false});
+
+/* 黑畫面上長按一秒，才會出現控制鈕（避免孩子誤觸） */
+let pressTimer=null;
+$('stage').addEventListener('pointerdown',e=>{if(e.target.closest('#sheet,#fork,#resume'))return;pressTimer=setTimeout(()=>{show('sheet',true);clearTimeout(sheetTimer);sheetTimer=setTimeout(()=>{if(!simHeld)show('sheet',false)},9000)},900)});
+['pointerup','pointerleave','pointercancel'].forEach(t=>$('stage').addEventListener(t,()=>clearTimeout(pressTimer)));
+$('sheet').addEventListener('pointerdown',()=>{clearTimeout(sheetTimer);sheetTimer=setTimeout(()=>{if(!simHeld)show('sheet',false)},9000)});
+$('pauseBtn').onclick=()=>{if(engine.state.paused){audio();engine.resume()}else engine.pause()};
+$('skipBtn').onclick=()=>engine.skipMove();
+$('quitBtn').onclick=()=>{engine.stop();leaveStage();show('setup',true);notice('')};
+$('fork').addEventListener('click',e=>{const b=e.target.closest('[data-choice]');if(b)engine.signal(b.dataset.choice==='left'?'CHOICE_LEFT':'CHOICE_RIGHT')});
+
+/* 準備畫面 */
+$('ideas').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('idea').value=b.dataset.idea||'';$('idea').focus()});
+let ageValue='6',sensValue='mid';
+function setSens(v){sensValue=v;document.querySelectorAll('#sensSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.sens===v)))}
+$('sensSeg').addEventListener('click',e=>{const b=e.target.closest('[data-sens]');if(b)setSens(b.dataset.sens)});
+function setAge(a){ageValue=String(a);document.querySelectorAll('#ages button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.age===ageValue)))}
+$('ages').addEventListener('click',e=>{const b=e.target.closest('[data-age]');if(b)setAge(b.dataset.age)});
+$('connect').onclick=connectBand;
+try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voice==='fish';if(s.sens&&SENS[s.sens])setSens(s.sens);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
+function begin(){
+  notice('');
+  // 這些一定要在「按下按鈕」的當下做，手機才允許之後自動播放聲音
+  audio();try{player.src=silentWav();Promise.resolve(player.play()).catch(()=>{})}catch(e){}
+  try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}
+  keepAwake();
+  voiceMode=$('fish').checked?'fish':'device';fishFails=0;voiceCache.clear();
+  const seated=$('seated').checked;
+  Object.assign(engine.cfg,SENS[sensValue]||SENS.mid,{seated});
+  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,voice:voiceMode,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
+  simStart();
+  engine.start({mode:'child',player:'solo',posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[]});
+}
+$('begin').onclick=begin;
+$('again').onclick=()=>{show('finale',false);show('setup',true);window.scrollTo(0,0)};
+window.addEventListener('pagehide',()=>{cancelSpeech();cmd('PAUSE')});
+bandUI();renderPast();
+</script>
+</body>
+</html>
