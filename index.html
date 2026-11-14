@@ -107,7 +107,7 @@ textarea{width:100%;height:160px;background:#15151d;color:var(--text);border:1px
     <h2>6. 新動作：測試準不準</h2>
     <p class="dim">每一項按下去，照畫面說的做 3 次。表格會顯示手環認出了什麼。理想的結果是：做什麼，就只在那一欄有數字。</p>
     <div class="row" id="gestBtns"></div>
-    <div style="overflow-x:auto"><table id="gestTable"><thead><tr><th>做的動作</th><th>舉高</th><th>放低</th><th>左倒</th><th>右倒</th><th>轉手腕</th><th>推</th><th>搖</th></tr></thead><tbody></tbody></table></div>
+    <div style="overflow-x:auto"><table id="gestTable"><thead><tr><th>做的動作</th><th>舉高</th><th>放低</th><th>轉手腕</th><th>推</th><th>搖</th></tr></thead><tbody></tbody></table></div>
     <div class="verdict" id="gestVerdict">還沒有結果。</div>
   </section>
 
@@ -322,13 +322,11 @@ function renderReaction(){
 /* ── 5. 新動作校正 ── */
 const msgCount={};
 const CAL_STEPS=[
-  {name:'MID',label:'手自然放前面',say:'手臂自然放在身體前面，像平常走路那樣，不要動',secs:1.5},
-  {name:'UP',label:'手舉高',say:'把手舉高，像要摘樹上的果子，舉著不要動',secs:1.5},
-  {name:'DOWN',label:'手放低',say:'把手放低，像要摸地上的小貓，放著不要動',secs:1.5},
-  {name:'LEFT',label:'手往左倒',say:'手臂往左邊倒，像船要往左轉，倒著不要動',secs:1.5},
-  {name:'RIGHT',label:'手往右倒',say:'手臂往右邊倒，像船要往右轉，倒著不要動',secs:1.5},
-  {name:'TWIST',label:'轉手腕',say:'像轉鑰匙開門一樣，手腕來回轉',secs:3},
-  {name:'PUSH',label:'往前推',say:'手往前用力推一下，像推開一扇門，然後收回來',secs:3}];
+  {name:'MID',label:'手自然放前面',say:'手肘彎著，手放在肚子前面，像捧著一碗湯，不要動',secs:1.5},
+  {name:'UP',label:'手舉高',say:'整隻手臂往上伸直，指向天空，舉著不要動',secs:1.5},
+  {name:'DOWN',label:'手放低',say:'整隻手臂往下伸直，指向地板，放著不要動',secs:1.5},
+  {name:'TWIST',label:'轉手腕',say:'手放在前面，像轉鑰匙開門一樣，只轉手腕，來回轉',secs:3},
+  {name:'PUSH',label:'往前推',say:'手往前用力推出去一下，像推開一扇門，然後收回來',secs:3}];
 const calStatus={};
 function renderCal(){const tb=document.querySelector('#calTable tbody');tb.innerHTML='';
   for(const s of CAL_STEPS){const tr=document.createElement('tr');[s.label,s.say,calStatus[s.name]||'–'].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.append(td)});tb.append(tr)}}
@@ -353,12 +351,10 @@ listeners.add(p=>{if(p.startsWith('CAL:LIST:')){const ok=p.slice(9).split(',').f
 renderCal();
 
 /* ── 6. 新動作準不準 ── */
-const GEST_COLS=['P:UP','P:DOWN','P:LEFT','P:RIGHT','G:TWIST','G:PUSH','S'];
+const GEST_COLS=['P:UP','P:DOWN','G:TWIST','G:PUSH','S'];
 const GEST_TESTS=[
-  {key:'UP',label:'舉高',say:'舉高手，維持 2 秒，放回前面。做 3 次',expect:'P:UP',n:3},
-  {key:'DOWN',label:'放低',say:'手放低，維持 2 秒，放回前面。做 3 次',expect:'P:DOWN',n:3},
-  {key:'LEFT',label:'往左倒',say:'手往左倒，維持 2 秒，回到前面。做 3 次',expect:'P:LEFT',n:3},
-  {key:'RIGHT',label:'往右倒',say:'手往右倒，維持 2 秒，回到前面。做 3 次',expect:'P:RIGHT',n:3},
+  {key:'UP',label:'舉高',say:'手臂往上伸直，維持 2 秒，放回肚子前面。做 3 次',expect:'P:UP',n:3},
+  {key:'DOWN',label:'放低',say:'手臂往下伸直，維持 2 秒，放回肚子前面。做 3 次',expect:'P:DOWN',n:3},
   {key:'TWIST',label:'轉手腕',say:'像轉鑰匙一樣，手腕來回轉 3 次（去、回算 2 下）',expect:'G:TWIST',n:6},
   {key:'PUSH',label:'往前推',say:'手往前推一下再收回來，做 3 次',expect:'G:PUSH',n:3},
   {key:'RUN',label:'用力原地跑',say:'手臂用力擺，原地跑（看會不會被誤認成別的動作）',expect:'',n:0}];
