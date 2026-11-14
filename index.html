@@ -431,7 +431,7 @@ const SENS={low:{bodyMin:4,armMin:3,stillMax:1,strongMin:6,moveMin:4,lightMin:1,
 function createEngine(d){
   const cfg=Object.assign({bodyMin:3,armMin:2,stillMax:1,strongMin:5,moveMin:3,lightMin:1,lightMax:4,tooHard:6,
     tick:100,autoContinue:60,practiceAuto:14,reHint:20,prefetchBoth:true,seated:false,
-    waitFirst:4,waitDemo:9,waitEvery:7,setbackAfter:16,cueMin:2000,cueMax:4500,cueWindow:2500},d.cfg||{});
+    sceneGap:900,waitFirst:4,waitDemo:9,waitEvery:7,setbackAfter:16,cueMin:2000,cueMax:4500,cueWindow:2500},d.cfg||{});
   const S={run:0,phase:'idle',paused:false,pauses:0,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0};
   const alive=r=>r===S.run;
   const CMD={body:'ACT:BODY',jump:'ACT:JUMP',arm:'ACT:ARM',still:'ACT:STILL',shake:'ACT:BODY',game:'ACT:BODY'};
@@ -681,7 +681,9 @@ function createEngine(d){
       if(!alive(r))return;
       if(!scenes.slice(i).some(s=>s.game||s.move))fire();
       d.ui('scene',sc);d.robot('EMO:'+sc.emotion);if(d.prefetch)d.prefetch(sc);
+      if(i>0)await d.sleep(cfg.sceneGap);                                    // 換幕前停一下，像翻頁
       await say(r,sc.text);
+      if((sc.game||sc.move)&&alive(r))await d.sleep(cfg.sceneGap/2);        // 故事講完、要動之前也喘口氣
       if(sc.game&&alive(r))await runGame(r,sc.game,sc);
       else if(sc.move&&alive(r))await runMove(r,sc.move);
       if(sc.after&&alive(r))await say(r,sc.after);
@@ -845,7 +847,7 @@ function bestVoice(){
 try{speechSynthesis.addEventListener('voiceschanged',()=>{pickedVoice=null;talkVoice=null;bestVoice()})}catch(e){}
 // 說故事的聲音設定：旁白慢一點；對話換聲音，沒有第二個好聲音時就用同一個聲音但音調高一點
 // （舊版音調拉到 1.28、句子在逗號切開，聽起來一頓一頓、像機器人，所以改成整句唸、音調只拉高一點點）
-const VOICE_STYLE={narr:{rate:.92,pitch:1.0},talk:{rate:.98,pitch:1.06},talkSame:{rate:.98,pitch:1.12}};
+const VOICE_STYLE={narr:{rate:.88,pitch:1.0},talk:{rate:.94,pitch:1.06},talkSame:{rate:.94,pitch:1.12}};
 async function speakDevice(text,my,role){
   while(my===speechToken){
     await waitResume(my);if(my!==speechToken)return;
@@ -902,7 +904,9 @@ async function storyPause(ms,my){const end=performance.now()+ms;while(my===speec
 async function speak(text){
   const my=++speechToken;
   if(voiceMode==='fish'){                                   // Fish 自己的聲音就有語氣，維持一段一段送
-    for(const p of chunk(text,360)){if(my!==speechToken)return;$('caption').textContent=p;await speakFish(p,my)}
+    // 以前整段一口氣唸完、句子之間沒有換氣，聽起來很急：改成兩三句一段，每段之間停一下
+    for(const p of chunk(text,90)){if(my!==speechToken)return;$('caption').textContent=p;await speakFish(p,my);
+      await storyPause(/[。！？!?…」]$/.test(p)?550:300,my)}
     return;
   }
   // 裝置語音：旁白和對話分開唸，一句一句唸（暫停後只重唸那一句）；字幕跟著目前唸的這一句走
@@ -922,11 +926,11 @@ async function speak(text){
 // Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
 function prefetch(sc){
   if(voiceMode!=='fish')return;
-  const list=[...chunk(sc.text,360)];
+  const list=[...chunk(sc.text,90)];
   if(sc.move)list.push(sc.move.lead,...sc.move.beats);
   if(sc.game){const g=sc.game;list.push(g.lead,...g.steps);for(const ph of g.phases){if(ph.call)list.push(ph.call);if(ph.hint)list.push(ph.hint)}
     list.push(g.win,g.help,(g.waits||[])[0])}                   // 結果和等待句也先準備，動作做完不會突然安靜很久
-  if(sc.after)list.push(...chunk(sc.after,360));
+  if(sc.after)list.push(...chunk(sc.after,90));
   if(sc.move)list.push(...sc.move.hints);
   prefetchText(list);
 }
