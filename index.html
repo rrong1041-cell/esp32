@@ -162,14 +162,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .bot .head{position:relative;z-index:2;padding:.45em .55em .5em;border-radius:1.4em;border:.13em solid transparent;
   background:linear-gradient(#100F2C,#100F2C) padding-box,var(--rgb) border-box;background-size:100% 100%,300% 100%;
   animation:rgbborder 6s linear infinite,headglow 6s linear infinite}
-@keyframes headglow{0%,100%{box-shadow:0 0 30px rgba(255,45,85,.35),inset 0 0 22px rgba(255,45,85,.12)}33%{box-shadow:0 0 30px rgba(48,209,88,.32),inset 0 0 22px rgba(48,209,88,.1)}66%{box-shadow:0 0 30px rgba(61,90,254,.4),inset 0 0 22px rgba(61,90,254,.12)}}
+@keyframes headglow{0%,100%{box-shadow:0 0 28px rgba(62,230,255,.32),inset 0 0 20px rgba(62,230,255,.1)}33%{box-shadow:0 0 28px rgba(139,108,255,.38),inset 0 0 20px rgba(139,108,255,.12)}66%{box-shadow:0 0 28px rgba(255,95,200,.32),inset 0 0 20px rgba(255,95,200,.1)}}
+/* 機器人的眼睛和嘴巴：青白色的螢幕光 */
+.bot .face{--moon:#A6F4FF;width:5.2em;height:3.6em}
+.bot .face .eye{box-shadow:0 0 calc(.45em + 1em*var(--glow)) rgba(110,230,255,calc(.5 + .45*var(--glow)))}
+.bot .face[data-emo=happy] .eye,.bot .face[data-emo=proud] .eye{box-shadow:none}
+/* 準備畫面的小機器人：同一隻，比較小，坐在山坡上跟你揮手 */
+.bot.mini{position:absolute;z-index:2;right:max(34px,calc(50% - 250px));bottom:40px;margin:0;font-size:17px}
+@media (min-width:700px){.bot.mini{font-size:21px;bottom:46px}}
 .bot .ant{position:absolute;z-index:1;left:50%;top:-.95em;width:.14em;height:1em;margin-left:-.07em;background:#3F3B7A;border-radius:.1em;transform-origin:50% 100%;animation:antwig 2.6s ease-in-out infinite}
 .bot .ant::after{content:"";position:absolute;left:50%;top:-.4em;width:.48em;height:.48em;margin-left:-.24em;border-radius:50%;animation:rgbfill 6s linear infinite;box-shadow:0 0 12px 3px rgba(255,255,255,.3)}
 @keyframes antwig{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}}
 .bot .arm{position:absolute;z-index:1;top:1.55em;width:.46em;height:1.75em;border-radius:.3em;background:#2E2A66;border:.08em solid #4E49A0;transform-origin:50% .2em;
   transition:transform .4s cubic-bezier(.3,1.5,.5,1)}
 .bot .arm::after{content:"";position:absolute;left:50%;bottom:-.32em;width:.62em;height:.62em;margin-left:-.31em;border-radius:50%;animation:rgbfill 6s linear infinite;box-shadow:0 0 10px rgba(255,255,255,.35)}
-.bot .arm.l{left:-.32em;transform:rotate(16deg)}.bot .arm.r{right:-.32em;transform:rotate(-16deg)}
+.bot .arm.l{left:-.5em;transform:rotate(28deg)}.bot .arm.r{right:-.5em;transform:rotate(-28deg)}
 #face{width:5.2em;height:3.6em;font-size:1em}
 /* 機器人示範的動作（跟著 DEMO 指令換） */
 .bot[data-pose=up] .arm.l{transform:rotate(165deg)}.bot[data-pose=up] .arm.r{transform:rotate(-165deg)}
@@ -253,29 +260,25 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .mark,.ask,.field>span:first-child,.ages button,.seg button,#begin,.ghost,.past h2,.grown summary,#resume button,#again,#finale h2,.how li::before{font-family:var(--round);font-weight:800}
 
 /* ── RGB 電競燈：慢慢流動的彩虹，不閃爍 ── */
-:root{--rgb:linear-gradient(90deg,#FF2D55,#FF9F0A,#FFE60A,#30D158,#00E5FF,#3D5AFE,#BF5AF2,#FF2D55)}
-@keyframes rgbflow{from{background-position:0% 50%}to{background-position:300% 50%}}
-@keyframes rgbborder{from{background-position:0 0,0% 50%}to{background-position:0 0,300% 50%}}
-@keyframes rgbspin{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(360deg)}}
-@keyframes rgbedge{0%,100%{border-color:#FF2D55}17%{border-color:#FF9F0A}33%{border-color:#30D158}50%{border-color:#00E5FF}67%{border-color:#3D5AFE}83%{border-color:#BF5AF2}}
-@keyframes rgbfill{0%,100%{background-color:#FF2D55}17%{background-color:#FF9F0A}33%{background-color:#30D158}50%{background-color:#00E5FF}67%{background-color:#3D5AFE}83%{background-color:#BF5AF2}}
-@keyframes rgbglow{0%,100%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(255,45,85,.7)}17%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(255,159,10,.7)}33%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(48,209,88,.7)}50%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(0,229,255,.7)}67%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(61,90,254,.75)}83%{box-shadow:0 6px 0 #17163A,0 0 26px rgba(191,90,242,.7)}}
-/* 彩虹字：標題、結束畫面 */
-.mark,#finale h2{background:var(--rgb);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;
-  filter:drop-shadow(0 3px 0 rgba(20,18,50,.45));animation:rgbflow 8s linear infinite}
-/* 開始按鈕：彩虹邊框＋會換顏色的光暈 */
-#begin{border:3px solid transparent;background:linear-gradient(var(--dusk),var(--dusk)) padding-box,var(--rgb) border-box;background-size:100% 100%,300% 100%;
-  animation:rgbborder 6s linear infinite,rgbglow 6s linear infinite}
-/* 小機器人：外框和天線燈跟著變色 */
-.buddy{animation:peek 4.5s ease-in-out infinite,rgbedge 6s linear infinite}
-.buddy::after{animation:rgbfill 6s linear infinite;box-shadow:0 0 10px rgba(255,255,255,.6)}
-/* 選到的按鈕和打開的開關：彩虹流動 */
-.ages button[aria-pressed=true],.seg button[aria-pressed=true],.sw input:checked{background:var(--rgb);background-size:300% 100%;border-color:transparent;animation:rgbflow 6s linear infinite}
-.ages button[aria-pressed=true],.seg button[aria-pressed=true]{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.45)}
-#idea:focus{animation:rgbedge 5s linear infinite}
-/* 故事畫面：夥伴的眼睛和笑容慢慢換顏色 */
-#face,#face.moving{animation:rgbspin 14s linear infinite}
-#finale .face{animation:rgbspin 12s linear infinite}
+/* 只用一組「夕陽霓虹」顏色：青、紫、粉、桃（和天空的顏色同一家），只放在幾個重點，其他地方保持安靜 */
+:root{--c1:#3EE6FF;--c2:#8B6CFF;--c3:#FF5FC8;--c4:#FFB070;
+  --rgb:linear-gradient(90deg,var(--c1),var(--c2),var(--c3),var(--c4),var(--c1))}
+@keyframes rgbflow{from{background-position:0% 50%}to{background-position:200% 50%}}
+@keyframes rgbborder{from{background-position:0 0,0% 50%}to{background-position:0 0,200% 50%}}
+@keyframes rgbedge{0%,100%{border-color:var(--c1)}25%{border-color:var(--c2)}50%{border-color:var(--c3)}75%{border-color:var(--c4)}}
+@keyframes rgbfill{0%,100%{background-color:var(--c1)}25%{background-color:var(--c2)}50%{background-color:var(--c3)}75%{background-color:var(--c4)}}
+@keyframes rgbglow{0%,100%{box-shadow:0 6px 0 #17163A,0 0 24px rgba(62,230,255,.45)}25%{box-shadow:0 6px 0 #17163A,0 0 24px rgba(139,108,255,.5)}50%{box-shadow:0 6px 0 #17163A,0 0 24px rgba(255,95,200,.45)}75%{box-shadow:0 6px 0 #17163A,0 0 24px rgba(255,176,112,.45)}}
+/* 標題、結束畫面：漸層字，慢慢流動 */
+.mark,#finale h2{background:var(--rgb);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;
+  filter:drop-shadow(0 3px 0 rgba(20,18,50,.5));animation:rgbflow 10s linear infinite}
+/* 開始按鈕：霓虹邊框＋柔和光暈 */
+#begin{border:3px solid transparent;background:linear-gradient(var(--dusk),var(--dusk)) padding-box,var(--rgb) border-box;background-size:100% 100%,200% 100%;
+  animation:rgbborder 6s linear infinite,rgbglow 8s linear infinite}
+/* 選到的年紀、靈敏度：深色底＋霓虹框，字看得清楚 */
+.ages button[aria-pressed=true],.seg button[aria-pressed=true]{color:#fff;border:3px solid transparent;transform:scale(1.08);
+  background:linear-gradient(#26225A,#26225A) padding-box,var(--rgb) border-box;background-size:100% 100%,200% 100%;animation:rgbborder 6s linear infinite;box-shadow:0 0 14px rgba(139,108,255,.45)}
+.sw input:checked{background:linear-gradient(90deg,var(--c2),var(--c3))}
+#idea:focus{border-color:var(--c1)}
 #finale h2{filter:drop-shadow(0 3px 0 rgba(20,18,50,.6)) drop-shadow(0 0 3px rgba(20,18,50,.45))}
 
 /* ── 深色電競主題：取代原本的米色，讓 RGB 燈光更亮 ── */
@@ -285,14 +288,12 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
 #idea{background:var(--card);border-color:#3A3670;box-shadow:0 5px 0 #3A3670;color:var(--ink)}
 #idea::placeholder{color:#6E69A0}
 #idea:focus{box-shadow:0 5px 0 #3A3670,0 0 18px rgba(0,229,255,.25)}
-.ideas button{background:var(--card)!important;color:var(--ink)}
-.ideas li:nth-child(4n+1) button{border-color:#FF2D55!important;box-shadow:0 3px 0 #FF2D55,0 0 12px rgba(255,45,85,.3)!important}
-.ideas li:nth-child(4n+2) button{border-color:#30D158!important;box-shadow:0 3px 0 #30D158,0 0 12px rgba(48,209,88,.3)!important}
-.ideas li:nth-child(4n+3) button{border-color:#FFE60A!important;box-shadow:0 3px 0 #FFE60A,0 0 12px rgba(255,230,10,.25)!important}
-.ideas li:nth-child(4n+4) button{border-color:#BF5AF2!important;box-shadow:0 3px 0 #BF5AF2,0 0 12px rgba(191,90,242,.3)!important}
+/* 靈感按鈕：統一的深色小卡，碰到時才亮起來 */
+.ideas button{background:var(--card)!important;color:var(--ink);border-color:#3A3670!important;box-shadow:0 3px 0 #2A2754!important;transition:transform .12s,border-color .2s,box-shadow .2s}
+.ideas button:hover,.ideas button:focus-visible{border-color:var(--c1)!important;box-shadow:0 3px 0 #2A2754,0 0 14px rgba(62,230,255,.3)!important}
 .ideas button:active{box-shadow:none!important}
 .ages button,.seg button{background:var(--card);border-color:#3A3670;color:var(--ink)}
-.ghost{background:var(--card);border-color:#00E5FF;color:var(--ink);box-shadow:0 3px 0 #00A8BD,0 0 12px rgba(0,229,255,.25)}
+.ghost{background:var(--card);border-color:var(--c1);color:var(--ink);box-shadow:0 3px 0 #1E8FA3,0 0 12px rgba(62,230,255,.2)}
 .how li,.grown{background:var(--card);border-color:#2E2B5C}
 .how li::before{color:#1B1940}
 .sw input{background:#3A3670}
@@ -326,7 +327,10 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
       <path d="M0 62 Q70 18 150 54 T300 44 T400 30 V112 H0Z" fill="#3B3276"/>
       <path d="M0 92 Q90 50 190 84 T400 66 V112 H0Z" fill="#0E0D24"/>
     </svg>
-    <div class="buddy face" data-emo="happy" id="buddy" aria-hidden="true"><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i><i class="mouth"></i></div>
+    <div class="bot mini" id="buddy" data-pose="wave" aria-hidden="true">
+      <i class="ant"></i><i class="arm l"></i><i class="arm r"></i>
+      <div class="head"><div class="face" data-emo="happy"><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i><i class="mouth"></i></div></div>
+    </div>
   </header>
 
   <main>
@@ -1039,6 +1043,9 @@ function lookAround(){
   setTimeout(lookAround,1800+Math.random()*2600);
 }
 setTimeout(lookAround,1500);
+// 準備畫面的小機器人：一下揮手、一下休息、偶爾舉手歡呼
+(function buddyLoop(){const b=document.getElementById('buddy');if(b){const r=Math.random();b.dataset.pose=b.dataset.pose?'':(r<.7?'wave':'cheer')}
+  setTimeout(buddyLoop,b&&b.dataset.pose?1800:2600+Math.random()*2000)})();
 
 /* ═════════ 把上面的東西接進故事流程 ═════════ */
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
