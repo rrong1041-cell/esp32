@@ -337,7 +337,7 @@ const SENS={low:{bodyMin:4,armMin:3,stillMax:1,strongMin:6,moveMin:4,lightMin:1,
 function createEngine(d){
   const cfg=Object.assign({bodyMin:3,armMin:2,stillMax:1,strongMin:5,moveMin:3,lightMin:1,lightMax:4,tooHard:6,
     tick:100,autoContinue:60,practiceAuto:14,reHint:20,prefetchBoth:true,seated:false,
-    waitFirst:4,waitDemo:9,waitEvery:7,cueMin:2000,cueMax:4500,cueWindow:2500},d.cfg||{});
+    waitFirst:4,waitDemo:9,waitEvery:7,setbackAfter:16,cueMin:2000,cueMax:4500,cueWindow:2500},d.cfg||{});
   const S={run:0,phase:'idle',paused:false,pauses:0,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0};
   const alive=r=>r===S.run;
   const CMD={body:'ACT:BODY',jump:'ACT:JUMP',arm:'ACT:ARM',still:'ACT:STILL',shake:'ACT:BODY',game:'ACT:BODY'};
@@ -409,7 +409,9 @@ function createEngine(d){
   const LV={strong:l=>l>=cfg.strongMin,any:l=>l>=cfg.moveMin,light:l=>l>=cfg.lightMin&&l<=cfg.lightMax};
   const phaseSize=ph=>ph.mode==='count'?ph.n:ph.mode==='cue'?ph.rounds:ph.seconds;
   const phaseDemo=ph=>ph.mode==='still'?'freeze':(ph.mode==='count'||ph.mode==='cue')?'shake':ph.band==='light'?'wave':'swing';
-  async function runGame(r,g){
+  async function runGame(r,g,sc){
+    const hasOutcome=!!(g.win||g.help);                                     // v5.1：做得順利／需要幫忙，兩種結果
+    let setbackDone=false,struggled=false,stillResets=0,totalMisses=0;
     const A=S.act={kind:'game',sound:g.sound,level:0,levelAt:0,sCount:0,skip:false,lastProgress:0,lastPacket:0};
     d.ui('move',{move:g});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+g.demo);
     const q=makeQueue(r);q.push(g.lead);
@@ -436,7 +438,7 @@ function createEngine(d){
       }else if(ph.mode==='still'){
         if(fresh&&lv<=cfg.stillMax){phDone+=dt;progressed=true}
         else if(lv>=cfg.moveMin){                                             // 要停住卻明顯在動：這一次重來
-          if(phDone>0.8&&now-oopsAt>4000&&q.idle){oopsAt=now;q.push(pick(['哎呀，動到了！我們再停一次。','噓……動了喔，再當一次木頭人。']))}
+          if(phDone>0.8){stillResets++;if(now-oopsAt>4000&&q.idle){oopsAt=now;q.push(pick(['哎呀，動到了！我們再停一次。','噓……動了喔，再當一次木頭人。']))}}
           phDone=0;
         }
       }else if(ph.mode==='count'){
@@ -449,7 +451,7 @@ function createEngine(d){
           if(A.sCount>cue.mark){cue.mark=A.sCount;cue.until=wait();if(now-oopsAt>3000&&q.idle){oopsAt=now;q.push(ph.early)}}
           else if(now>=cue.until){d.sfx('ding');d.robot('DEMO:shake');q.push(ph.call);cue={state:'go',until:now+cfg.cueWindow,mark:A.sCount}}
         }else if(A.sCount>cue.mark){phDone+=1;moved+=1;misses=0;d.sfx('cheer');cue=null}
-        else if(now>=cue.until){misses++;cue=null;if(misses>=2){misses=0;q.push(ph.hint);d.robot('DEMO:shake')}else q.push('沒關係，再一次！')}
+        else if(now>=cue.until){misses++;totalMisses++;cue=null;if(misses>=2){misses=0;q.push(ph.hint);d.robot('DEMO:shake')}else q.push('沒關係，再一次！')}
       }
       // 即時音效：身體一動就聽得到。用力動是腳步聲（越用力越快），輕輕動是沙沙聲，太大力是嘩啦聲，該停住卻在動是「咦？」
       if(fresh&&ph.mode==='level'){
@@ -460,12 +462,19 @@ function createEngine(d){
       }else if(fresh&&ph.mode==='still'&&lv>=cfg.moveMin&&now-fxAt>=1200){fxAt=now;d.sfx('wobble')}
       const frac=Math.min(1,(before+Math.min(phDone,phaseSize(ph)))/total);
       d.ui('progress',frac);
-      while(said<g.steps.length-1&&frac>=(said+1)/g.steps.length){q.push(g.steps[said]);said++}
+      // 進度旁白：有兩種結果時，steps 全部在過程中唸完（結果另外唸）；舊版的最後一句 step 就是結果
+      if(hasOutcome){while(said<g.steps.length&&frac>=(said+1)/(g.steps.length+1)){q.push(g.steps[said]);said++}}
+      else while(said<g.steps.length-1&&frac>=(said+1)/g.steps.length){q.push(g.steps[said]);said++}
       if(phDone>=phaseSize(ph)){before+=phaseSize(ph);if(pi+1>=g.phases.length)break;nextPhase();continue}
       if(progressed){stage=0;idleSince=now}
       else if(q.idle){
         const idle=(now-idleSince)/1000;
-        if(stage===0&&idle>=cfg.waitFirst){q.push(g.waits[wi++%g.waits.length]);d.robot('NUDGE');stage=1;lastLine=now}
+        // 一直沒動：發生一個小挫折，夥伴鼓勵再試一次。故事不結束、不跳過，只是走向會變成「需要幫忙」
+        if(hasOutcome&&!setbackDone&&g.setback&&idle>=cfg.setbackAfter){
+          setbackDone=true;struggled=true;q.push(g.setback);d.sfx('wobble');d.robot('WAIT');
+          q.push(g.retry||ph.hint);d.robot('DEMO:'+phaseDemo(ph));stage=2;lastLine=now;
+        }
+        else if(stage===0&&idle>=cfg.waitFirst){q.push(g.waits[wi++%g.waits.length]);d.robot('NUDGE');stage=1;lastLine=now}
         else if(stage===1&&idle>=cfg.waitDemo){q.push(ph.hint);d.robot('DEMO:'+phaseDemo(ph));stage=2;lastLine=now}
         else if(stage>=2&&now-lastLine>=cfg.waitEvery*1000){
           if(stage%2){q.push(ph.hint);d.robot('DEMO:'+phaseDemo(ph))}else{q.push(g.waits[wi++%g.waits.length]);d.sfx('wind')}
@@ -476,8 +485,17 @@ function createEngine(d){
     if(!alive(r))return null;
     S.act=null;d.cmd('PAUSE');q.clear();await q.drain();if(!alive(r))return null;
     d.ui('progress',1);S.moved+=Math.round(moved);
-    d.robot('CHEER');d.sfx('cheer');
-    await say(r,g.steps[g.steps.length-1]);
+    if(hasOutcome){
+      // 孩子的表現決定故事怎麼走：順利 → 多了一個好的新發展；需要幫忙 → 夥伴幫忙，用不同方法過關。兩種都會往下走
+      if(A.skip||totalMisses>=2||stillResets>=2)struggled=true;
+      const outcome=struggled?'help':'win';
+      if(outcome==='win'){d.robot('CHEER');d.sfx('cheer')}else{d.robot('NUDGE');d.sfx('chime')}
+      await say(r,g[outcome]);
+      S.log.push({index:sc?sc.index:0,type:g.type,outcome,reward:g.reward||'',lesson:g.lesson||''});
+    }else{
+      d.robot('CHEER');d.sfx('cheer');
+      await say(r,g.steps[g.steps.length-1]);
+    }
     d.ui('progress',0);d.ui('level',0);d.ui('rest');
     return {skipped:A.skip};
   }
@@ -519,17 +537,22 @@ function createEngine(d){
     if(err)throw err;return val;
   }
   // 兩條路的下半段都先準備；準備好的留在 S.halves，故事結束時一起存起來，之後可以「再聽一次」
-  function fetchHalf(c){const api=S.story&&S.story.api;const p=d.api(api===5?'/api/v5/next':api===4?'/api/v4/next':'/api/v3/next',{story:S.story,choice:c});p.then(v=>{if(v&&v.scenes)S.halves[c]=v}).catch(()=>{});return p}
+  function fetchHalf(c){const api=S.story&&S.story.api;const p=d.api(api===5?'/api/v5/next':api===4?'/api/v4/next':'/api/v3/next',{story:S.story,choice:c,log:S.log.slice()});p.then(v=>{if(v&&v.scenes)S.halves[c]=v}).catch(()=>{});return p}
 
-  async function playScenes(r,scenes){
-    for(const sc of scenes){
+  // onMovesDone：這一半的動作都做完時呼叫一次（v5 用來在這時才寫下半段，這樣下半段才知道孩子剛剛的表現）
+  async function playScenes(r,scenes,onMovesDone){
+    const fire=()=>{if(onMovesDone){const f=onMovesDone;onMovesDone=null;f()}};
+    for(let i=0;i<scenes.length;i++){
+      const sc=scenes[i];
       if(!alive(r))return;
+      if(!scenes.slice(i).some(s=>s.game||s.move))fire();
       d.ui('scene',sc);d.robot('EMO:'+sc.emotion);if(d.prefetch)d.prefetch(sc);
       await say(r,sc.text);
-      if(sc.game&&alive(r))await runGame(r,sc.game);
+      if(sc.game&&alive(r))await runGame(r,sc.game,sc);
       else if(sc.move&&alive(r))await runMove(r,sc.move);
       if(sc.after&&alive(r))await say(r,sc.after);
     }
+    fire();
   }
   async function askBranch(r){
     const b=S.story.branch,name=S.story.companion.name;
@@ -551,17 +574,18 @@ function createEngine(d){
   // replay：之前存下來的故事（不用再問 AI；配音的句子一模一樣，Fish 會直接用存好的音檔）
   async function start(params,replay){
     const r=++S.run;
-    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},choiceWaiter:null,practices:0,moved:0});
+    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},log:[],choiceWaiter:null,practices:0,moved:0});
     d.ui('dark');d.robot('EMO:happy');
     try{
       const data=replay?replay.start:await waitWith(r,d.api(cfg.api==='v3'?'/api/v3/start':cfg.api==='v4'?'/api/v4/start':'/api/v5/start',params),'故事正在路上。等它來的時候，我們先暖暖身！');
       if(!alive(r))return;
       S.story=data.story;S.phase='story';d.ui('story',data.story);
       const name=S.story.companion.name;
-      for(const c of ['left','right']){                                                       // 孩子聽上半段時，兩條路都先準備好
-        if(replay&&replay.halves&&replay.halves[c]){S.halves[c]=replay.halves[c];S.pending[c]=Promise.resolve(replay.halves[c])}
-        else if(cfg.prefetchBoth)S.pending[c]=fetchHalf(c);
-      }
+      // v5：下半段要知道孩子在上半段的表現，所以等上半段的動作都做完才開始寫；v3、v4 一開始就先準備
+      const lateFetch=S.story.api===5;
+      const prepare=()=>{for(const c of ['left','right'])if(!S.pending[c]&&cfg.prefetchBoth)S.pending[c]=fetchHalf(c)};
+      for(const c of ['left','right'])if(replay&&replay.halves&&replay.halves[c]){S.halves[c]=replay.halves[c];S.pending[c]=Promise.resolve(replay.halves[c])}
+      if(!lateFetch)prepare();
       const w=data.warmup||{lines:[],steps:[],outro:''};
       for(const l of w.lines)await say(r,l);
       if(S.practices<2)for(const st of w.steps){
@@ -569,7 +593,7 @@ function createEngine(d){
         await runMove(r,{kind:st.kind,do:st.do,lead:st.lead,beats:['很好！','就是這樣！',st.done],hints:P_HINT(st.do),hintAt:[3,7,11],sound:st.sound,demo:st.demo,target:st.target},{practice:true});
       }
       await say(r,w.outro);
-      await playScenes(r,data.scenes);
+      await playScenes(r,data.scenes,lateFetch?prepare:null);
       if(!alive(r))return;
       const choice=await askBranch(r);if(!alive(r)||!choice)return;
       let half=null;
