@@ -688,18 +688,29 @@ function bandUI(){const el=$('bandState');el.replaceChildren();const i=document.
   el.append(i,document.createTextNode(band.connected?'手環連上了':'手環還沒連上'));$('connect').textContent=band.connected?'中斷連線':'連接手環'}
 function cmd(c){if(!band.ch||!band.connected)return;const ch=band.ch;
   band.queue=band.queue.then(()=>ch===band.ch&&band.connected?ch.writeValue(new TextEncoder().encode(c)):null).catch(()=>{})}
+// Windows 的 Chrome 第一次連藍牙常常失敗（Connection attempt failed），自動多試幾次
+async function connectRetry(dev,tries=4){
+  let last;
+  for(let i=0;i<tries;i++){
+    try{if(dev.gatt.connected)return dev.gatt;return await dev.gatt.connect()}
+    catch(e){last=e;notice('正在連接手環……（第 '+(i+2)+' 次）');await new Promise(r=>setTimeout(r,800+i*400))}
+  }
+  throw last;
+}
 async function connectBand(){
   if(band.connected){try{band.device.gatt.disconnect()}catch(e){}return}
   if(!navigator.bluetooth||!navigator.bluetooth.requestDevice){notice('這個瀏覽器不能連手環。iPhone 請改用 Bluefy；也可以先用畫面上的按鈕試玩。');return}
   try{
     const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE.service]});
-    const server=await dev.gatt.connect(),svc=await server.getPrimaryService(BLE.service),ch=await svc.getCharacteristic(BLE.characteristic);
+    const server=await connectRetry(dev),svc=await server.getPrimaryService(BLE.service),ch=await svc.getCharacteristic(BLE.characteristic);
     band.device=dev;band.ch=ch;band.connected=true;band.queue=Promise.resolve();
     dev.addEventListener('gattserverdisconnected',()=>{if(band.device!==dev)return;band.connected=false;band.ch=null;bandUI();notice('手環斷線了。可以重新連接，或長按畫面用按鈕代替。')});
     await ch.startNotifications();
     ch.addEventListener('characteristicvaluechanged',e=>{const t=new TextDecoder().decode(e.target.value).trim().toUpperCase();if(t)engine.signal(t)});
     cmd('MODE_CHILD');cmd('GAME_ACTIVE');cmd('PAUSE');bandUI();notice('手環連上了。');
-  }catch(e){band.connected=false;band.ch=null;bandUI();notice('沒有連上手環：'+(e.message||e))}
+  }catch(e){band.connected=false;band.ch=null;bandUI();
+    const m=String(e&&e.message||e);
+    notice(/cancel/i.test(m)?'沒有選擇手環。':'沒有連上手環：'+m+'。請確認手環有開機、沒有被其他分頁或手機連著，再按一次「連接手環」。')}
 }
 
 /* ═════════ 機器人（預留）═════════
