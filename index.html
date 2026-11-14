@@ -127,9 +127,10 @@ $('connect').onclick=async()=>{
     const server=await dev.gatt.connect(),svc=await server.getPrimaryService(BLE.service),ch=await svc.getCharacteristic(BLE.characteristic);
     band.device=dev;band.ch=ch;band.connected=true;band.queue=Promise.resolve();
     dev.addEventListener('gattserverdisconnected',()=>{if(band.device!==dev)return;band.connected=false;band.ch=null;stateUI();$('note').textContent='手環斷線了，請重新連接。'});
-    await ch.startNotifications();
-    ch.addEventListener('characteristicvaluechanged',e=>onRaw(new TextDecoder().decode(e.target.value)));
+    ch.addEventListener('characteristicvaluechanged',e=>{notifyRx++;onRaw(new TextDecoder().decode(e.target.value))});
+    try{await ch.startNotifications();notifyOn=true}catch(e){notifyErr=e.message||String(e);addLog('！開啟通知失敗：'+notifyErr)}
     stateUI();$('note').textContent='連上了。';cmd('MODE_CHILD');cmd('GAME_ACTIVE');cmd('ACT:BODY');
+    pollRead(ch);
   }catch(e){band.connected=false;stateUI();$('note').textContent='沒有連上：'+(e.message||e)}
 };
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>cmd(b.dataset.mode));
@@ -138,11 +139,24 @@ document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>cmd(b.dataset.
 const hist=[];            // {t,lv}
 const sigTimes=[];        // 最近一秒內收到的筆數
 let sTotal=0,jTotal=0,lastLevel=null,rxTotal=0,gotOk=false,noMpu=false;
+let notifyRx=0,notifyOn=false,notifyErr='',readRx=0,readErr='';
 const listeners=new Set();
+// 第二條路：直接「讀」手環目前的值。通知收不到時，用它判斷資料到底有沒有在手環上更新
+async function pollRead(ch){
+  let last='';
+  while(band.connected&&band.ch===ch){
+    try{const p=band.queue.then(()=>ch.readValue());band.queue=p.catch(()=>{});   // 跟寫入排隊，不能同時進行
+      const v=new TextDecoder().decode(await p).trim();
+      if(v&&v!==last){last=v;readRx++;if(!notifyRx){addLog('（讀取）');onRaw(v)}}}
+    catch(e){readErr=e.message||String(e);addLog('！讀取失敗：'+readErr);await sleep(2000)}
+    await sleep(notifyRx?2000:150);
+  }
+}
 // 用手環的回覆判斷問題出在哪裡
 function diagnosis(){
   if(!band.connected&&!rxTotal)return '還沒連上手環。';
-  if(!rxTotal)return '手環完全沒有送任何訊息回來：藍牙有連上，但收不到通知。可能是手環韌體不是新版，或通知沒有開。';
+  if(!notifyRx&&readRx)return `通知收不到，但用「讀取」收得到（${readRx} 次）。手環有在更新資料，問題在通知這一段。${notifyOn?'網頁說通知已開啟。':'開啟通知失敗：'+notifyErr}`;
+  if(!rxTotal)return `手環完全沒有送任何訊息回來。${notifyOn?'網頁說通知已開啟':'開啟通知失敗：'+notifyErr}；讀取${readErr?'失敗：'+readErr:'也沒有讀到新的值'}。`;
   if(noMpu)return '藍牙正常，但手環說它找不到 MPU6050 感測器（ERR:NO_MPU）。請檢查感測器的接線，並看序列埠的訊息。';
   if(!hist.length)return gotOk?'藍牙雙向都正常，但還沒收到強度數值。請按 ACT:BODY。':'有收到訊息，但沒有強度數值。';
   return '手環正常：藍牙雙向都通，也有收到強度數值。';
@@ -288,7 +302,8 @@ function renderReaction(){
 /* ── 5. 結果 ── */
 function report(){
   const L=[],r=levelResults;L.push('【手環測試結果】');
-  L.push('手環狀態：'+diagnosis()+`（共收到 ${rxTotal} 則訊息${gotOk?'，有收到 OK 回覆':''}）`);
+  L.push('手環狀態：'+diagnosis()+`（共收到 ${rxTotal} 則訊息${gotOk?'，有收到 OK 回覆':''}；通知 ${notifyRx} 則、讀取 ${readRx} 次）`);
+  L.push('瀏覽器：'+navigator.userAgent);
   for(const k of Object.keys(LEVEL_TESTS)){const x=r[k];if(x)L.push(`${x.name}：最小${f1(x.min)} 低10%${f1(x.p10)} 中${f1(x.med)} 高10%${f1(x.p90)} 最大${f1(x.max)}｜S ${x.s} 次｜${x.n} 筆（每秒 ${f1(x.rate)}）`)}
   const v=levelVerdict().replace(/<[^>]+>/g,'');if(v!=='還沒有結果。')L.push(v.replace(/\s*\n\s*/g,' '));
   if(countRes!==null)L.push(`搖 5 下：收到 ${countRes} 次`);
