@@ -220,6 +220,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 /* 進度條：孩子動的時候，彩虹慢慢填滿 */
 #meter{width:min(240px,62vw);height:12px;margin-top:26px;border-radius:99px;background:#1A1838;border:1px solid #2E2B5C;overflow:hidden;opacity:0;transition:opacity .3s}
 #meter.on{opacity:1}
+/* 雙人合作：家人的進度條 */
+#meterFamWrap{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.8rem;color:#C9C3F2;opacity:.35;transition:opacity .3s}
+#meterFamWrap.on{opacity:1}
+#meterFam{width:min(180px,46vw);height:10px;border-radius:99px;background:#1A1838;border:1px solid #2E2B5C;overflow:hidden}
+#meterFamFill{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--c4),var(--c3));transition:width .25s linear}
+#meterFamWrap.done #meterFamFill{background:var(--c1)}
+.players button{width:auto!important;padding:0 14px;border-radius:999px!important;font-size:1rem!important;white-space:nowrap}
 #meterFill{display:block;height:100%;width:0;border-radius:inherit;background:var(--rgb);background-size:300% 100%;animation:rgbflow 4s linear infinite;transition:width .25s linear;box-shadow:0 0 12px rgba(255,255,255,.4)}
 #caption{width:100%;max-width:540px;min-height:5.4em;text-align:center;font-family:var(--story);font-size:1.22rem;line-height:1.8;color:#E4DCC6;margin:22px 0 0;
   padding:12px 18px;border-radius:20px;background:rgba(22,20,56,.6);border:1px solid #2E2B5C}
@@ -351,8 +358,18 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
       </div>
     </div>
     <div class="field">
+      <span>怎麼玩</span>
+      <div class="ages players" id="playerSeg" role="group" aria-label="怎麼玩">
+        <button type="button" data-player="solo" aria-pressed="true">🌟 單人冒險</button><button type="button" data-player="coop" aria-pressed="false">🤝 和家人一起</button>
+      </div>
+    </div>
+    <div class="field">
       <span><span id="bandState"><i class="dot"></i>手環還沒連上</span><small>沒有手環也可以用畫面上的按鈕玩</small></span>
       <button type="button" class="ghost" id="connect">連接手環</button>
+    </div>
+    <div class="field" id="famRow" hidden>
+      <span><span id="famState"><i class="dot"></i>家人手環還沒連上</span><small>家人戴另一個手環（SDQ-Band-Family），沒有的話可以用手動按鈕代替</small></span>
+      <button type="button" class="ghost" id="connectFam">連接家人手環</button>
     </div>
     <div class="field band">
       <span><span id="botState"><i class="dot"></i>機器人還沒連上</span><small>沒有機器人也可以玩，畫面上的夥伴會代替它</small></span>
@@ -392,6 +409,7 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
     <div class="head"><div class="face" id="face" data-emo="calm"><i class="eye l"></i><i class="eye r"></i><i class="cheek l"></i><i class="cheek r"></i><i class="mouth"></i></div></div>
   </div>
   <div id="meter" aria-hidden="true"><i id="meterFill"></i></div>
+  <div id="meterFamWrap" hidden><span>🤝 家人</span><div id="meterFam" aria-hidden="true"><i id="meterFamFill"></i></div></div>
   <p id="caption" hidden></p>
   <div id="fork" hidden>
     <button type="button" data-choice="left"><b class="arrow">◀</b><span id="forkL"></span><small>按左邊的按鈕</small></button>
@@ -404,6 +422,7 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
       <button type="button" id="skipBtn">跳過這段動作</button>
       <button type="button" class="hold" id="simMove">按住＝在動（代替手環）</button>
       <button type="button" id="simJump">跳一下</button>
+      <button type="button" id="famDoneBtn" hidden>家人完成了（手動）</button>
       <button type="button" id="quitBtn">結束故事</button>
     </div>
     <p id="sheetInfo"></p>
@@ -535,10 +554,19 @@ function createEngine(d){
     if(ph.mode==='count'&&SIG_GESTURE[ph.sig]&&!(cfg.gestures||[]).includes(SIG_GESTURE[ph.sig]))return {mode:'level',band:'any',seconds:Math.max(2,ph.n*2),call:ph.call,hint:ph.hint};
     return ph;
   };
+  // 雙人合作：給家人的一句話（故事沒寫的時候用這些）、家人還沒完成時的提醒
+  const FAMILY_CUE={dash:'家人也一起，原地跑起來！',alternate:'家人也跟著，一下慢、一下快！',gentle:'家人也一起，輕輕地、慢慢地！',shake:'家人也一起搖一搖！',
+    cue:'家人也一起，聽到叮再搖！',hold:'家人也一起當小石頭，別動！',freeze:'家人也一起玩木頭人！',reach:'家人也一起，把手舉高高！',low:'家人也一起彎下腰，手往下伸！',
+    updown:'家人也一起，舉高再放低！',twist:'家人也一起轉轉手腕！',jump:'家人也一起跳一跳！',push:'家人也一起，用力推！',swim:'家人也拿起槳，一起划！',
+    flap:'家人也一起拍拍翅膀！',stir:'家人也一起攪一攪！',knock:'家人也一起敲一敲！',steer:'家人也一起，往左、往右！'};
+  const FAM_WAIT=['等等家人！大家一起再動一下下！','家人也要一起完成喔，加油！','還差家人一點點，一起動！'];
   async function runGame(r,g,sc){
     const hasOutcome=!!(g.win||g.help);                                     // v5.1：做得順利／需要幫忙，兩種結果
     let setbackDone=false,struggled=false,stillResets=0,totalMisses=0;
-    const A=S.act={kind:'game',sound:g.sound,level:0,levelAt:0,sCount:0,counts:{},skip:false,lastProgress:0,lastPacket:0};
+    const A=S.act={kind:'game',sound:g.sound,level:0,levelAt:0,sCount:0,counts:{},skip:false,lastProgress:0,lastPacket:0,fam:{level:0,levelAt:0},famManual:false};
+    const coop=cfg.player==='coop';
+    // 家人要動多久：大約是孩子的一半，5～12 秒
+    const famNeed=Math.min(12,Math.max(5,((g.steps&&g.steps.length)||2)*2+2));let famDone=0,famNagAt=0,famWaitSince=0;
     const phases=g.phases.map(ph=>({...adaptPhase(ph)}));
     // 動作要夠長，旁白才講得完（實測：划船只動了 6 秒，三句過程只念到第一句就靠岸了）。
     // 大約每一句過程要動 4 秒；木頭人、聽口令搖的節奏另外算，不拉長
@@ -562,6 +590,7 @@ function createEngine(d){
       if(ph.mode==='cue')q.push(ph.hint);else if(ph.call)q.push(ph.call);      // 聽口令搖：開頭只說「等叮再搖」，「搖！」留到叮的時候
       d.robot('DEMO:'+phaseDemo(ph))};
     nextPhase();
+    if(coop){q.push(g.familyCue||FAMILY_CUE[g.type]||'家人也一起來！');d.ui('famProgress',0)}
     while(alive(r)){
       await hold(r);if(!alive(r))return null;
       const now=d.now(),dt=Math.min(0.3,(now-last)/1000);last=now;
@@ -613,9 +642,23 @@ function createEngine(d){
       // 進度旁白：有兩種結果時，steps 全部在過程中唸完（結果另外唸）；舊版的最後一句 step 就是結果
       if(hasOutcome){while(said<g.steps.length&&frac>=(said+1)/(g.steps.length+1)){q.push(g.steps[said]);said++}}
       else while(said<g.steps.length-1&&frac>=(said+1)/g.steps.length){q.push(g.steps[said]);said++}
+      // 雙人合作：家人的手環有在動（該停住的時候是停住）就累積；大人也可以按「家人完成了」
+      if(coop){
+        const F=A.fam,ff=now-F.levelAt<800;
+        if(A.famManual)famDone=famNeed;
+        else if(ph.mode==='still'?(ff&&F.level<=cfg.stillMax):(ff&&F.level>=Math.max(2,cfg.lightMin)))famDone+=dt;
+        d.ui('famProgress',Math.min(1,famDone/famNeed));
+      }
       if(phDone>=phaseSize(ph)){
         if(pi+1<phases.length){before+=phaseSize(ph);nextPhase();continue}
-        if(!hasOutcome||q.idle)break;                                         // 最後一段：等過程旁白念完才算做完，孩子不會沒聽到故事就結束
+        const famOk=!coop||famDone>=famNeed;
+        if((!hasOutcome||q.idle)&&famOk)break;                                // 最後一段：等過程旁白念完才算做完，孩子不會沒聽到故事就結束
+        if(!famOk&&q.idle){                                                     // 孩子做完了、家人還沒：等家人，一直有聲音提醒；等太久就算了，故事不卡住
+          if(!famWaitSince)famWaitSince=now;
+          if(now-famNagAt>6000){famNagAt=now;q.push(pick(FAM_WAIT));d.robot('NUDGE')}
+          if(now-famWaitSince>25000)famDone=famNeed;
+        }
+        await d.sleep(cfg.tick);continue;
       }
       // 一直用「不對的力道」在動（太大力或太小力）：跟完全不動一樣，夥伴來幫忙，之後有在動就算
       if(!setbackDone&&wrongT>=cfg.setbackAfter&&q.idle){
@@ -643,6 +686,7 @@ function createEngine(d){
     if(!alive(r))return null;
     S.act=null;d.cmd('PAUSE');q.clear();await q.drain();if(!alive(r))return null;
     d.ui('progress',1);S.moved+=Math.round(moved);
+    if(coop){S.famMoved=(S.famMoved||0)+Math.round(famDone);d.ui('famProgress',-1)}
     if(hasOutcome){
       // 孩子的表現決定故事怎麼走：順利 → 多了一個好的新發展；需要幫忙 → 夥伴幫忙，用不同方法過關。兩種都會往下走
       if(A.skip||totalMisses>=2||stillResets>=2)struggled=true;
@@ -659,8 +703,14 @@ function createEngine(d){
   }
 
   // 手環（或模擬按鈕）送來的訊號
-  function signal(sig){
+  function signal(sig,who){
     const now=d.now(),A=S.act;
+    // 家人手環：只記力道，選路的按鈕跟孩子的一樣有效
+    if(who==='family'&&!/^CHOICE_/.test(sig)){
+      if(!A||S.paused||A.kind!=='game'||!A.fam)return;
+      if(sig.length>2&&sig[0]==='A'&&sig[1]===':'){const lv=Number(sig.slice(2));if(Number.isFinite(lv)){A.fam.level=lv;A.fam.levelAt=now}}
+      return;
+    }
     if(sig==='CHOICE_LEFT'||sig==='CHOICE_RIGHT'){
       const c=sig==='CHOICE_LEFT'?'left':'right';
       if(S.paused)return;
@@ -756,7 +806,7 @@ function createEngine(d){
   // replay：之前存下來的故事（不用再問 AI；配音的句子一模一樣，Fish 會直接用存好的音檔）
   async function start(params,replay){
     const r=++S.run;
-    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},log:[],choiceWaiter:null,lastChoice:null,practices:0,moved:0,deck:practiceDeck()});
+    Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},log:[],choiceWaiter:null,lastChoice:null,practices:0,moved:0,famMoved:0,deck:practiceDeck()});
     d.ui('dark');d.robot('EMO:happy');
     try{
       const data=replay?replay.start:await waitWith(r,d.api(cfg.storyId?'/api/v5/library':cfg.api==='v3'?'/api/v3/start':cfg.api==='v4'?'/api/v4/start':'/api/v5/start',cfg.storyId?{id:cfg.storyId}:params),pick(['故事正在路上。等它來的時候，我們先暖暖身！','我正在想一個新故事。想好之前，我們先動一動！','嘿嘿，故事馬上來。先跟我玩個小遊戲！']));
@@ -798,7 +848,7 @@ function createEngine(d){
       d.robot('WAVE');
       await say(r,name+'跟你揮揮手：「今天謝謝你陪我冒險。明天見！」');
       if(!alive(r))return;
-      S.phase='done';d.cmd('PAUSE');d.ui('end',{story:S.story,moved:S.moved,replay:!!replay,sources:[...S.sources],save:{start:data,halves:Object.assign({},S.halves)}});
+      S.phase='done';d.cmd('PAUSE');d.ui('end',{story:S.story,moved:S.moved,famMoved:cfg.player==='coop'?S.famMoved:0,replay:!!replay,sources:[...S.sources],save:{start:data,halves:Object.assign({},S.halves)}});
     }catch(e){
       if(!alive(r))return;
       S.phase='error';S.act=null;d.cmd('PAUSE');d.ui('error',(e&&e.message)||String(e));
@@ -807,7 +857,7 @@ function createEngine(d){
   function stop(){S.run++;S.act=null;S.choiceWaiter=null;S.paused=false;S.phase='idle';d.cmd('PAUSE');d.cmd('BRANCH_OFF');if(d.cancelSpeech)d.cancelSpeech()}
   function pause(){if(S.paused||S.phase==='idle'||S.phase==='done'||S.phase==='error')return;S.paused=true;S.pauses++;d.cmd('PAUSE');if(d.pauseSpeech)d.pauseSpeech();else if(d.cancelSpeech)d.cancelSpeech();d.ui('paused',true)}
   function resume(){if(!S.paused)return;S.paused=false;if(d.resumeSpeech)d.resumeSpeech();if(S.act){S.act.lastProgress=d.now();S.act.lastPacket=0;d.cmd(CMD[S.act.kind])}else if(S.phase==='branch')d.cmd('BRANCH_ON');d.ui('paused',false)}
-  return {start,stop,pause,resume,signal,skipMove(){if(S.act)S.act.skip=true},state:S,cfg};
+  return {start,stop,pause,resume,signal,skipMove(){if(S.act)S.act.skip=true},famDone(){if(S.act&&S.act.fam)S.act.famManual=true},state:S,cfg};
 }
 /* ENGINE-END */
 
@@ -1038,7 +1088,7 @@ function gesturesFromCal(list){
 function bandUI(){const el=$('bandState');el.replaceChildren();const i=document.createElement('i');i.className='dot'+(band.connected?' on':'');
   const gName={UP:'舉高',DOWN:'放低',TWIST:'轉手腕'};
   el.append(i,document.createTextNode(band.connected?'手環連上了'+(bandGestures.length?'（新動作：'+bandGestures.map(x=>gName[x]).join('、')+'）':'（新動作還沒校正）'):'手環還沒連上'));$('connect').textContent=band.connected?'中斷連線':'連接手環'}
-function cmd(c){if(!band.ch||!band.connected)return;const ch=band.ch;
+function cmd(c){if(playerValue==='coop')famCmd(c);if(!band.ch||!band.connected)return;const ch=band.ch;
   band.queue=band.queue.then(()=>ch===band.ch&&band.connected?ch.writeValue(new TextEncoder().encode(c)):null).catch(()=>{})}
 // Windows 的 Chrome 第一次連藍牙常常失敗（Connection attempt failed），自動多試幾次
 async function connectRetry(dev,tries=4){
@@ -1074,6 +1124,35 @@ async function connectBand(){
    DEMO:<swing|up|wave|freeze|shake>  示範動作（一段動作開始）。shake＝雙手一上一下輪流揮
    NUDGE  孩子還沒動，動作做大一點、看向孩子      WAIT  表示「我等你」
    CHEER  孩子完成了，歡呼      ASK  等孩子選路      WAVE  故事結束，揮手說明天見 */
+/* ═════════ 家人手環（雙人合作）═════════
+   跟孩子的手環同一份程式，只是燒錄時 FAMILY_BAND 設成 1，名字是 SDQ-Band-Family */
+let playerValue='solo';
+const fam={device:null,ch:null,queue:Promise.resolve(),connected:false};
+function famUI(){const el=$('famState');el.replaceChildren();const i=document.createElement('i');i.className='dot'+(fam.connected?' on':'');
+  el.append(i,document.createTextNode(fam.connected?'家人手環連上了':'家人手環還沒連上'));$('connectFam').textContent=fam.connected?'中斷連線':'連接家人手環'}
+function famCmd(c){if(!fam.ch||!fam.connected)return;const ch=fam.ch;
+  fam.queue=fam.queue.then(()=>ch===fam.ch&&fam.connected?ch.writeValue(new TextEncoder().encode(c)):null).catch(()=>{})}
+async function connectFam(){
+  if(fam.connected){try{fam.device.gatt.disconnect()}catch(e){}return}
+  if(!navigator.bluetooth||!navigator.bluetooth.requestDevice){notice('這個瀏覽器不能連手環，請用電腦版的 Chrome 或 Edge。');return}
+  try{
+    const dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'SDQ-Band'}],optionalServices:[BLE.service]});
+    if(band.device&&dev.id===band.device.id){notice('這是孩子的手環喔，請選另一個（SDQ-Band-Family）。');return}
+    const server=await connectRetry(dev),svc=await server.getPrimaryService(BLE.service),ch=await svc.getCharacteristic(BLE.characteristic);
+    fam.device=dev;fam.ch=ch;fam.connected=true;fam.queue=Promise.resolve();
+    dev.addEventListener('gattserverdisconnected',()=>{if(fam.device!==dev)return;fam.connected=false;fam.ch=null;famUI();notice('家人手環斷線了，可以重新連接，或用「家人完成了」按鈕代替。')});
+    await ch.startNotifications();
+    ch.addEventListener('characteristicvaluechanged',e=>{const t=new TextDecoder().decode(e.target.value).trim().toUpperCase();
+      if(!t||t.startsWith('CAL:')||t.startsWith('OK:'))return;engine.signal(t,'family')});
+    famCmd('MODE_CHILD');famCmd('GAME_ACTIVE');famCmd('PAUSE');
+    famUI();notice('家人手環連上了。');
+  }catch(e){fam.connected=false;fam.ch=null;famUI();
+    const m=String(e&&e.message||e);
+    notice(/cancel/i.test(m)?'沒有選擇家人手環。':'沒有連上家人手環：'+m+'。請確認家人手環有開機，再試一次。')}
+}
+function setPlayer(v){playerValue=v==='coop'?'coop':'solo';
+  document.querySelectorAll('#playerSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.player===playerValue)));
+  show('famRow',playerValue==='coop')}
 /* ═════════ SDQ-30 機器人（藍牙）═════════
    跟手環一樣用 BLE，但服務 UUID 不同，網頁才分得出來。指令就是上面那些，再加上：
    TALK:1／TALK:0  正在說話（OLED 嘴巴開合）　REST  回到休息姿勢　MIC:1／MIC:0  開關麥克風（回報 V:0～10 音量） */
@@ -1159,11 +1238,12 @@ function fmtTime(s){return s>=60?Math.floor(s/60)+' 分 '+(s%60)+' 秒':s+' 秒'
 function ui(ev,data){
   if(ev==='dark'){show('setup',false);show('finale',false);show('stage',true);show('fork',false);show('resume',false);show('sheet',false);
     $('caption').textContent='';show('caption',$('subs').checked);sceneNo=0;storyTitle='';sceneEmo='happy';
-    face.dataset.emo='calm';botPose('');$('meter').classList.remove('on');face.classList.add('thinking');face.classList.remove('moving');sheetInfo();window.scrollTo(0,0)}
+    face.dataset.emo='calm';botPose('');$('meter').classList.remove('on');show('meterFamWrap',playerValue==='coop');show('famDoneBtn',playerValue==='coop');$('meterFamWrap').className='';face.classList.add('thinking');face.classList.remove('moving');sheetInfo();window.scrollTo(0,0)}
   else if(ev==='story'){storyTitle=data.title;if(data.libId)rememberLibId(data.libId);face.classList.remove('thinking');face.dataset.emo='happy';sheetInfo()}
   else if(ev==='line'){$('caption').textContent=data}
   else if(ev==='level'){face.style.setProperty('--glow',Math.min(1,data/7).toFixed(2))}
   else if(ev==='progress'){$('meterFill').style.width=(Math.max(0,Math.min(1,data))*100).toFixed(1)+'%';$('meter').classList.toggle('on',data>0.01)}
+  else if(ev==='famProgress'){const w=$('meterFamWrap');if(data<0){w.className='';$('meterFamFill').style.width='0%'}else{w.className='on'+(data>=1?' done':'');$('meterFamFill').style.width=(Math.min(1,data)*100).toFixed(1)+'%'}}
   else if(ev==='move'){face.classList.remove('thinking');face.classList.add('moving');face.dataset.emo='excited'}
   else if(ev==='rest'){face.classList.remove('moving');basePose='';if(!/cheer|nudge/.test($('bot').dataset.pose||''))botPose('');face.dataset.emo=sceneEmo;if(!storyTitle)face.classList.add('thinking')}
   else if(ev==='scene'){sceneNo=data.index;sceneEmo=data.emotion||'calm';face.dataset.emo=sceneEmo;sheetInfo()}
@@ -1172,7 +1252,7 @@ function ui(ev,data){
   else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事';if(data)botSend('REST')}
   else if(ev==='end'){leaveStage();show('finale',true);window.scrollTo(0,0);
     $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion.name+'說：「明天見！」';
-    $('stat').textContent=(data.moved?'你今天動了 '+fmtTime(data.moved):'')+sourceNote(data.sources);remember(data.story,data.moved,data.save,data.replay)}
+    $('stat').textContent=(data.moved?(data.famMoved?'你和家人一起動了 '+fmtTime(data.moved)+'（家人動了 '+fmtTime(data.famMoved)+'）':'你今天動了 '+fmtTime(data.moved)):'')+sourceNote(data.sources);remember(data.story,data.moved,data.save,data.replay)}
   else if(ev==='source'){storySource=data||[];sheetInfo()}
   else if(ev==='error'){leaveStage();show('setup',true);notice('故事沒有說成：'+data+'。請再按一次開始。')}
 }
@@ -1190,7 +1270,7 @@ function sourceNote(src){
 const RECENT_KEY='sdq-lib-recent';
 function recentLibIds(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]')}catch(e){return []}}
 function rememberLibId(id){try{const l=recentLibIds().filter(x=>x!==id);l.unshift(id);localStorage.setItem(RECENT_KEY,JSON.stringify(l.slice(0,20)))}catch(e){}}
-function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' 幕':'故事準備中')+(storySource.length?'　·　'+storySource.map(s=>SOURCE_NAME[s]||s).join('＋'):'')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')+'　·　'+(bot.connected?'機器人已連線':'沒有機器人')+'　·　聲音：'+voiceName()}
+function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' 幕':'故事準備中')+(storySource.length?'　·　'+storySource.map(s=>SOURCE_NAME[s]||s).join('＋'):'')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')+(playerValue==='coop'?'　·　'+(fam.connected?'家人手環已連線':'家人沒有手環，用「家人完成了」按鈕'):'')+'　·　'+(bot.connected?'機器人已連線':'沒有機器人')+'　·　聲音：'+voiceName()}
 function voiceName(){if(voiceMode==='fish')return 'Fish 配音';const v=bestVoice();return v?v.name:'裝置內建'}
 function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech();botSend('REST')}
 // 聽過的故事：名稱和運動時間，加上整篇故事（兩條路的下半段都有），只存在這台裝置上。
@@ -1282,7 +1362,10 @@ function setAge(a){ageValue=String(a);document.querySelectorAll('#ages button').
 $('ages').addEventListener('click',e=>{const b=e.target.closest('[data-age]');if(b)setAge(b.dataset.age)});
 $('connect').onclick=connectBand;
 $('connectBot').onclick=connectBot;
-try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voiceV===2?s.voice==='fish':true;   /* v5.6 起預設用 Fish 配音 */if(s.sens&&SENS[s.sens])setSens(s.sens);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
+$('connectFam').onclick=connectFam;
+$('playerSeg').addEventListener('click',e=>{const b=e.target.closest('[data-player]');if(b)setPlayer(b.dataset.player)});
+$('famDoneBtn').onclick=()=>{engine.famDone();notice('')};
+try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voiceV===2?s.voice==='fish':true;   /* v5.6 起預設用 Fish 配音 */if(s.sens&&SENS[s.sens])setSens(s.sens);if(s.player)setPlayer(s.player);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
 function begin(replay){
   notice('');
   if(!(replay&&replay.start&&replay.start.scenes)){replay=null;replayId=null}   // 一般開始；replay 是「再聽一次」存下來的故事
@@ -1294,15 +1377,15 @@ function begin(replay){
   const seated=$('seated').checked;
   // 用按鈕玩或手環沒校正：不用新動作。跳不用校正，但坐著玩不跳
   const gestures=band.connected?bandGestures.concat($('seated').checked?[]:['JUMP']):[];
-  Object.assign(engine.cfg,SENS[sensValue]||SENS.mid,{seated,gestures});
-  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,voice:voiceMode,voiceV:2,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
+  Object.assign(engine.cfg,SENS[sensValue]||SENS.mid,{seated,gestures,player:playerValue});
+  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,player:playerValue,voice:voiceMode,voiceV:2,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
   simStart();
-  engine.start({mode:'child',player:'solo',posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[],gestures,recent:recentLibIds()},replay||undefined);
+  engine.start({mode:'child',player:playerValue,posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[],gestures,recent:recentLibIds()},replay||undefined);
 }
 $('begin').onclick=()=>begin(null);
 $('again').onclick=()=>{show('finale',false);show('setup',true);window.scrollTo(0,0)};
 window.addEventListener('pagehide',()=>{cancelSpeech();cmd('PAUSE')});
-bandUI();botUI();renderPast();
+bandUI();botUI();famUI();renderPast();
 </script>
 </body>
 </html>
