@@ -546,8 +546,8 @@ function createEngine(d){
     if(!alive(r))return null;
     const total=phases.reduce((s,ph)=>s+phaseSize(ph),0);
     let pi=-1,ph=null,phDone=0,before=0,said=0,last=d.now(),idleSince=d.now(),stage=0,lastLine=0,wi=0,oopsAt=0,moved=0,cue=null,sMark=0,misses=0,fxAt=0;
-    let assisted=0,assistT=0;
-    const nextPhase=()=>{pi++;ph=phases[pi];phDone=0;cue=null;sMark=A.counts[ph.sig===''?'__none':(ph.sig||'S')]||0;assisted=0;assistT=0;idleSince=d.now();stage=0;
+    let assisted=0,assistT=0,wrongT=0;
+    const nextPhase=()=>{pi++;ph=phases[pi];A.ph=ph;phDone=0;cue=null;sMark=A.counts[ph.sig===''?'__none':(ph.sig||'S')]||0;assisted=0;assistT=0;idleSince=d.now();stage=0;
       if(ph.mode==='cue')q.push(ph.hint);else if(ph.call)q.push(ph.call);      // 聽口令搖：開頭只說「等叮再搖」，「搖！」留到叮的時候
       d.robot('DEMO:'+phaseDemo(ph))};
     nextPhase();
@@ -558,11 +558,15 @@ function createEngine(d){
       const fresh=now-A.levelAt<800,lv=fresh?A.level:0;
       let progressed=false;
       if(ph.mode==='level'){
-        if(LV[ph.band](lv)){phDone+=dt;moved+=dt;progressed=true}
+        const ok=LV[ph.band](lv),moving=fresh&&lv>=cfg.lightMin;
+        if(ok){phDone+=dt;moved+=dt;progressed=true}
+        // 夥伴已經幫過忙（發生過挫折）：孩子有在動就算，只是慢一點，故事走「需要幫忙」，不會卡住
+        else if(moving&&setbackDone){phDone+=dt*0.7;moved+=dt;progressed=true;struggled=true}
         else if(ph.band==='light'&&lv>cfg.lightMax){                        // 要輕輕的卻太大力：進度倒退，不是亂動也能過
-          phDone=Math.max(0,phDone-dt*1.5);progressed=true;
+          phDone=Math.max(0,phDone-dt*1.5);progressed=true;wrongT+=dt;
           if(now-oopsAt>4000&&q.idle){oopsAt=now;q.push(ph.oops||'輕一點，慢慢來……')}
         }
+        else if(moving)wrongT+=dt;                                           // 有在動，但不夠用力
       }else if(ph.mode==='still'){
         if(fresh&&lv<=cfg.stillMax){phDone+=dt;progressed=true}
         else if(lv>=cfg.moveMin){                                             // 要停住卻明顯在動：這一次重來
@@ -599,6 +603,13 @@ function createEngine(d){
       if(hasOutcome){while(said<g.steps.length&&frac>=(said+1)/(g.steps.length+1)){q.push(g.steps[said]);said++}}
       else while(said<g.steps.length-1&&frac>=(said+1)/g.steps.length){q.push(g.steps[said]);said++}
       if(phDone>=phaseSize(ph)){before+=phaseSize(ph);if(pi+1>=phases.length)break;nextPhase();continue}
+      // 一直用「不對的力道」在動（太大力或太小力）：跟完全不動一樣，夥伴來幫忙，之後有在動就算
+      if(!setbackDone&&wrongT>=cfg.setbackAfter&&q.idle){
+        setbackDone=true;struggled=true;
+        if(hasOutcome&&g.setback){q.push(g.setback);d.sfx('wobble');d.robot('WAIT');q.push(g.retry||ph.hint);d.robot('DEMO:'+phaseDemo(ph))}
+        else q.push(pick(['沒關係，照你的方法來就好！','不管快還是慢，我們一起往前走！']));
+        stage=2;lastLine=now;idleSince=now;
+      }
       if(progressed){stage=0;idleSince=now}
       else if(q.idle){
         const idle=(now-idleSince)/1000;
@@ -698,9 +709,9 @@ function createEngine(d){
     }
     fire();
   }
-  const branchLines=(b,name)=>({ask:'想去「'+b.left.label+'」，就按左邊的按鈕。想去「'+b.right.label+'」，就按右邊的按鈕。',
+  const branchLines=(b0,name)=>{const lb=x=>String(x||'').replace(/^(去|走|到|往|前往)(?=.)/,''),b={left:{label:lb(b0.left.label)},right:{label:lb(b0.right.label)}};return {ask:'想去「'+b.left.label+'」，就按左邊的按鈕。想去「'+b.right.label+'」，就按右邊的按鈕。',
     remind:name+'在等你決定喔。左邊的按鈕是「'+b.left.label+'」，右邊的按鈕是「'+b.right.label+'」。',
-    left:'好，我們去「'+b.left.label+'」！',right:'好，我們去「'+b.right.label+'」！'});
+    left:'好，我們去「'+b.left.label+'」！',right:'好，我們去「'+b.right.label+'」！'}};
   async function askBranch(r){
     const b=S.story.branch,name=S.story.companion.name,L=branchLines(b,name);
     S.phase='branch';d.ui('branch',b);d.cmd('BRANCH_ON');d.robot('ASK');
@@ -809,6 +820,24 @@ function chunk(text,max){
       if(cur){out.push(cur);cur=''}
       for(let i=0;i<c.length;i+=max)out.push(c.slice(i,i+max))}}
   if(cur)out.push(cur);return out}
+// Fish 配音用的切法：只在「」外面的句號、驚嘆號、問號切；很短的句子（像「呼——！」）跟下一句黏在一起；一段最多 150 字。
+// （舊版 90 字一切，會切在「結果，呼——！｜一陣大風」或「『…找寶物！｜我們出發吧！』」中間，Fish 分開配音，語調斷掉）
+function fishChunks(text,max){
+  max=max||150;const s=String(text).replace(/\n+/g,'');const sent=[];let cur='',depth=0;
+  for(let i=0;i<s.length;i++){
+    const ch=s[i];cur+=ch;
+    if(ch==='「')depth++;else if(ch==='」'){depth=Math.max(0,depth-1);if(depth===0&&/[。！？!?…]$/.test(cur.slice(0,-1))){sent.push(cur);cur='';continue}}
+    if(depth===0&&/[。！？!?…]/.test(ch)&&!/[。！？!?…」]/.test(s[i+1]||'')){sent.push(cur);cur=''}
+  }
+  if(cur.trim())sent.push(cur);
+  const out=[];let buf='';
+  for(const x of sent){
+    if(buf&&(buf+x).length>max&&buf.replace(/[^一-鿿]/g,'').length>=8){out.push(buf);buf=''}
+    buf+=x;
+  }
+  if(buf)out.push(buf);
+  return out.flatMap(c=>c.length>max*1.6?chunk(c,max):[c]);
+}
 function endSpeech(){if(speechEnd){const f=speechEnd;speechEnd=null;f()}}
 // 暫停：Fish 音檔停在原位；裝置語音停掉這一句，繼續時只重唸這一句
 let speechPaused=false,fishPlaying=false;const resumeWaiters=[];
@@ -916,7 +945,7 @@ async function speak(text){
   const my=++speechToken;
   if(voiceMode==='fish'){                                   // Fish 自己的聲音就有語氣，維持一段一段送
     // 以前整段一口氣唸完、句子之間沒有換氣，聽起來很急：改成兩三句一段，每段之間停一下
-    const parts=chunk(text,90);parts.forEach(p=>voiceFor(p));          // 整段的每一小段同時開始準備，唸第一段時後面的就好了
+    const parts=fishChunks(text);parts.forEach(p=>voiceFor(p));          // 整段的每一小段同時開始準備，唸第一段時後面的就好了
     for(const p of parts){if(my!==speechToken)return;$('caption').textContent=p;await speakFish(p,my);
       await storyPause(/[。！？!?…」]$/.test(p)?550:300,my)}
     return;
@@ -938,19 +967,19 @@ async function speak(text){
 // Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
 function prefetch(sc){
   if(voiceMode!=='fish')return;
-  const list=[...chunk(sc.text,90)];
+  const list=[...fishChunks(sc.text)];
   if(sc.move)list.push(sc.move.lead,...sc.move.beats);
   if(sc.game){const g=sc.game;list.push(g.lead,...g.steps);for(const ph of g.phases){if(ph.call)list.push(ph.call);if(ph.hint)list.push(ph.hint)}
     list.push(g.win,g.help,(g.waits||[])[0])}                   // 結果和等待句也先準備，動作做完不會突然安靜很久
-  if(sc.after)list.push(...chunk(sc.after,90));
+  if(sc.after)list.push(...fishChunks(sc.after));
   if(sc.move)list.push(...sc.move.hints);
   prefetchText(list);
 }
 // 馬上要唸的句子：不排隊，全部同時開始準備
-function prefetchNow(list){if(voiceMode!=='fish')return;for(const t of list)if(t&&String(t).trim())for(const p of chunk(String(t).trim(),90))voiceFor(p)}
+function prefetchNow(list){if(voiceMode!=='fish')return;for(const t of list)if(t&&String(t).trim())for(const p of fishChunks(String(t).trim()))voiceFor(p)}
 function prefetchText(list){
   if(voiceMode!=='fish')return;
-  for(const t of list)if(t&&String(t).trim())prefetchChain=prefetchChain.then(()=>voiceFor(String(t).trim())).catch(()=>{});
+  for(const t of list)if(t&&String(t).trim())for(const p of fishChunks(String(t).trim()))prefetchChain=prefetchChain.then(()=>voiceFor(p)).catch(()=>{});
 }
 
 /* ═════════ 聲音：音效（用程式合成，不需要音檔） ═════════ */
