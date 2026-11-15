@@ -539,9 +539,20 @@ function createEngine(d){
     const hasOutcome=!!(g.win||g.help);                                     // v5.1：做得順利／需要幫忙，兩種結果
     let setbackDone=false,struggled=false,stillResets=0,totalMisses=0;
     const A=S.act={kind:'game',sound:g.sound,level:0,levelAt:0,sCount:0,counts:{},skip:false,lastProgress:0,lastPacket:0};
-    const phases=g.phases.map(adaptPhase);
+    const phases=g.phases.map(ph=>({...adaptPhase(ph)}));
+    // 動作要夠長，旁白才講得完（實測：划船只動了 6 秒，三句過程只念到第一句就靠岸了）。
+    // 大約每一句過程要動 4 秒；木頭人、聽口令搖的節奏另外算，不拉長
+    if(hasOutcome&&g.steps&&g.steps.length&&!phases.some(p=>p.mode==='cue')){
+      const per=p=>p.mode==='count'?(p.loose?1.3:1.5):1;
+      const have=phases.reduce((s,p)=>s+phaseSize(p)*per(p),0),want=(g.steps.length+1)*4;
+      if(have>0&&have<want){const f=want/have;for(const p of phases){
+        if(p.mode==='count')p.n=Math.ceil(p.n*f);
+        else if(p.mode==='still')p.seconds=Math.min(12,Math.ceil(p.seconds*f));
+        else if(p.mode==='level')p.seconds=Math.ceil(p.seconds*f);}}
+    }
     d.ui('move',{move:g});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+g.demo);
-    const q=makeQueue(r);q.push(g.lead);
+    // 故事最後一句已經在叫孩子動了，不再念「為什麼要動」（實測：一個動作被叫了三次才開始動，像在下指令）
+    const q=makeQueue(r);if(!hasOutcome)q.push(g.lead);
     while(alive(r)&&!q.idle&&!A.skip){await hold(r);await d.sleep(cfg.tick)}     // 先唸完「為什麼要動」
     if(!alive(r))return null;
     const total=phases.reduce((s,ph)=>s+phaseSize(ph),0);
@@ -602,7 +613,10 @@ function createEngine(d){
       // 進度旁白：有兩種結果時，steps 全部在過程中唸完（結果另外唸）；舊版的最後一句 step 就是結果
       if(hasOutcome){while(said<g.steps.length&&frac>=(said+1)/(g.steps.length+1)){q.push(g.steps[said]);said++}}
       else while(said<g.steps.length-1&&frac>=(said+1)/g.steps.length){q.push(g.steps[said]);said++}
-      if(phDone>=phaseSize(ph)){before+=phaseSize(ph);if(pi+1>=phases.length)break;nextPhase();continue}
+      if(phDone>=phaseSize(ph)){
+        if(pi+1<phases.length){before+=phaseSize(ph);nextPhase();continue}
+        if(!hasOutcome||q.idle)break;                                         // 最後一段：等過程旁白念完才算做完，孩子不會沒聽到故事就結束
+      }
       // 一直用「不對的力道」在動（太大力或太小力）：跟完全不動一樣，夥伴來幫忙，之後有在動就算
       if(!setbackDone&&wrongT>=cfg.setbackAfter&&q.idle){
         setbackDone=true;struggled=true;
@@ -905,14 +919,15 @@ function speakDeviceOnce(text,my,role){return new Promise(resolve=>{
   const tm=setTimeout(fin,text.length*420+5000);speechEnd=fin;u.onend=fin;u.onerror=fin;u.onstart=()=>setTalking(true);
   try{speechSynthesis.speak(u)}catch(e){fin()}})}
 async function fetchVoice(text){
-  const c=new AbortController(),t=setTimeout(()=>c.abort(),25000);
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),45000);   // Worker 等 Fish 最多 45 秒，這裡不要比它先放棄
   try{const r=await fetch(WORKER_URL+'/api/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:c.signal});
     if(!r.ok||!(r.headers.get('Content-Type')||'').includes('audio/'))throw Error('voice');
     return URL.createObjectURL(await r.blob())}finally{clearTimeout(t)}}
 function voiceFor(text){if(!voiceCache.has(text))voiceCache.set(text,fetchVoice(text).catch(()=>null));return voiceCache.get(text)}
 async function speakFish(text,my){
   const url=await voiceFor(text);if(my!==speechToken)return;
-  if(!url){if(++fishFails>=3)voiceMode='device';return speakDevice(text,my)}
+  // 這一句 Fish 沒拿到：這一句先用裝置聲音，下一句再試 Fish（舊版連續失敗 3 次就整篇換成機器聲音，後半篇都沒有 Fish）
+  if(!url){fishFails++;voiceCache.delete(text);return speakDevice(text,my)}
   fishFails=0;
   await waitResume(my);if(my!==speechToken)return;
   let blocked=false;
