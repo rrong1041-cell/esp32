@@ -745,7 +745,7 @@ function createEngine(d){
     Object.assign(S,{phase:'loading',paused:false,act:null,story:null,pending:{},halves:{},log:[],choiceWaiter:null,lastChoice:null,practices:0,moved:0,deck:practiceDeck()});
     d.ui('dark');d.robot('EMO:happy');
     try{
-      const data=replay?replay.start:await waitWith(r,d.api(cfg.api==='v3'?'/api/v3/start':cfg.api==='v4'?'/api/v4/start':'/api/v5/start',params),pick(['故事正在路上。等它來的時候，我們先暖暖身！','我正在想一個新故事。想好之前，我們先動一動！','嘿嘿，故事馬上來。先跟我玩個小遊戲！']));
+      const data=replay?replay.start:await waitWith(r,d.api(cfg.storyId?'/api/v5/library':cfg.api==='v3'?'/api/v3/start':cfg.api==='v4'?'/api/v4/start':'/api/v5/start',cfg.storyId?{id:cfg.storyId}:params),pick(['故事正在路上。等它來的時候，我們先暖暖身！','我正在想一個新故事。想好之前，我們先動一動！','嘿嘿，故事馬上來。先跟我玩個小遊戲！']));
       if(!alive(r))return;
       S.story=data.story;S.phase='story';d.ui('story',data.story);
       const name=S.story.companion.name;
@@ -754,7 +754,7 @@ function createEngine(d){
       const lateFetch=S.story.api===5;
       const prepare=()=>{for(const c of ['left','right'])if(!S.pending[c]&&cfg.prefetchBoth)S.pending[c]=fetchHalf(c)};
       // 這篇故事從哪裡來：AI 剛寫的、故事庫、固定的備用故事、或是「再聽一次」
-      S.sources=new Set([replay?'replay':data.fromLibrary?'library':data.fallbackUsed?'template':'ai']);d.ui('source',[...S.sources]);
+      S.sources=new Set([replay?'replay':data.story&&data.story.curated?'curated':data.fromLibrary?'library':data.fallbackUsed?'template':'ai']);d.ui('source',[...S.sources]);
       const preset=replay?replay.halves:(data.libraryHalves||null);                         // 再聽一次、故事庫：下半段已經有了
       for(const c of ['left','right'])if(preset&&preset[c]){S.halves[c]=preset[c];S.pending[c]=Promise.resolve(preset[c])}
       if(!lateFetch)prepare();
@@ -1163,10 +1163,11 @@ function ui(ev,data){
 }
 // 故事從哪裡來（給大人看）：AI 剛寫的、故事庫、固定的備用故事、再聽一次
 let storySource=[];
-const SOURCE_NAME={ai:'AI 剛寫的',library:'故事庫',template:'固定備用故事',replay:'再聽一次'};
+const SOURCE_NAME={ai:'AI 剛寫的',library:'故事庫',curated:'精選故事',template:'固定備用故事',replay:'再聽一次'};
 function sourceNote(src){
   src=src||[];
   if(src.includes('template'))return '｜這篇有一部分是固定的備用故事（AI 暫時不能用，可能是今天的額度用完了）';
+  if(src.includes('curated'))return '';
   if(src.includes('library'))return '｜這篇是故事庫裡的故事（AI 暫時不能用，改用之前 AI 寫過的故事）';
   return '';
 }
@@ -1215,8 +1216,10 @@ function renderPast(){const list=pastStories(),saved=savedStories(),ul=$('pastLi
 $('pastList').addEventListener('click',e=>{const b=e.target.closest('[data-replay]');if(!b)return;const s=savedStories()[b.dataset.replay];if(s){replayId=b.dataset.replay;begin(s)}});
 
 // 用哪一版故事引擎：預設 v5；網址加 ?api=v4 可以換回 v4 比較
+// 指定播放故事庫裡的某一篇：網址加 ?story=故事編號（例如精選故事 curated-01-mail）
+const STORY_ID=(()=>{try{const v=new URLSearchParams(location.search).get('story');return /^[\w-]{3,60}$/.test(v||'')?v:''}catch(e){return ''}})();
 const API_VERSION=(()=>{try{const v=new URLSearchParams(location.search).get('api');return /^v[345]$/.test(v||'')?v:'v5'}catch(e){return 'v5'}})();
-const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,prefetchText,prefetchNow,sleep,now:()=>performance.now(),cfg:{api:API_VERSION}});
+const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,prefetchText,prefetchNow,sleep,now:()=>performance.now(),cfg:{api:API_VERSION,storyId:STORY_ID}});
 
 /* 螢幕不要自己鎖起來（鎖了故事會被系統暫停） */
 let wake=null;
