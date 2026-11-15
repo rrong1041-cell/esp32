@@ -100,7 +100,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ages button{width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid var(--paper-line);font-family:var(--story);font-weight:700;font-size:1.25rem}
 .ages button[aria-pressed=true]{background:var(--berry);border-color:var(--berry);color:#fff;transform:scale(1.08)}
 .band{border-bottom:2px dashed var(--paper-line);margin-bottom:26px}
-.band small{display:block;font-family:var(--ui);font-weight:400;font-size:.82rem;color:var(--soft)}
+.field small{display:block;font-family:var(--ui);font-weight:400;font-size:.82rem;color:var(--soft)}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#D9CDB0;margin-right:7px}
 .dot.on{background:#39C99B;box-shadow:0 0 0 4px #D2F5E8}
 .ghost{background:#fff;border:2px solid var(--ink);border-radius:14px;padding:9px 16px;min-height:48px;white-space:nowrap;font-weight:600;box-shadow:0 3px 0 var(--ink);transition:transform .12s,box-shadow .12s}
@@ -350,9 +350,13 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
         <button type="button" data-age="7" aria-pressed="false">7</button><button type="button" data-age="8" aria-pressed="false">8</button>
       </div>
     </div>
-    <div class="field band">
+    <div class="field">
       <span><span id="bandState"><i class="dot"></i>手環還沒連上</span><small>沒有手環也可以用畫面上的按鈕玩</small></span>
       <button type="button" class="ghost" id="connect">連接手環</button>
+    </div>
+    <div class="field band">
+      <span><span id="botState"><i class="dot"></i>機器人還沒連上</span><small>沒有機器人也可以玩，畫面上的夥伴會代替它</small></span>
+      <button type="button" class="ghost" id="connectBot">連接機器人</button>
     </div>
 
     <button type="button" id="begin">關燈，開始說故事</button>
@@ -744,6 +748,8 @@ function createEngine(d){
       for(const c of ['left','right'])if(preset&&preset[c]){S.halves[c]=preset[c];S.pending[c]=Promise.resolve(preset[c])}
       if(!lateFetch)prepare();
       const w=data.warmup||{lines:[],steps:[],outro:''};
+      // 故事一到，開場白和第一幕馬上同時開始配音（影片實測：沒先準備時「嗨，我是……」前面安靜了快 4 秒）
+      if(d.prefetchNow)d.prefetchNow([...w.lines,w.outro,data.scenes&&data.scenes[0]&&data.scenes[0].text]);
       for(const l of w.lines)await say(r,l);
       // 暖身：每次從動作庫隨機抽，不再固定「跑→搖→木頭人」；等故事時已經暖過身就少做一點
       for(let k=S.practices;k<2;k++){
@@ -815,6 +821,7 @@ function cancelSpeech(){speechToken++;speechPaused=false;setTalking(false);relea
 let talkTimer=null;
 function setTalking(on){
   const f=document.getElementById('face');if(!f)return;
+  if(on!==setTalking.last){setTalking.last=on;if(typeof botSend==='function')botSend(on?'TALK:1':'TALK:0')}   // 實體機器人的嘴巴也跟著動
   if(on){if(talkTimer)return;f.classList.add('talking');
     const tick=()=>{f.style.setProperty('--open',(Math.random()<.2?.08:.3+Math.random()*.7).toFixed(2));talkTimer=setTimeout(tick,75+Math.random()*95)};tick()}
   else{clearTimeout(talkTimer);talkTimer=null;f.classList.remove('talking');f.style.setProperty('--open','0')}
@@ -909,7 +916,8 @@ async function speak(text){
   const my=++speechToken;
   if(voiceMode==='fish'){                                   // Fish 自己的聲音就有語氣，維持一段一段送
     // 以前整段一口氣唸完、句子之間沒有換氣，聽起來很急：改成兩三句一段，每段之間停一下
-    for(const p of chunk(text,90)){if(my!==speechToken)return;$('caption').textContent=p;await speakFish(p,my);
+    const parts=chunk(text,90);parts.forEach(p=>voiceFor(p));          // 整段的每一小段同時開始準備，唸第一段時後面的就好了
+    for(const p of parts){if(my!==speechToken)return;$('caption').textContent=p;await speakFish(p,my);
       await storyPause(/[。！？!?…」]$/.test(p)?550:300,my)}
     return;
   }
@@ -938,6 +946,8 @@ function prefetch(sc){
   if(sc.move)list.push(...sc.move.hints);
   prefetchText(list);
 }
+// 馬上要唸的句子：不排隊，全部同時開始準備
+function prefetchNow(list){if(voiceMode!=='fish')return;for(const t of list)if(t&&String(t).trim())for(const p of chunk(String(t).trim(),90))voiceFor(p)}
 function prefetchText(list){
   if(voiceMode!=='fish')return;
   for(const t of list)if(t&&String(t).trim())prefetchChain=prefetchChain.then(()=>voiceFor(String(t).trim())).catch(()=>{});
@@ -1020,8 +1030,33 @@ async function connectBand(){
    DEMO:<swing|up|wave|freeze|shake>  示範動作（一段動作開始）。shake＝雙手一上一下輪流揮
    NUDGE  孩子還沒動，動作做大一點、看向孩子      WAIT  表示「我等你」
    CHEER  孩子完成了，歡呼      ASK  等孩子選路      WAVE  故事結束，揮手說明天見 */
+/* ═════════ SDQ-30 機器人（藍牙）═════════
+   跟手環一樣用 BLE，但服務 UUID 不同，網頁才分得出來。指令就是上面那些，再加上：
+   TALK:1／TALK:0  正在說話（OLED 嘴巴開合）　REST  回到休息姿勢　MIC:1／MIC:0  開關麥克風（回報 V:0～10 音量） */
+const BOT={service:'a8f2c0de-3b1d-4f7e-9c55-5d9030000001',characteristic:'a8f2c0de-3b1d-4f7e-9c55-5d9030000002'};
+const bot={device:null,ch:null,queue:Promise.resolve(),connected:false,level:0};
+function botUI(){const el=$('botState');el.replaceChildren();const i=document.createElement('i');i.className='dot'+(bot.connected?' on':'');
+  el.append(i,document.createTextNode(bot.connected?'機器人連上了':'機器人還沒連上'));$('connectBot').textContent=bot.connected?'中斷連線':'連接機器人'}
+function botSend(c){if(!bot.ch||!bot.connected)return;const ch=bot.ch;
+  bot.queue=bot.queue.then(()=>ch===bot.ch&&bot.connected?ch.writeValueWithoutResponse(new TextEncoder().encode(c)):null).catch(()=>{})}
+async function connectBot(){
+  if(bot.connected){try{bot.device.gatt.disconnect()}catch(e){}return}
+  if(!navigator.bluetooth||!navigator.bluetooth.requestDevice){notice('這個瀏覽器不能連機器人，請用電腦版的 Chrome 或 Edge。');return}
+  try{
+    const dev=await navigator.bluetooth.requestDevice({filters:[{services:[BOT.service]}]});
+    const server=await connectRetry(dev),svc=await server.getPrimaryService(BOT.service),ch=await svc.getCharacteristic(BOT.characteristic);
+    bot.device=dev;bot.ch=ch;bot.connected=true;bot.queue=Promise.resolve();
+    dev.addEventListener('gattserverdisconnected',()=>{if(bot.device!==dev)return;bot.connected=false;bot.ch=null;botUI();notice('機器人斷線了，可以重新連接。')});
+    await ch.startNotifications();
+    ch.addEventListener('characteristicvaluechanged',e=>{const t=new TextDecoder().decode(e.target.value).trim();
+      if(t.startsWith('V:')){bot.level=Number(t.slice(2))||0;engine.signal('VOL:'+bot.level)}});    // 麥克風音量
+    botUI();notice('機器人連上了。記得在電腦的藍牙設定連接「SDQ-30 Speaker」，聲音才會從機器人身上出來。');
+  }catch(e){bot.connected=false;bot.ch=null;botUI();
+    const m=String(e&&e.message||e);
+    notice(/cancel/i.test(m)?'沒有選擇機器人。':'沒有連上機器人：'+m+'。請確認機器人有開機，再按一次「連接機器人」。')}
+}
 const robotLog=[];
-function robot(c){robotLog.push(c);if(robotLog.length>60)robotLog.shift();
+function robot(c){robotLog.push(c);if(robotLog.length>60)robotLog.shift();botSend(c);
   try{window.dispatchEvent(new CustomEvent('sdq-robot',{detail:c}))}catch(e){}
   botFromCmd(c)}
 // 畫面上的機器人也跟著做：示範動作時手會動，歡呼會跳，選路時兩隻手指向左右
@@ -1090,7 +1125,7 @@ function ui(ev,data){
   else if(ev==='scene'){sceneNo=data.index;sceneEmo=data.emotion||'calm';face.dataset.emo=sceneEmo;sheetInfo()}
   else if(ev==='branch'){$('forkL').textContent=data.left.label;$('forkR').textContent=data.right.label;show('fork',true);show('caption',false);face.dataset.emo='surprised'}
   else if(ev==='chosen'){show('fork',false);botPose('cheer',1500);show('caption',$('subs').checked);face.dataset.emo='happy'}
-  else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事'}
+  else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事';if(data)botSend('REST')}
   else if(ev==='end'){leaveStage();show('finale',true);window.scrollTo(0,0);
     $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion.name+'說：「明天見！」';
     $('stat').textContent=(data.moved?'你今天動了 '+fmtTime(data.moved):'')+sourceNote(data.sources);remember(data.story,data.moved,data.save,data.replay)}
@@ -1110,9 +1145,9 @@ function sourceNote(src){
 const RECENT_KEY='sdq-lib-recent';
 function recentLibIds(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||'[]')}catch(e){return []}}
 function rememberLibId(id){try{const l=recentLibIds().filter(x=>x!==id);l.unshift(id);localStorage.setItem(RECENT_KEY,JSON.stringify(l.slice(0,20)))}catch(e){}}
-function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' 幕':'故事準備中')+(storySource.length?'　·　'+storySource.map(s=>SOURCE_NAME[s]||s).join('＋'):'')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')+'　·　聲音：'+voiceName()}
+function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' 幕':'故事準備中')+(storySource.length?'　·　'+storySource.map(s=>SOURCE_NAME[s]||s).join('＋'):'')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')+'　·　'+(bot.connected?'機器人已連線':'沒有機器人')+'　·　聲音：'+voiceName()}
 function voiceName(){if(voiceMode==='fish')return 'Fish 配音';const v=bestVoice();return v?v.name:'裝置內建'}
-function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech()}
+function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech();botSend('REST')}
 // 聽過的故事：名稱和運動時間，加上整篇故事（兩條路的下半段都有），只存在這台裝置上。
 // 「再聽一次」不用再問 AI，配音的句子也一模一樣，所以 Fish 會直接播存好的音檔，不用額度。
 const SAVED_KEY='sdq-v4-saved',SAVED_MAX=8;
@@ -1152,7 +1187,7 @@ $('pastList').addEventListener('click',e=>{const b=e.target.closest('[data-repla
 
 // 用哪一版故事引擎：預設 v5；網址加 ?api=v4 可以換回 v4 比較
 const API_VERSION=(()=>{try{const v=new URLSearchParams(location.search).get('api');return /^v[345]$/.test(v||'')?v:'v5'}catch(e){return 'v5'}})();
-const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,prefetchText,sleep,now:()=>performance.now(),cfg:{api:API_VERSION}});
+const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,robot,api,ui,prefetch,prefetchText,prefetchNow,sleep,now:()=>performance.now(),cfg:{api:API_VERSION}});
 
 /* 螢幕不要自己鎖起來（鎖了故事會被系統暫停） */
 let wake=null;
@@ -1199,6 +1234,7 @@ $('sensSeg').addEventListener('click',e=>{const b=e.target.closest('[data-sens]'
 function setAge(a){ageValue=String(a);document.querySelectorAll('#ages button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.age===ageValue)))}
 $('ages').addEventListener('click',e=>{const b=e.target.closest('[data-age]');if(b)setAge(b.dataset.age)});
 $('connect').onclick=connectBand;
+$('connectBot').onclick=connectBot;
 try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voiceV===2?s.voice==='fish':true;   /* v5.6 起預設用 Fish 配音 */if(s.sens&&SENS[s.sens])setSens(s.sens);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
 function begin(replay){
   notice('');
@@ -1219,7 +1255,7 @@ function begin(replay){
 $('begin').onclick=()=>begin(null);
 $('again').onclick=()=>{show('finale',false);show('setup',true);window.scrollTo(0,0)};
 window.addEventListener('pagehide',()=>{cancelSpeech();cmd('PAUSE')});
-bandUI();renderPast();
+bandUI();botUI();renderPast();
 </script>
 </body>
 </html>
