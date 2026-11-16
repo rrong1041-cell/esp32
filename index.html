@@ -504,7 +504,7 @@ function createEngine(d){
   // 一段動作：孩子動的時候旁白跟著進度往下講；沒動時提示一層一層變清楚；絕不卡死
   async function runMove(r,m,opt){
     opt=opt||{};
-    const name=S.story?S.story.companion.name:'我';
+    const name=(S.story&&S.story.companion&&S.story.companion.name)||'我';
     const A=S.act={kind:m.kind,sound:m.sound,value:0,target:m.target.value,lastProgress:0,lastPacket:0,skip:false,auto:false};
     d.ui('move',{move:m,practice:!!opt.practice});
     d.cmd(CMD[m.kind]);d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+m.demo);
@@ -575,7 +575,8 @@ function createEngine(d){
   }
   const FAM_WAIT=['等等家人！大家一起再動一下下！','家人也要一起完成喔，加油！','還差家人一點點，一起動！'];
   async function runGame(r,g,sc){
-    const hasOutcome=!!(g.win||g.help);                                     // v5.1：做得順利／需要幫忙，兩種結果
+    // v5.1：做得順利／需要幫忙，兩種結果。自由故事（g.free）：動作只是故事的一部分，做完就接著講，不用另外說結果
+    const hasOutcome=!!(g.win||g.help||g.free);
     let setbackDone=false,struggled=false,stillResets=0,totalMisses=0;
     const A=S.act={kind:'game',sound:g.sound,level:0,levelAt:0,sCount:0,counts:{},skip:false,lastProgress:0,lastPacket:0,fam:{level:0,levelAt:0},famManual:false};
     const coop=cfg.player==='coop';
@@ -720,7 +721,7 @@ function createEngine(d){
       else if(q.idle){
         const idle=(now-idleSince)/1000;
         // 完全沒動超過 40 秒：夥伴直接幫忙過關，故事往下走（虛擬試玩實測：孩子不動時，故事會永遠停在這一段）
-        if(idle>=cfg.giveUp){gaveUp=true;break}
+        if(idle>=(g.giveUp||cfg.giveUp)){gaveUp=true;break}
         // 一直沒動：發生一個小挫折，夥伴鼓勵再試一次。故事不結束、不跳過，只是走向會變成「需要幫忙」
         if(hasOutcome&&!setbackDone&&g.setback&&idle>=cfg.setbackAfter){
           setbackDone=true;struggled=true;q.push(g.setback);d.sfx('wobble');d.robot('WAIT');
@@ -742,7 +743,8 @@ function createEngine(d){
       // 孩子的表現決定故事怎麼走：順利 → 多了一個好的新發展；需要幫忙 → 夥伴幫忙，用不同方法過關。兩種都會往下走
       if(A.skip||gaveUp||totalMisses>=2||stillResets>=2)struggled=true;
       const outcome=struggled?'help':'win';
-      if(outcome==='win'){d.robot('CHEER');d.sfx('cheer')}else{d.robot('NUDGE');d.sfx('chime')}
+      if(g.free){if(g.done)d.sfx(g.done)}                                   // 自由故事：不歡呼、不打斷，故事自己接下去
+      else if(outcome==='win'){d.robot('CHEER');d.sfx('cheer')}else{d.robot('NUDGE');d.sfx('chime')}
       await say(r,g[outcome]);
       S.log.push({index:sc?sc.index:0,type:g.type,outcome,reward:g.reward||'',lesson:g.lesson||''});
     }else{
@@ -863,11 +865,12 @@ function createEngine(d){
       const data=replay?replay.start:await waitWith(r,d.api(cfg.storyId?'/api/v5/library':cfg.api==='v3'?'/api/v3/start':cfg.api==='v4'?'/api/v4/start':'/api/v5/start',cfg.storyId?{id:cfg.storyId}:params),pick(['故事正在路上。等它來的時候，我們先暖暖身！','我正在想一個新故事。想好之前，我們先動一動！','嘿嘿，故事馬上來。先跟我玩個小遊戲！']));
       if(!alive(r))return;
       S.story=data.story;S.phase='story';d.ui('story',data.story);
-      const name=S.story.companion.name;
+      // 自由故事（story.free）：沒有固定的夥伴、沒有選路、沒有下半段，一路講到完
+      const free=!!S.story.free,name=(S.story.companion&&S.story.companion.name)||'';
       if(d.prefetchText&&S.story.branch){const L=branchLines(S.story.branch,name);d.prefetchText([L.ask,L.left,L.right])}
       // v5：下半段要知道孩子在上半段的表現，所以等上半段的動作都做完才開始寫；v3、v4 一開始就先準備
-      const lateFetch=S.story.api===5;
-      const prepare=()=>{for(const c of ['left','right'])if(!S.pending[c]&&cfg.prefetchBoth)S.pending[c]=fetchHalf(c)};
+      const lateFetch=S.story.api===5&&!free;
+      const prepare=()=>{if(free)return;for(const c of ['left','right'])if(!S.pending[c]&&cfg.prefetchBoth)S.pending[c]=fetchHalf(c)};
       // 這篇故事從哪裡來：AI 剛寫的、故事庫、固定的備用故事、或是「再聽一次」
       S.sources=new Set([replay?'replay':data.story&&data.story.curated?'curated':data.fromLibrary?'library':data.fallbackUsed?'template':'ai']);d.ui('source',[...S.sources]);
       const preset=replay?replay.halves:(data.libraryHalves||null);                         // 再聽一次、故事庫：下半段已經有了
@@ -878,13 +881,19 @@ function createEngine(d){
       if(d.prefetchNow)d.prefetchNow([...w.lines,w.outro,data.scenes&&data.scenes[0]&&data.scenes[0].text]);
       for(const l of w.lines)await say(r,l);
       // 暖身：每次從動作庫隨機抽，不再固定「跑→搖→木頭人」；等故事時已經暖過身就少做一點
-      for(let k=S.practices;k<2;k++){
+      for(let k=S.practices;k<(w.practices==null?2:w.practices);k++){
         if(!alive(r))return;
         await runMove(r,nextPractice(),{practice:true});S.practices++;
       }
       await say(r,w.outro);
       await playScenes(r,data.scenes,lateFetch?prepare:null);
       if(!alive(r))return;
+      if(free){
+        await d.sleep(1500);if(!alive(r))return;
+        d.robot('WAVE');await say(r,data.goodbye||'故事說完了。明天見！');if(!alive(r))return;
+        S.phase='done';d.cmd('PAUSE');d.ui('end',{story:S.story,moved:S.moved,famMoved:cfg.player==='coop'?S.famMoved:0,replay:!!replay,sources:[...S.sources],save:{start:data,halves:{}}});
+        return;
+      }
       const choice=await askBranch(r);if(!alive(r)||!choice)return;
       let half=null;
       for(let attempt=0;attempt<2&&!half&&alive(r);attempt++){
@@ -1375,7 +1384,7 @@ function ui(ev,data){
   else if(ev==='chosen'){show('fork',false);botPose('cheer',1500);show('caption',$('subs').checked);face.dataset.emo='happy'}
   else if(ev==='paused'){$('pauseBtn').textContent=data?'繼續故事':'暫停故事';if(data)botSend('REST')}
   else if(ev==='end'){leaveStage();show('finale',true);window.scrollTo(0,0);
-    $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion.name+'說：「明天見！」';
+    $('endTitle').textContent='今天的故事：《'+data.story.title+'》';$('bye').textContent=data.story.companion&&data.story.companion.name?data.story.companion.name+'說：「明天見！」':'明天見！';
     $('stat').textContent=(data.moved?(data.famMoved?'你和家人一起動了 '+fmtTime(data.moved)+'（家人動了 '+fmtTime(data.famMoved)+'）':'你今天動了 '+fmtTime(data.moved)):'')+sourceNote(data.sources);remember(data.story,data.moved,data.save,data.replay)}
   else if(ev==='source'){storySource=data||[];sheetInfo()}
   else if(ev==='error'){leaveStage();show('setup',true);notice('故事沒有說成：'+data+'。請再按一次開始。')}
@@ -1417,7 +1426,7 @@ function remember(story,moved,save,isReplay){
       storeSaved(all);renderPast();return;
     }
     const id='s'+Date.now(),list=pastStories();
-    list.unshift({id,title:story.title,name:story.companion.name,moved:moved||0,t:Date.now()});
+    list.unshift({id,title:story.title,name:(story.companion&&story.companion.name)||'',moved:moved||0,t:Date.now()});
     localStorage.setItem('sdq-v3-stories',JSON.stringify(list.slice(0,SAVED_MAX)));
     if(save&&save.start&&save.start.scenes){
       all[id]={t:Date.now(),start:save.start,halves:save.halves||{}};
@@ -1429,7 +1438,7 @@ function remember(story,moved,save,isReplay){
   renderPast();
 }
 function renderPast(){const list=pastStories(),saved=savedStories(),ul=$('pastList');ul.replaceChildren();show('past',list.length>0);
-  for(const s of list){const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');a.textContent='《'+s.title+'》和'+s.name;b.className='moved';b.textContent=s.moved?'動了 '+fmtTime(s.moved):'';li.append(a,b);
+  for(const s of list){const li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');a.textContent='《'+s.title+'》'+(s.name?'和'+s.name:'');b.className='moved';b.textContent=s.moved?'動了 '+fmtTime(s.moved):'';li.append(a,b);
     if(s.id&&saved[s.id]){const btn=document.createElement('button');btn.type='button';btn.className='replay';btn.dataset.replay=s.id;btn.textContent='再聽一次';li.append(btn)}
     ul.append(li)}}
 $('pastList').addEventListener('click',e=>{const b=e.target.closest('[data-replay]');if(!b)return;const s=savedStories()[b.dataset.replay];if(s){replayId=b.dataset.replay;begin(s)}});
