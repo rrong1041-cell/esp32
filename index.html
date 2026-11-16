@@ -395,6 +395,7 @@ body{background:#0E0D24 radial-gradient(circle at 12% 30%,rgba(191,90,242,.16),t
       <label class="sw"><span><b>坐著玩</b><small>故事不會出現跑和跳</small></span><input type="checkbox" id="seated"></label>
       <label class="sw"><span><b>顯示字幕</b><small>讓旁邊的人看到故事在說什麼</small></span><input type="checkbox" id="subs"></label>
       <label class="sw"><span><b>用 Fish 配音</b><small>聲音比較好聽，但要等久一點</small></span><input type="checkbox" id="fish"></label>
+      <label class="sw"><span><b>背景音樂</b><small>故事有輕輕的音樂，動作有節奏可以跟著動</small></span><input type="checkbox" id="music" checked></label>
       <div class="sw"><span><b>手環靈敏度</b><small>孩子動了卻沒反應，就調高</small></span>
         <div class="seg" id="sensSeg" role="group" aria-label="手環靈敏度"><button type="button" data-sens="low" aria-pressed="false">低</button><button type="button" data-sens="mid" aria-pressed="true">中</button><button type="button" data-sens="high" aria-pressed="false">高</button></div>
       </div>
@@ -454,7 +455,7 @@ const SENS={low:{bodyMin:4,armMin:3,stillMax:1,strongMin:6,moveMin:4,lightMin:1,
 function createEngine(d){
   const cfg=Object.assign({bodyMin:3,armMin:2,stillMax:1,strongMin:5,moveMin:3,lightMin:1,lightMax:4,tooHard:6,
     tick:100,autoContinue:60,practiceAuto:14,reHint:20,prefetchBoth:true,seated:false,
-    sceneGap:900,waitFirst:4,waitDemo:9,waitEvery:7,setbackAfter:16,cueMin:2000,cueMax:4500,cueWindow:2500},d.cfg||{});
+    sceneGap:900,waitFirst:4,waitDemo:9,waitEvery:7,setbackAfter:16,giveUp:40,cueMin:2000,cueMax:4500,cueWindow:2500},d.cfg||{});
   const S={run:0,phase:'idle',paused:false,pauses:0,act:null,story:null,pending:{},choiceWaiter:null,practices:0,moved:0};
   const alive=r=>r===S.run;
   const CMD={body:'ACT:BODY',jump:'ACT:JUMP',arm:'ACT:ARM',still:'ACT:STILL',shake:'ACT:BODY',game:'ACT:BODY'};
@@ -494,9 +495,10 @@ function createEngine(d){
     while(alive(r)){await hold(r);if(!alive(r))return;const pc=S.pauses;d.ui('line',text);await d.speak(text);if(d.pauseSpeech||S.pauses===pc)return}
   }
   function makeQueue(r){
-    const q=[];let busy=false;
-    async function pump(){if(busy)return;busy=true;while(q.length&&alive(r))await say(r,q.shift());busy=false}
-    return {push(t){if(t){q.push(t);pump()}},clear(){q.length=0},get idle(){return !busy&&!q.length},async drain(){while(busy&&alive(r))await d.sleep(cfg.tick)}};
+    const q=[];let busy=false,lastEnd=0;
+    async function pump(){if(busy)return;busy=true;while(q.length&&alive(r)){await say(r,q.shift());lastEnd=d.now()}busy=false}
+    // lastEnd：上一句話講完的時間（讓句子之間留一點空白，聽得到音效和音樂）
+    return {push(t){if(t){q.push(t);pump()}},clear(){q.length=0},get idle(){return !busy&&!q.length},get lastEnd(){return lastEnd},async drain(){while(busy&&alive(r))await d.sleep(cfg.tick)}};
   }
 
   // 一段動作：孩子動的時候旁白跟著進度往下講；沒動時提示一層一層變清楚；絕不卡死
@@ -564,9 +566,9 @@ function createEngine(d){
     const evs=events.filter(e=>e&&e.say&&['fast','stop','slow'].includes(e.kind)).map(e=>({...e,at:Math.min(0.8,Math.max(0.2,Number(e.at)||0.5))})).sort((a,b)=>a.at-b.at).slice(0,2);
     if(!evs.length)return [base];
     const part=(f,call)=>base.mode==='count'?{...base,n:Math.max(2,Math.round(base.n*f)),call}:{...base,seconds:Math.max(2,Math.round(base.seconds*f)),call};
-    const ev=e=>e.kind==='stop'?{mode:'still',seconds:e.seconds||3,call:e.say,hint:e.say,demo:'freeze'}
-      :e.kind==='fast'?{mode:'level',band:'strong',seconds:e.seconds||5,call:e.say,hint:e.say,demo:'swing'}
-      :{mode:'level',band:'light',seconds:e.seconds||5,call:e.say,hint:e.say,demo:'wave',oops:e.oops||base.oops};
+    const ev=e=>e.kind==='stop'?{mode:'still',seconds:e.seconds||3,call:e.say,hint:e.say,demo:'freeze',event:true}
+      :e.kind==='fast'?{mode:'level',band:'strong',seconds:e.seconds||5,call:e.say,hint:e.say,demo:'swing',event:true}
+      :{mode:'level',band:'light',seconds:e.seconds||5,call:e.say,hint:e.say,demo:'wave',oops:e.oops||base.oops,event:true};
     const out=[];let prev=0,call=base.call;
     for(const e of evs){out.push(part(e.at-prev,call));out.push(ev(e));prev=e.at;call=e.resume||base.call}
     out.push(part(1-prev,call));return out;
@@ -584,22 +586,26 @@ function createEngine(d){
     // 大約每一句過程要動 4 秒；木頭人、聽口令搖的節奏另外算，不拉長
     // 想像：故事有寫「每動一下的回應」(reacts) 時，用它取代每 4 秒一句的過程旁白
     const reacts=Array.isArray(g.reacts)?g.reacts.filter(Boolean):[],steps=reacts.length?[]:(g.steps||[]);
+    // 突發狀況：一段動作只用一個（故事寫了兩個就每次隨機挑一個，重聽也不一樣）；很長的衝刺才用兩個。
+    // （虛擬試玩實測：40 秒的動作塞了「口令、停、繼續、快、繼續」五句指令，聽起來又像在下命令）
+    let evs=(Array.isArray(g.events)?g.events:[]).filter(e=>e&&e.say&&['fast','stop','slow'].includes(e.kind));
+    if(evs.length>1&&!(phases.length===1&&phases[0].mode==='level'&&phases[0].seconds>=30))evs=[pick(evs)];
     let minDur=0;
     if(hasOutcome&&(steps.length||reacts.length)&&!phases.some(p=>p.mode==='cue')){
       const per=p=>p.mode==='count'?(p.loose?1.3:1.5):1;
       const have=phases.reduce((s,p)=>s+phaseSize(p)*per(p),0),want=reacts.length?Math.min(24,Math.max(14,reacts.length*3)):(steps.length+1)*4;
       // 至少要動這麼久：孩子手快的時候，次數一下就到了（實測揮寶劍 8 秒就結束，只聽到一句回應）
       // 突發狀況、家人的話也要時間念，另外加上去（實測：揮寶劍 16 秒全被口令、家人、突發狀況的話占滿，一句回應都沒有）
-      if(!phases.every(p=>p.mode==='still'))minDur=(want*0.8+(Array.isArray(g.events)?g.events.length*4:0)+(cfg.player==='coop'?3:0))*1000;
+      if(!phases.every(p=>p.mode==='still'))minDur=(want*0.8+evs.length*4+(cfg.player==='coop'?3:0))*1000;
       if(have>0&&have<want){const f=want/have;for(const p of phases){
         if(p.mode==='count')p.n=Math.ceil(p.n*f);
         else if(p.mode==='still')p.seconds=Math.min(12,Math.ceil(p.seconds*f));
         else if(p.mode==='level')p.seconds=Math.ceil(p.seconds*f);}}
     }
     // 動到一半的突發狀況（故事寫的 events）：把這段動作切開，中間插入「快！」「停！」「慢慢來」
-    if(Array.isArray(g.events)&&g.events.length&&!phases.some(p=>['cue','still'].includes(p.mode))){
-      if(phases.length===1)phases.splice(0,1,...splitEvents(phases[0],g.events));
-      else for(const e of g.events.filter(e=>e&&e.say&&['fast','stop','slow'].includes(e.kind)).slice(0,1)){      // 好幾段的動作（往左、往右…）：插在中間兩段之間
+    if(evs.length&&!phases.some(p=>['cue','still'].includes(p.mode))){
+      if(phases.length===1)phases.splice(0,1,...splitEvents(phases[0],evs));
+      else for(const e of evs.slice(0,1)){      // 好幾段的動作（往左、往右…）：插在中間兩段之間
         const k=Math.min(phases.length-1,Math.max(1,Math.round((Number(e.at)||0.5)*phases.length)));
         phases.splice(k,0,splitEvents({mode:'level',band:'any',seconds:4,call:''},[{...e,at:0.2}])[1]);
         if(e.resume&&phases[k+1])phases[k+1]={...phases[k+1],call:e.resume};
@@ -614,9 +620,14 @@ function createEngine(d){
     let pi=-1,ph=null,phDone=0,before=0,said=0,last=d.now(),idleSince=d.now(),stage=0,lastLine=0,wi=0,oopsAt=0,moved=0,cue=null,sMark=0,misses=0,fxAt=0;
     const gameStart=d.now();let lastMv=gameStart,reactSaid=0,assisted=0,assistT=0,wrongT=0,beatT=0,reactI=0,lastReact=0,raceAt=0;let reactOrder=shuffle(reacts);
     // 每動一下：世界回應一句（不重複，用完再洗牌）。旁白還在講的時候不插話
-    const beat=t=>{if(!reactOrder.length||!q.idle||t-lastReact<2200)return;if(reactI>=reactOrder.length){reactI=0;reactOrder=shuffle(reacts)}q.push(reactOrder[reactI++]);lastReact=t;reactSaid++};
+    // 兩句回應之間留 1.4 秒空白（實測：動作中 85% 的時間都有人在講話，孩子沒有喘息、也聽不到音效）
+    const beat=t=>{if(!reactOrder.length||!q.idle||t-q.lastEnd<1400)return;if(reactI>=reactOrder.length){reactI=0;reactOrder=shuffle(reacts)}q.push(reactOrder[reactI++]);lastReact=t;reactSaid++};
+    let callPending=false,gaveUp=false;
     const nextPhase=()=>{pi++;ph=phases[pi];A.ph=ph;phDone=0;cue=null;sMark=A.counts[ph.sig===''?'__none':(ph.sig||'S')]||0;assisted=0;assistT=0;idleSince=d.now();stage=0;
+      // 突發狀況要馬上講：排在後面的回應先丟掉（實測：「停！」晚了 3 秒才講，孩子還在動就被算成動到了）
+      if(ph.event)q.clear();
       if(ph.mode==='cue')q.push(ph.hint);else if(ph.call)q.push(ph.call);      // 聽口令搖：開頭只說「等叮再搖」，「搖！」留到叮的時候
+      callPending=true;d.ui('phase',{mode:ph.mode,band:ph.band||'',event:!!ph.event});
       d.robot('DEMO:'+phaseDemo(ph))};
     nextPhase();
     if(coop){q.push(g.familyCue||FAMILY_CUE[g.type]||'家人也一起來！');d.ui('famProgress',0)}
@@ -626,6 +637,7 @@ function createEngine(d){
       if(A.skip)break;
       const fresh=now-A.levelAt<800,lv=fresh?A.level:0;
       let progressed=false;
+      if(callPending&&q.idle)callPending=false;                               // 這一段的口令講完了
       if(ph.mode==='level'){
         const ok=LV[ph.band](lv),moving=fresh&&lv>=cfg.lightMin;
         if(ok){phDone+=dt;moved+=dt;progressed=true;beatT+=dt;if(beatT>=1.3){beatT=0;beat(now)}}
@@ -638,6 +650,7 @@ function createEngine(d){
         else if(moving)wrongT+=dt;                                           // 有在動，但不夠用力
       }else if(ph.mode==='still'){
         if(fresh&&lv<=cfg.stillMax){phDone+=dt;progressed=true}
+        else if(callPending){progressed=true}                                 // 「別動」還沒講完：還在動不算錯
         else if(lv>=cfg.moveMin){                                             // 要停住卻明顯在動：這一次重來
           if(phDone>0.8){stillResets++;if(now-oopsAt>4000&&q.idle){oopsAt=now;q.push(pick(['哎呀，動到了！我們再停一次。','噓……動了喔，再當一次木頭人。']))}}
           phDone=0;
@@ -665,7 +678,7 @@ function createEngine(d){
           const gap=ph.band==='light'?700:Math.max(220,620-lv*45);
           if(now-fxAt>=gap){fxAt=now;d.sfx(ph.band==='light'?'rustle':(g.sound&&g.sound!=='none'?g.sound:'step'))}
         }else if(ph.band==='light'&&lv>cfg.lightMax&&now-fxAt>=500){fxAt=now;d.sfx('splash')}
-      }else if(fresh&&ph.mode==='still'&&lv>=cfg.moveMin&&now-fxAt>=1200){fxAt=now;d.sfx('wobble')}
+      }else if(fresh&&ph.mode==='still'&&!callPending&&lv>=cfg.moveMin&&now-fxAt>=1200){fxAt=now;d.sfx('wobble')}
       if(progressed)lastMv=now;
       const frac=Math.min(1,(before+Math.min(phDone,phaseSize(ph)))/total);
       d.ui('progress',minDur?Math.min(frac,(now-gameStart)/minDur):frac);
@@ -685,7 +698,7 @@ function createEngine(d){
           else if(frac>fr+0.3){q.push(pick(['你領先了！家人快追！','你跑到前面了！家人加油！']));raceAt=now}
         }
       }
-      if(phDone>=phaseSize(ph)){
+      if(phDone>=phaseSize(ph)&&!(ph.event&&callPending)){                    // 突發狀況的那句話要講完才換下一段
         if(pi+1<phases.length){before+=phaseSize(ph);nextPhase();continue}
         const famOk=!coop||famDone>=famNeed;
         if((!hasOutcome||q.idle)&&famOk&&((now-gameStart>=minDur&&reactSaid>=Math.min(3,reacts.length))||now-lastMv>8000))break;   // 至少聽到 3 句世界的回應                                // 最後一段：等過程旁白念完才算做完，孩子不會沒聽到故事就結束
@@ -706,6 +719,8 @@ function createEngine(d){
       if(progressed){stage=0;idleSince=now}
       else if(q.idle){
         const idle=(now-idleSince)/1000;
+        // 完全沒動超過 40 秒：夥伴直接幫忙過關，故事往下走（虛擬試玩實測：孩子不動時，故事會永遠停在這一段）
+        if(idle>=cfg.giveUp){gaveUp=true;break}
         // 一直沒動：發生一個小挫折，夥伴鼓勵再試一次。故事不結束、不跳過，只是走向會變成「需要幫忙」
         if(hasOutcome&&!setbackDone&&g.setback&&idle>=cfg.setbackAfter){
           setbackDone=true;struggled=true;q.push(g.setback);d.sfx('wobble');d.robot('WAIT');
@@ -721,11 +736,11 @@ function createEngine(d){
     }
     if(!alive(r))return null;
     S.act=null;d.cmd('PAUSE');q.clear();await q.drain();if(!alive(r))return null;
-    d.ui('progress',1);S.moved+=Math.round(moved);
+    d.ui('progress',1);d.ui('phase',{mode:'done'});S.moved+=Math.round(moved);   // 動作做完：音樂回到講故事的樣子，再講結果
     if(coop){S.famMoved=(S.famMoved||0)+Math.round(famDone);d.ui('famProgress',-1)}
     if(hasOutcome){
       // 孩子的表現決定故事怎麼走：順利 → 多了一個好的新發展；需要幫忙 → 夥伴幫忙，用不同方法過關。兩種都會往下走
-      if(A.skip||totalMisses>=2||stillResets>=2)struggled=true;
+      if(A.skip||gaveUp||totalMisses>=2||stillResets>=2)struggled=true;
       const outcome=struggled?'help':'win';
       if(outcome==='win'){d.robot('CHEER');d.sfx('cheer')}else{d.robot('NUDGE');d.sfx('chime')}
       await say(r,g[outcome]);
@@ -950,7 +965,8 @@ function cancelSpeech(){speechToken++;speechPaused=false;setTalking(false);relea
 let talkTimer=null;
 function setTalking(on){
   const f=document.getElementById('face');if(!f)return;
-  if(on!==setTalking.last){setTalking.last=on;if(typeof botSend==='function')botSend(on?'TALK:1':'TALK:0')}   // 實體機器人的嘴巴也跟著動
+  if(on!==setTalking.last){setTalking.last=on;if(typeof botSend==='function')botSend(on?'TALK:1':'TALK:0');   // 實體機器人的嘴巴也跟著動
+    try{music.talk(on)}catch(e){}}                                                                              // 講話時背景音樂小聲一點
   if(on){if(talkTimer)return;f.classList.add('talking');
     const tick=()=>{f.style.setProperty('--open',(Math.random()<.2?.08:.3+Math.random()*.7).toFixed(2));talkTimer=setTimeout(tick,75+Math.random()*95)};tick()}
   else{clearTimeout(talkTimer);talkTimer=null;f.classList.remove('talking');f.style.setProperty('--open','0')}
@@ -1120,6 +1136,59 @@ function sfx(name){
   else if(name==='wind')noise(.7,'lowpass',620,.4,.16,.3);
 }
 
+/* ═════════ 背景音樂（用程式合成，不需要音檔） ═════════
+   以前整篇只有人聲和「叮」，聽起來像在聽指令。現在故事有輕輕的音樂盒，動作有節奏（孩子可以跟著拍子動），
+   要停住的時候音樂也跟著安靜下來。只用 C 大調五聲音階（Do Re Mi Sol La），怎麼排都不會難聽。
+   story＝講故事　move＝動作　fast＝快！　soft＝輕輕的　still＝別動　branch＝選路　off＝關掉 */
+const music=(()=>{
+  const MODES={story:{bpm:66,vol:.05},move:{bpm:112,vol:.075},fast:{bpm:138,vol:.085},soft:{bpm:80,vol:.05},still:{bpm:60,vol:.03},branch:{bpm:72,vol:.045}};
+  const SC=[0,2,4,7,9],BASS=[65.41,55,87.31,98];                       // 低音：C、A、F、G，四小節一輪
+  const hz=n=>261.63*Math.pow(2,(SC[((n%5)+5)%5]+12*Math.floor(n/5))/12);
+  let on=true,mode='off',timer=null,next=0,step=0,out=null,talking=false,held=false,mel=5,nbuf=null;
+  const level=()=>mode==='off'||held?0.0001:MODES[mode].vol*(talking?.5:1);   // 有人講話時音樂小聲一半
+  function ramp(tc){if(out&&actx)out.gain.setTargetAtTime(level(),actx.currentTime,tc||.25)}
+  function pluck(f,t,dur,g,type){const o=actx.createOscillator(),e=actx.createGain();o.type=type||'triangle';o.frequency.value=f;
+    e.gain.setValueAtTime(.0001,t);e.gain.exponentialRampToValueAtTime(g,t+.012);e.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(e);e.connect(out);o.start(t);o.stop(t+dur+.05)}
+  function kick(t,g){const o=actx.createOscillator(),e=actx.createGain();o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(48,t+.12);
+    e.gain.setValueAtTime(g,t);e.gain.exponentialRampToValueAtTime(.0001,t+.2);o.connect(e);e.connect(out);o.start(t);o.stop(t+.22)}
+  function shake(t,g){if(!nbuf){nbuf=actx.createBuffer(1,2048,actx.sampleRate);const c=nbuf.getChannelData(0);for(let i=0;i<c.length;i++)c[i]=Math.random()*2-1}
+    const s=actx.createBufferSource(),f=actx.createBiquadFilter(),e=actx.createGain();s.buffer=nbuf;f.type='highpass';f.frequency.value=6500;
+    e.gain.setValueAtTime(g,t);e.gain.exponentialRampToValueAtTime(.0001,t+.04);s.connect(f);f.connect(e);e.connect(out);s.start(t);s.stop(t+.05)}
+  // 旋律：在五聲音階上一小步一小步走，偶爾跳一下，不會跑太高或太低
+  const walk=()=>{mel+=[-2,-1,-1,0,1,1,2][Math.floor(Math.random()*7)];if(mel<3)mel+=2;if(mel>11)mel-=3;return mel};
+  function play(k,t,m){                                                // k：第幾個半拍（八個半拍是一小節）
+    const bar=Math.floor(k/8)%4,p=k%8,b=BASS[bar];
+    if(m==='story'||m==='soft'){                                       // 音樂盒：每拍一個音，小節開頭有低音
+      if(p===0)pluck(b*2,t,1.6,.5,'sine');
+      if(p%2===0)pluck(hz(walk()),t,1.1,.5);else if(Math.random()<.25)pluck(hz(mel+2),t,.7,.25);
+    }else if(m==='move'||m==='fast'){                                  // 節奏：大鼓、沙鈴、跳跳的低音和旋律
+      if(p===0||p===4)kick(t,.9);
+      if(p%2===1)shake(t,.35);else shake(t,.12);
+      if(p===0||p===3||p===6)pluck(b*2,t,.22,.6,'triangle');
+      if(p===0||p===2||p===3||p===5||p===6||(p===7&&Math.random()<.5))pluck(hz(walk()+5),t,.28,.45);
+    }else if(m==='still'){                                             // 別動：只剩很輕、很慢的兩個音，像踮腳尖
+      if(p===0)pluck(hz(7),t,.5,.5,'sine');if(p===4)pluck(hz(5),t,.5,.4,'sine');
+    }else if(m==='branch'){                                            // 選路：一上一下，像在問「哪一邊？」
+      if(p===0)pluck(hz(5),t,.9,.5);if(p===2)pluck(hz(7),t,.9,.5);if(p===4)pluck(hz(6),t,.9,.5);if(p===6)pluck(hz(8),t,1.2,.4);
+    }
+  }
+  function tick(){if(!actx||mode==='off'||held)return;const m=mode,half=60/MODES[m].bpm/2;
+    if(next<actx.currentTime)next=actx.currentTime+.05;
+    while(next<actx.currentTime+.25){play(step++,next,m);next+=half}}
+  function set(m){
+    if(!on||!MODES[m])m='off';if(m===mode)return;
+    const a=audio();if(!a)return;
+    if(!out){out=a.createGain();out.gain.value=.0001;out.connect(a.destination)}
+    mode=m;ramp(m==='off'?.15:.3);
+    if(m==='off'){clearInterval(timer);timer=null}
+    else{step=Math.ceil(step/8)*8;if(!timer)timer=setInterval(tick,60)}   // 換音樂時從新的一小節開始
+  }
+  return {set,get mode(){return mode},get on(){return on},
+    setOn(v){on=!!v;if(!on)set('off')},
+    talk(v){talking=!!v;ramp(.12)},                                       // 夥伴講話時自動變小聲
+    hold(v){held=!!v;ramp(.1)}};                                          // 暫停故事時音樂也停
+})();
+
 /* ═════════ 手環（藍牙） ═════════ */
 const band={device:null,ch:null,queue:Promise.resolve(),connected:false};
 // 手環校正好、可以用在故事裡的新動作（舉高、放低要先校正「中間」才準；推會跟跑步混在一起，先不用）
@@ -1280,7 +1349,17 @@ async function api(path,body){
 let sceneNo=0,sheetTimer=null,storyTitle='',sceneEmo='calm';
 const face=$('face');
 function fmtTime(s){return s>=60?Math.floor(s/60)+' 分 '+(s%60)+' 秒':s+' 秒'}
+// 背景音樂跟著故事走
+function musicFor(ev,data){
+  if(ev==='dark'||ev==='rest'||ev==='chosen'||ev==='scene')music.set('story');
+  else if(ev==='move'){const m=data.move||{};music.set(m.kind==='still'||['hold','freeze'].includes(m.type)?'still':'move')}   // 暖身的木頭人、故事裡的躲起來
+  else if(ev==='phase')music.set(data.mode==='done'?'story':data.mode==='still'?'still':data.band==='light'?'soft':data.event&&data.band==='strong'?'fast':data.mode==='cue'?'soft':'move');
+  else if(ev==='branch')music.set('branch');
+  else if(ev==='paused')music.hold(!!data);
+  else if(ev==='end'||ev==='error')music.set('off');
+}
 function ui(ev,data){
+  try{musicFor(ev,data)}catch(e){}
   if(ev==='dark'){show('setup',false);show('finale',false);show('stage',true);show('fork',false);show('resume',false);show('sheet',false);
     $('caption').textContent='';show('caption',$('subs').checked);sceneNo=0;storyTitle='';sceneEmo='happy';
     face.dataset.emo='calm';botPose('');$('meter').classList.remove('on');show('meterFamWrap',playerValue==='coop');show('famDoneBtn',playerValue==='coop');$('meterFamWrap').className='';face.classList.add('thinking');face.classList.remove('moving');sheetInfo();window.scrollTo(0,0)}
@@ -1317,7 +1396,7 @@ function recentLibIds(){try{return JSON.parse(localStorage.getItem(RECENT_KEY)||
 function rememberLibId(id){try{const l=recentLibIds().filter(x=>x!==id);l.unshift(id);localStorage.setItem(RECENT_KEY,JSON.stringify(l.slice(0,20)))}catch(e){}}
 function sheetInfo(){$('sheetInfo').textContent=(sceneNo?'《'+storyTitle+'》第 '+sceneNo+' 幕':'故事準備中')+(storySource.length?'　·　'+storySource.map(s=>SOURCE_NAME[s]||s).join('＋'):'')+'　·　'+(band.connected?'手環已連線':'沒有手環，用按鈕代替')+(playerValue==='coop'?'　·　'+(fam.connected?'家人手環已連線':'家人沒有手環，用「家人完成了」按鈕'):'')+'　·　'+(bot.connected?'機器人已連線':'沒有機器人')+'　·　聲音：'+voiceName()}
 function voiceName(){if(voiceMode==='fish')return 'Fish 配音';const v=bestVoice();return v?v.name:'裝置內建'}
-function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech();botSend('REST')}
+function leaveStage(){show('stage',false);simStop();releaseWake();cancelSpeech();botSend('REST');music.set('off');music.hold(false)}
 // 聽過的故事：名稱和運動時間，加上整篇故事（兩條路的下半段都有），只存在這台裝置上。
 // 「再聽一次」不用再問 AI，配音的句子也一模一樣，所以 Fish 會直接播存好的音檔，不用額度。
 const SAVED_KEY='sdq-v4-saved',SAVED_MAX=8;
@@ -1410,7 +1489,7 @@ $('connectBot').onclick=connectBot;
 $('connectFam').onclick=connectFam;
 $('playerSeg').addEventListener('click',e=>{const b=e.target.closest('[data-player]');if(b)setPlayer(b.dataset.player)});
 $('famDoneBtn').onclick=()=>{engine.famDone();notice('')};
-try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voiceV===2?s.voice==='fish':true;   /* v5.6 起預設用 Fish 配音 */if(s.sens&&SENS[s.sens])setSens(s.sens);if(s.player)setPlayer(s.player);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs}catch(e){}
+try{const s=JSON.parse(localStorage.getItem('sdq-v3')||'{}');if(s.age&&/^[5-8]$/.test(String(s.age)))setAge(s.age);$('fish').checked=s.voiceV===2?s.voice==='fish':true;   /* v5.6 起預設用 Fish 配音 */if(s.sens&&SENS[s.sens])setSens(s.sens);if(s.player)setPlayer(s.player);$('seated').checked=!!s.seated;$('subs').checked=!!s.subs;$('music').checked=s.music!==false}catch(e){}
 function begin(replay){
   notice('');
   if(!(replay&&replay.start&&replay.start.scenes)){replay=null;replayId=null}   // 一般開始；replay 是「再聽一次」存下來的故事
@@ -1419,11 +1498,12 @@ function begin(replay){
   try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}
   keepAwake();
   voiceMode=$('fish').checked?'fish':'device';fishFails=0;voiceCache.clear();
+  music.hold(false);music.setOn($('music').checked);
   const seated=$('seated').checked;
   // 用按鈕玩或手環沒校正：不用新動作。跳不用校正，但坐著玩不跳
   const gestures=band.connected?bandGestures.concat($('seated').checked?[]:['JUMP']):[];
   Object.assign(engine.cfg,SENS[sensValue]||SENS.mid,{seated,gestures,player:playerValue});
-  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,player:playerValue,voice:voiceMode,voiceV:2,sens:sensValue,seated,subs:$('subs').checked}))}catch(e){}
+  try{localStorage.setItem('sdq-v3',JSON.stringify({age:ageValue,player:playerValue,voice:voiceMode,voiceV:2,sens:sensValue,seated,subs:$('subs').checked,music:$('music').checked}))}catch(e){}
   simStart();
   engine.start({mode:'child',player:playerValue,posture:seated?'seated':'general',age:Number(ageValue),topic:$('idea').value.trim(),chat:[],gestures,recent:recentLibIds()},replay||undefined);
 }
