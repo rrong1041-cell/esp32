@@ -559,6 +559,18 @@ function createEngine(d){
     cue:'家人也一起，聽到叮再搖！',hold:'家人也一起當小石頭，別動！',freeze:'家人也一起玩木頭人！',reach:'家人也一起，把手舉高高！',low:'家人也一起彎下腰，手往下伸！',
     updown:'家人也一起，舉高再放低！',twist:'家人也一起轉轉手腕！',jump:'家人也一起跳一跳！',push:'家人也一起，用力推！',swim:'家人也拿起槳，一起划！',
     flap:'家人也一起拍拍翅膀！',stir:'家人也一起攪一攪！',knock:'家人也一起敲一敲！',steer:'家人也一起，往左、往右！'};
+  // 突發狀況：fast＝快！（用力動）、stop＝停！（不動）、slow＝慢慢來（輕輕的）；at＝在這段動作的哪裡（0～1）
+  function splitEvents(base,events){
+    const evs=events.filter(e=>e&&e.say&&['fast','stop','slow'].includes(e.kind)).map(e=>({...e,at:Math.min(0.8,Math.max(0.2,Number(e.at)||0.5))})).sort((a,b)=>a.at-b.at).slice(0,2);
+    if(!evs.length)return [base];
+    const part=(f,call)=>base.mode==='count'?{...base,n:Math.max(2,Math.round(base.n*f)),call}:{...base,seconds:Math.max(2,Math.round(base.seconds*f)),call};
+    const ev=e=>e.kind==='stop'?{mode:'still',seconds:e.seconds||3,call:e.say,hint:e.say,demo:'freeze'}
+      :e.kind==='fast'?{mode:'level',band:'strong',seconds:e.seconds||5,call:e.say,hint:e.say,demo:'swing'}
+      :{mode:'level',band:'light',seconds:e.seconds||5,call:e.say,hint:e.say,demo:'wave',oops:e.oops||base.oops};
+    const out=[];let prev=0,call=base.call;
+    for(const e of evs){out.push(part(e.at-prev,call));out.push(ev(e));prev=e.at;call=e.resume||base.call}
+    out.push(part(1-prev,call));return out;
+  }
   const FAM_WAIT=['等等家人！大家一起再動一下下！','家人也要一起完成喔，加油！','還差家人一點點，一起動！'];
   async function runGame(r,g,sc){
     const hasOutcome=!!(g.win||g.help);                                     // v5.1：做得順利／需要幫忙，兩種結果
@@ -570,13 +582,28 @@ function createEngine(d){
     const phases=g.phases.map(ph=>({...adaptPhase(ph)}));
     // 動作要夠長，旁白才講得完（實測：划船只動了 6 秒，三句過程只念到第一句就靠岸了）。
     // 大約每一句過程要動 4 秒；木頭人、聽口令搖的節奏另外算，不拉長
-    if(hasOutcome&&g.steps&&g.steps.length&&!phases.some(p=>p.mode==='cue')){
+    // 想像：故事有寫「每動一下的回應」(reacts) 時，用它取代每 4 秒一句的過程旁白
+    const reacts=Array.isArray(g.reacts)?g.reacts.filter(Boolean):[],steps=reacts.length?[]:(g.steps||[]);
+    let minDur=0;
+    if(hasOutcome&&(steps.length||reacts.length)&&!phases.some(p=>p.mode==='cue')){
       const per=p=>p.mode==='count'?(p.loose?1.3:1.5):1;
-      const have=phases.reduce((s,p)=>s+phaseSize(p)*per(p),0),want=(g.steps.length+1)*4;
+      const have=phases.reduce((s,p)=>s+phaseSize(p)*per(p),0),want=reacts.length?Math.min(24,Math.max(14,reacts.length*3)):(steps.length+1)*4;
+      // 至少要動這麼久：孩子手快的時候，次數一下就到了（實測揮寶劍 8 秒就結束，只聽到一句回應）
+      // 突發狀況、家人的話也要時間念，另外加上去（實測：揮寶劍 16 秒全被口令、家人、突發狀況的話占滿，一句回應都沒有）
+      if(!phases.every(p=>p.mode==='still'))minDur=(want*0.8+(Array.isArray(g.events)?g.events.length*4:0)+(cfg.player==='coop'?3:0))*1000;
       if(have>0&&have<want){const f=want/have;for(const p of phases){
         if(p.mode==='count')p.n=Math.ceil(p.n*f);
         else if(p.mode==='still')p.seconds=Math.min(12,Math.ceil(p.seconds*f));
         else if(p.mode==='level')p.seconds=Math.ceil(p.seconds*f);}}
+    }
+    // 動到一半的突發狀況（故事寫的 events）：把這段動作切開，中間插入「快！」「停！」「慢慢來」
+    if(Array.isArray(g.events)&&g.events.length&&!phases.some(p=>['cue','still'].includes(p.mode))){
+      if(phases.length===1)phases.splice(0,1,...splitEvents(phases[0],g.events));
+      else for(const e of g.events.filter(e=>e&&e.say&&['fast','stop','slow'].includes(e.kind)).slice(0,1)){      // 好幾段的動作（往左、往右…）：插在中間兩段之間
+        const k=Math.min(phases.length-1,Math.max(1,Math.round((Number(e.at)||0.5)*phases.length)));
+        phases.splice(k,0,splitEvents({mode:'level',band:'any',seconds:4,call:''},[{...e,at:0.2}])[1]);
+        if(e.resume&&phases[k+1])phases[k+1]={...phases[k+1],call:e.resume};
+      }
     }
     d.ui('move',{move:g});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+g.demo);
     // 故事最後一句已經在叫孩子動了，不再念「為什麼要動」（實測：一個動作被叫了三次才開始動，像在下指令）
@@ -585,7 +612,9 @@ function createEngine(d){
     if(!alive(r))return null;
     const total=phases.reduce((s,ph)=>s+phaseSize(ph),0);
     let pi=-1,ph=null,phDone=0,before=0,said=0,last=d.now(),idleSince=d.now(),stage=0,lastLine=0,wi=0,oopsAt=0,moved=0,cue=null,sMark=0,misses=0,fxAt=0;
-    let assisted=0,assistT=0,wrongT=0;
+    const gameStart=d.now();let lastMv=gameStart,reactSaid=0,assisted=0,assistT=0,wrongT=0,beatT=0,reactI=0,lastReact=0,raceAt=0;let reactOrder=shuffle(reacts);
+    // 每動一下：世界回應一句（不重複，用完再洗牌）。旁白還在講的時候不插話
+    const beat=t=>{if(!reactOrder.length||!q.idle||t-lastReact<2200)return;if(reactI>=reactOrder.length){reactI=0;reactOrder=shuffle(reacts)}q.push(reactOrder[reactI++]);lastReact=t;reactSaid++};
     const nextPhase=()=>{pi++;ph=phases[pi];A.ph=ph;phDone=0;cue=null;sMark=A.counts[ph.sig===''?'__none':(ph.sig||'S')]||0;assisted=0;assistT=0;idleSince=d.now();stage=0;
       if(ph.mode==='cue')q.push(ph.hint);else if(ph.call)q.push(ph.call);      // 聽口令搖：開頭只說「等叮再搖」，「搖！」留到叮的時候
       d.robot('DEMO:'+phaseDemo(ph))};
@@ -599,7 +628,7 @@ function createEngine(d){
       let progressed=false;
       if(ph.mode==='level'){
         const ok=LV[ph.band](lv),moving=fresh&&lv>=cfg.lightMin;
-        if(ok){phDone+=dt;moved+=dt;progressed=true}
+        if(ok){phDone+=dt;moved+=dt;progressed=true;beatT+=dt;if(beatT>=1.3){beatT=0;beat(now)}}
         // 夥伴已經幫過忙（發生過挫折）：孩子有在動就算，只是慢一點，故事走「需要幫忙」，不會卡住
         else if(moving&&setbackDone){phDone+=dt*0.7;moved+=dt;progressed=true;struggled=true}
         else if(ph.band==='light'&&lv>cfg.lightMax){                        // 要輕輕的卻太大力：進度倒退，不是亂動也能過
@@ -615,9 +644,9 @@ function createEngine(d){
         }
       }else if(ph.mode==='count'){
         const key=ph.sig===''?'__none':(ph.sig||'S');
-        const c=(A.counts[key]||0)-sMark+assisted;if(c>phDone){moved+=(c-phDone)*0.8;phDone=c;progressed=true}   // 搖、舉高、放低、轉、跳都用次數算
+        const c=(A.counts[key]||0)-sMark+assisted;if(c>phDone){moved+=(c-phDone)*0.8;phDone=c;progressed=true;beat(now)}   // 搖、舉高、放低、轉、跳都用次數算
         // 跟著做的動作（loose）：手環認不出這個動作也沒關係，孩子有在動，每 1.3 秒就算一下，故事照樣往前
-        else if(ph.loose&&fresh&&lv>=cfg.moveMin){assistT+=dt;moved+=dt;progressed=true;if(assistT>=1.3){assistT=0;assisted++;d.sfx(g.sound&&g.sound!=='none'?g.sound:'step')}}
+        else if(ph.loose&&fresh&&lv>=cfg.moveMin){assistT+=dt;moved+=dt;progressed=true;if(assistT>=1.3){assistT=0;assisted++;d.sfx(g.sound&&g.sound!=='none'?g.sound:'step');beat(now)}}
         // 保險：已經發生過挫折、孩子明顯在動，手環卻一直認不出這個動作 → 有在動也算（故事走「需要幫忙」），不會卡死
         else if(setbackDone&&fresh&&lv>=cfg.moveMin){assistT+=dt;if(assistT>=2){assistT=0;assisted++;struggled=true}}
       }else if(ph.mode==='cue'){
@@ -637,22 +666,29 @@ function createEngine(d){
           if(now-fxAt>=gap){fxAt=now;d.sfx(ph.band==='light'?'rustle':(g.sound&&g.sound!=='none'?g.sound:'step'))}
         }else if(ph.band==='light'&&lv>cfg.lightMax&&now-fxAt>=500){fxAt=now;d.sfx('splash')}
       }else if(fresh&&ph.mode==='still'&&lv>=cfg.moveMin&&now-fxAt>=1200){fxAt=now;d.sfx('wobble')}
+      if(progressed)lastMv=now;
       const frac=Math.min(1,(before+Math.min(phDone,phaseSize(ph)))/total);
-      d.ui('progress',frac);
+      d.ui('progress',minDur?Math.min(frac,(now-gameStart)/minDur):frac);
       // 進度旁白：有兩種結果時，steps 全部在過程中唸完（結果另外唸）；舊版的最後一句 step 就是結果
-      if(hasOutcome){while(said<g.steps.length&&frac>=(said+1)/(g.steps.length+1)){q.push(g.steps[said]);said++}}
-      else while(said<g.steps.length-1&&frac>=(said+1)/g.steps.length){q.push(g.steps[said]);said++}
+      if(hasOutcome){while(said<steps.length&&frac>=(said+1)/(steps.length+1)){q.push(steps[said]);said++}}
+      else while(said<steps.length-1&&frac>=(said+1)/steps.length){q.push(steps[said]);said++}
       // 雙人合作：家人的手環有在動（該停住的時候是停住）就累積；大人也可以按「家人完成了」
       if(coop){
         const F=A.fam,ff=now-F.levelAt<800;
         if(A.famManual)famDone=famNeed;
         else if(ph.mode==='still'?(ff&&F.level<=cfg.stillMax):(ff&&F.level>=Math.max(2,cfg.lightMin)))famDone+=dt;
         d.ui('famProgress',Math.min(1,famDone/famNeed));
+        // 全家比賽：差很多的時候說一句，讓大家追起來
+        const fr=famDone/famNeed;
+        if(q.idle&&!A.famManual&&frac<1&&fr<1&&now-raceAt>9000&&ph.mode!=='still'){
+          if(fr>frac+0.3){q.push(pick(['家人領先了！快追上！','哇，家人跑到前面了，加油！']));raceAt=now}
+          else if(frac>fr+0.3){q.push(pick(['你領先了！家人快追！','你跑到前面了！家人加油！']));raceAt=now}
+        }
       }
       if(phDone>=phaseSize(ph)){
         if(pi+1<phases.length){before+=phaseSize(ph);nextPhase();continue}
         const famOk=!coop||famDone>=famNeed;
-        if((!hasOutcome||q.idle)&&famOk)break;                                // 最後一段：等過程旁白念完才算做完，孩子不會沒聽到故事就結束
+        if((!hasOutcome||q.idle)&&famOk&&((now-gameStart>=minDur&&reactSaid>=Math.min(3,reacts.length))||now-lastMv>8000))break;   // 至少聽到 3 句世界的回應                                // 最後一段：等過程旁白念完才算做完，孩子不會沒聽到故事就結束
         if(!famOk&&q.idle){                                                     // 孩子做完了、家人還沒：等家人，一直有聲音提醒；等太久就算了，故事不卡住
           if(!famWaitSince)famWaitSince=now;
           if(now-famNagAt>6000){famNagAt=now;q.push(pick(FAM_WAIT));d.robot('NUDGE')}
@@ -1067,6 +1103,15 @@ function sfx(name){
   if(name==='wobble'){tone(392,0,.18,.12);tone(330,.14,.28,.12);return}
   if(name==='pop'){tone(660,0,.08,.14);tone(990,.06,.14,.12);return}                 // 舉高：往上的「啵」
   if(name==='click'){noise(.04,'bandpass',2600,2,.5);return}                          // 轉手腕：「喀」
+  // 故事可以挑的音效（想像的道具發出的聲音）
+  if(now-lastSfx<150&&/^(swish|clang|drum|sparkle|boing|whoosh)$/.test(name))return;
+  if(name==='swish'){lastSfx=now;const f=noise(.22,'bandpass',3200,1.4,.35);if(f&&actx)f.frequency.exponentialRampToValueAtTime(700,actx.currentTime+.2);return}   // 揮寶劍：咻
+  if(name==='clang'){lastSfx=now;tone(1250,0,.25,.12);tone(1870,0,.18,.08);tone(2640,.01,.12,.05);return}                                                 // 打到：鏘
+  if(name==='drum'){lastSfx=now;tone(110,0,.22,.3);noise(.06,'lowpass',300,.8,.4);return}                                                              // 咚
+  if(name==='sparkle'){lastSfx=now;tone(1760,0,.12,.07);tone(2217,.07,.12,.07);tone(2637,.14,.2,.07);return}                                           // 魔法：叮叮叮
+  if(name==='boing'){lastSfx=now;const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;o.type='sine';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(520,t+.18);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.32);return}   // 彈起來：啵嚶
+  if(name==='whoosh'){lastSfx=now;const f=noise(.45,'bandpass',500,.8,.25,.12);if(f&&actx)f.frequency.exponentialRampToValueAtTime(1800,actx.currentTime+.4);return}   // 飛過：呼咻
   if(now-lastSfx<170)return;lastSfx=now;
   if(name==='step')noise(.09,'lowpass',380,.7,.5);
   else if(name==='splash'){const f=noise(.28,'bandpass',1500,.9,.42);if(f&&actx)f.frequency.exponentialRampToValueAtTime(500,actx.currentTime+.26)}
