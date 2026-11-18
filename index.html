@@ -946,6 +946,8 @@ function chunk(text,max){
   if(cur)out.push(cur);return out}
 // Fish 配音用的切法：只在「」外面的句號、驚嘆號、問號切；很短的句子（像「呼——！」）跟下一句黏在一起；一段最多 150 字。
 // （舊版 90 字一切，會切在「結果，呼——！｜一陣大風」或「『…找寶物！｜我們出發吧！』」中間，Fish 分開配音，語調斷掉）
+// Fish 配音的每一段：先分「旁白」和「角色說的話」，角色的話前面加記號 \u0001，Worker 會用第二個聲音念
+function fishPieces(text){const out=[];for(const part of storyParts(text))for(const c of fishChunks(part.text))if(c.trim())out.push(part.role==='talk'?'\u0001'+c:c);return out}
 function fishChunks(text,max){
   max=max||150;const s=String(text).replace(/\n+/g,'');const sent=[];let cur='',depth=0;
   for(let i=0;i<s.length;i++){
@@ -1012,7 +1014,7 @@ function bestVoice(){
 try{speechSynthesis.addEventListener('voiceschanged',()=>{pickedVoice=null;talkVoice=null;bestVoice()})}catch(e){}
 // 說故事的聲音設定：旁白慢一點；對話換聲音，沒有第二個好聲音時就用同一個聲音但音調高一點
 // （舊版音調拉到 1.28、句子在逗號切開，聽起來一頓一頓、像機器人，所以改成整句唸、音調只拉高一點點）
-const VOICE_STYLE={narr:{rate:.88,pitch:1.0},talk:{rate:.94,pitch:1.06},talkSame:{rate:.94,pitch:1.12}};
+const VOICE_STYLE={narr:{rate:.88,pitch:1.0},talk:{rate:.96,pitch:1.1},talkSame:{rate:.98,pitch:1.2}};
 async function speakDevice(text,my,role){
   while(my===speechToken){
     await waitResume(my);if(my!==speechToken)return;
@@ -1029,16 +1031,17 @@ function speakDeviceOnce(text,my,role){return new Promise(resolve=>{
   let done=false;const fin=()=>{if(done)return;done=true;setTalking(false);clearTimeout(tm);if(speechEnd===fin)speechEnd=null;resolve()};
   const tm=setTimeout(fin,text.length*420+5000);speechEnd=fin;u.onend=fin;u.onerror=fin;u.onstart=()=>setTalking(true);
   try{speechSynthesis.speak(u)}catch(e){fin()}})}
-async function fetchVoice(text){
+async function fetchVoice(key){
+  const talk=key.startsWith('\u0001'),text=talk?key.slice(1):key;
   const c=new AbortController(),t=setTimeout(()=>c.abort(),45000);   // Worker 等 Fish 最多 45 秒，這裡不要比它先放棄
-  try{const r=await fetch(WORKER_URL+'/api/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:c.signal});
+  try{const r=await fetch(WORKER_URL+'/api/voice',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(talk?{text,role:'talk'}:{text}),signal:c.signal});
     if(!r.ok||!(r.headers.get('Content-Type')||'').includes('audio/'))throw Error('voice');
     return URL.createObjectURL(await r.blob())}finally{clearTimeout(t)}}
 function voiceFor(text){if(!voiceCache.has(text))voiceCache.set(text,fetchVoice(text).catch(()=>null));return voiceCache.get(text)}
 async function speakFish(text,my){
   const url=await voiceFor(text);if(my!==speechToken)return;
   // 這一句 Fish 沒拿到：這一句先用裝置聲音，下一句再試 Fish（舊版連續失敗 3 次就整篇換成機器聲音，後半篇都沒有 Fish）
-  if(!url){fishFails++;voiceCache.delete(text);return speakDevice(text,my)}
+  if(!url){fishFails++;voiceCache.delete(text);return speakDevice(text.replace(/^\u0001/,''),my,text.startsWith('\u0001')?'talk':'narr')}
   fishFails=0;
   await waitResume(my);if(my!==speechToken)return;
   let blocked=false;
@@ -1047,7 +1050,7 @@ async function speakFish(text,my){
     const guard=()=>{if(!speechPaused)budget-=1000;if(budget<=0)return fin();tm=setTimeout(guard,1000)};   // 暫停的時間不算進逾時
     tm=setTimeout(guard,1000);speechEnd=fin;player.onended=fin;player.onerror=fin;player.src=url;fishPlaying=true;
     Promise.resolve(player.play()).catch(()=>{if(speechPaused)return;blocked=true;fin()})});
-  if(blocked&&my===speechToken)await speakDevice(text,my);
+  if(blocked&&my===speechToken)await speakDevice(text.replace(/^\u0001/,''),my,text.startsWith('\u0001')?'talk':'narr');
 }
 // 「」裡是角色說的話，外面是旁白
 // 只有真的在說話（有句子標點，或前面是「：」）才換聲音；「左邊的小路」「加油」這種名字留在旁白裡，
@@ -1071,9 +1074,12 @@ async function speak(text){
   const my=++speechToken;
   if(voiceMode==='fish'){                                   // Fish 自己的聲音就有語氣，維持一段一段送
     // 以前整段一口氣唸完、句子之間沒有換氣，聽起來很急：改成兩三句一段，每段之間停一下
-    const parts=fishChunks(text);parts.forEach(p=>voiceFor(p));          // 整段的每一小段同時開始準備，唸第一段時後面的就好了
-    for(const p of parts){if(my!==speechToken)return;$('caption').textContent=p;await speakFish(p,my);
-      await storyPause(/[。！？!?…」]$/.test(p)?550:300,my)}
+    const parts=fishPieces(text);parts.forEach(p=>voiceFor(p));          // 整段的每一小段同時開始準備，唸第一段時後面的就好了
+    let prevTalk=null;
+    for(const p of parts){if(my!==speechToken)return;const talk=p.startsWith('\u0001'),t=talk?p.slice(1):p;
+      if(prevTalk!==null&&prevTalk!==talk)await storyPause(260,my);      // 換人說話前停一下
+      $('caption').textContent=talk?'「'+t+'」':t;await speakFish(p,my);prevTalk=talk;
+      await storyPause(/[。！？!?…」]$/.test(t)?550:300,my)}
     return;
   }
   // 裝置語音：旁白和對話分開唸，一句一句唸（暫停後只重唸那一句）；字幕跟著目前唸的這一句走
@@ -1093,19 +1099,19 @@ async function speak(text){
 // Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
 function prefetch(sc){
   if(voiceMode!=='fish')return;
-  const list=[...fishChunks(sc.text)];
+  const list=[sc.text];
   if(sc.move)list.push(sc.move.lead,...sc.move.beats);
   if(sc.game){const g=sc.game;list.push(g.lead,...g.steps);for(const ph of g.phases){if(ph.call)list.push(ph.call);if(ph.hint)list.push(ph.hint)}
     list.push(g.win,g.help,(g.waits||[])[0])}                   // 結果和等待句也先準備，動作做完不會突然安靜很久
-  if(sc.after)list.push(...fishChunks(sc.after));
+  if(sc.after)list.push(sc.after);
   if(sc.move)list.push(...sc.move.hints);
   prefetchText(list);
 }
 // 馬上要唸的句子：不排隊，全部同時開始準備
-function prefetchNow(list){if(voiceMode!=='fish')return;for(const t of list)if(t&&String(t).trim())for(const p of fishChunks(String(t).trim()))voiceFor(p)}
+function prefetchNow(list){if(voiceMode!=='fish')return;for(const t of list)if(t&&String(t).trim())for(const p of fishPieces(String(t).trim()))voiceFor(p)}
 function prefetchText(list){
   if(voiceMode!=='fish')return;
-  for(const t of list)if(t&&String(t).trim())for(const p of fishChunks(String(t).trim()))prefetchChain=prefetchChain.then(()=>voiceFor(p)).catch(()=>{});
+  for(const t of list)if(t&&String(t).trim())for(const p of fishPieces(String(t).trim()))prefetchChain=prefetchChain.then(()=>voiceFor(p)).catch(()=>{});
 }
 
 /* ═════════ 聲音：音效（用程式合成，不需要音檔） ═════════ */
