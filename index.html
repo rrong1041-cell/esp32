@@ -167,10 +167,29 @@ function notice(t){$('notice').textContent=t||''}
 /* ENGINE-BEGIN —— 故事播放引擎：不碰畫面、聲音、藍牙，全部從 d 傳進來（可以在電腦上模擬測試） */
 function createEngine(d){
   const cfg=Object.assign({tick:100,strongMin:5,moveMin:3,lightMin:1,lightMax:4,stillMax:1,fresh:800,
-    idleAt:[4,8,12],giveUp:16,lineGap:1400,eventSecs:{stop:3,fast:5},choiceRemind:15,choiceAuto:45},d.cfg||{});
+    idleAt:[5,10],giveUp:14,lineGap:1400,eventSecs:{stop:3,fast:5},choiceRemind:15,choiceAuto:45},d.cfg||{});
   const S={run:0,phase:'idle',paused:false,level:0,levelAt:-1e9,act:null,choiceWaiter:null,moved:0,last:'win',story:null};
   const alive=r=>r===S.run;
   const noDing=t=>String(t||'').replace(/^\s*叮咚[！!～~。，,…—\s]*/,''),noDrum=t=>String(t||'').replace(/^\s*(咚[、，,！!～~…—\s]*){2,}/,'');
+  // 每個動作：孩子身體要做什麼（夥伴喊出來），動的時候聽到什麼聲音（飛是呼咻、划是水聲、跳是彈簧聲……）
+  // AI 有寫 body 就用 AI 的；舊的故事沒有，就從開始的話猜
+  const BODY_RULES=[[/跳舞|舞/,'原地跳舞','boing'],[/轉圈|旋/,'原地轉圈圈','whoosh'],[/飛|翅膀|飄|拍翅/,'拍拍手臂','whoosh'],[/划|槳|船|游/,'雙手用力划','splash'],
+    [/爬|攀/,'雙手往上爬','rustle'],[/跳|蹦|彈/,'原地跳','boing'],[/塞|放進|摸|拿/,'手輕輕伸出去','none'],[/踮|輕輕|偷偷|悄悄|躡/,'踮腳走','none'],[/鑽|蹲|趴|低頭/,'蹲低身體','rustle'],
+    [/搖|扭|擺|晃/,'左右搖','swish'],[/揮|甩|劍|打/,'用力揮手','swish'],[/推/,'雙手用力推','step'],[/拉(?!著)|拔(?!腿)/,'用力往後拉','step'],[/挖/,'雙手挖挖挖','rustle'],
+    [/舉|拋|伸|摘|抓/,'把手伸高高','swish'],[/抖/,'全身抖一抖','swish'],[/跑|衝|追|逃|奔|踏|趕/,'原地跑','step']];
+  const SEATED_BODY=[['原地跳舞','坐著扭一扭'],['原地跑','雙手快快拍腿'],['原地跳','手舉高高'],['踮腳走','手指輕輕走'],['蹲低身體','身體壓低低'],['原地轉圈圈','雙手轉圈圈']];
+  const SOUND_GAP={step:220,whoosh:650,splash:520,rustle:300,boing:480,swish:380,clap:300};
+  function bodyOf(m){if(!m)return {body:'',sound:'none'};if(m.pace==='still')return {body:'一動也不動',sound:'none'};
+    const t=String(m.go||'');let body=String(m.body||'').trim(),sound=m.sound||'';
+    if(m.pace==='light'){if(!body)body=/塞|放|摸|拿|伸|摘|抓/.test(t)?'手輕輕伸出去':'踮腳走';sound='none'}   // 要很輕：踮腳或手輕輕伸，不放聲音
+    for(const [re,bd,sd] of BODY_RULES)if(re.test(t)){if(!body)body=bd;if(!sound)sound=sd;break}
+    if(!body)body={fast:'原地跑',light:'踮腳走'}[m.pace]||'動一動';if(!sound)sound=m.pace==='light'?'none':'step';
+    if(S.story&&S.story.seated)for(const [a,b] of SEATED_BODY)body=body.replace(a,b);
+    return {body,sound}}
+  const buddyName=()=>(S.story&&S.story.buddy&&S.story.buddy.name)||'夥伴';
+  const cueOf=m=>{const {body}=bodyOf(m);if(!body)return '';const B=buddyName();
+    return m.pace==='still'?B+'小小聲說：「'+body+'……」':m.pace==='light'?B+'小小聲說：「'+body+'……」':B+'喊：「'+body+'！」'};
+  const showOf=m=>{const {body}=bodyOf(m);const B=buddyName();return m.pace==='still'?B+'也變成木頭人：「'+body+'……」':B+'在旁邊做給你看：「'+body+'，像這樣！」'};
   const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
   async function hold(r){while(alive(r)&&S.paused)await d.sleep(cfg.tick)}
   async function say(r,text){text=String(text||'').trim();if(!text||!alive(r))return;await hold(r);if(!alive(r))return;d.ui('line',text);await d.speak(text)}
@@ -184,13 +203,14 @@ function createEngine(d){
   async function runMove(r,m,b){
     const A=S.act={skip:false,pace:m.pace||'move',ev:null};
     const need=Number(m.seconds)||18,pace=m.pace||'move';
-    d.ui('move',{pace,go:m.go});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('drums');
+    const {body,sound}=bodyOf(m),gap=SOUND_GAP[sound]||220;
+    d.ui('move',{pace,go:m.go,body});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('drums');
     await d.sleep(1100);if(!alive(r))return;                                   // 先聽完「咚、咚、咚！」再說話
-    const q=queue(r);q.push(noDrum(m.go));                                   // 鼓聲已經響了，開始的話不用再念「咚咚咚」
+    const q=queue(r);q.push(noDrum(m.go));q.push(cueOf(m));                 // 鼓聲已經響了，開始的話不用再念「咚咚咚」；接著夥伴喊出身體要做什麼（「原地跑！」）
     // 第一輪照 AI 寫的順序念（「越來越近」→「追上了」），之後才打亂；不會連講同一句
     let F=(m.fast||[]).slice(),SL=((m.slow&&m.slow.length?m.slow:m.fast)||[]).slice(),fi=0,si=0,calm=0,lastLine='';
     const pick=(L,i,re)=>{if(!L.length)return '';if(i>0&&i%L.length===0){const n=shuffle(L);L.splice(0,L.length,...n)}let x=L[i%L.length];if(L.length>1&&x===lastLine)x=L[(i+1)%L.length];return x};
-    const idleLines=[(m.stop||[])[0],m.invite,(m.stop||[])[1]].filter(Boolean);let ii=0,stage=0;
+    const idleLines=pace==='still'?[(m.stop||[])[0],(m.stop||[])[1]].filter(Boolean):[showOf(m),(m.stop||[])[0]].filter(Boolean);let ii=0,stage=0;   // 沒動：先做給他看，再用故事催一次，14 秒夥伴陪著完成
     let realAt=-1e9,done=0,moveT=0,fastT=0,idle=0,said=0,helped=false,struggled=false,wrongT=0,oopsAt=-1e9,last=d.now(),doneAt=0;const t0=d.now();
     let ev=m.event&&m.event.say?{...m.event,state:'wait',t:0}:null,goDone=false;A.ev=ev;
     while(alive(r)){
@@ -217,7 +237,7 @@ function createEngine(d){
           if(wrongT<10)done=Math.max(0,done-dt);else{done+=dt*0.6;struggled=true}          // 一直太用力：10 秒後也算，故事不會卡住（結果走「夥伴幫忙」）
           if(now-oopsAt>5000&&q.idle&&wrongT<10){oopsAt=now;q.push('噓……輕一點……');d.sfx('wobble')}}
       }else{
-        if(l>=cfg.moveMin){done+=dt;moveT+=dt;ok=true;realAt=now;if(l>=cfg.strongMin)fastT+=dt;if(now-oopsAt>220){oopsAt=now;d.sfx('step')}}
+        if(l>=cfg.moveMin){done+=dt;moveT+=dt;ok=true;realAt=now;if(l>=cfg.strongMin)fastT+=dt;if(sound!=='none'&&now-oopsAt>(l>=cfg.strongMin?gap*0.7:gap)){oopsAt=now;d.sfx(sound)}}   // 動的時候聽到這個動作的聲音
         else if(l>cfg.stillMax&&l>=cfg.moveMin-1&&now-realAt<1500){done+=dt*0.5;moveT+=dt*0.5;ok=true}   // 剛剛真的在動、只是一下下變小：還算在動（手放著不動的小晃動不算）
       }
       if(cueing)ok=true;
@@ -255,7 +275,7 @@ function createEngine(d){
     if(b.move&&alive(r)){await d.sleep(500);await runMove(r,b.move,b)}
     if(alive(r))await d.sleep(600);
   }
-  const lineSet=b=>{if(!b)return[];const m=b.move;return [b.text,...Object.values(b.textBy||{})].concat(m?[m.go,m.done,m.help,m.invite,...(m.stop||[]),...(m.fast||[]),...(m.slow||[]),m.event&&m.event.say,m.event&&m.event.resume]:[]).filter(Boolean)};
+  const lineSet=b=>{if(!b)return[];const m=b.move;return [b.text,...Object.values(b.textBy||{})].concat(m?[noDrum(m.go),cueOf(m),showOf(m),noDing(m.done),noDing(m.help),...(m.stop||[]),...(m.fast||[]),...(m.slow||[]),m.event&&m.event.say,m.event&&m.event.resume]:[]).filter(Boolean)};
   async function playList(r,list,after){for(let i=0;i<list.length;i++){if(!alive(r))return;await scene(r,list[i],list[i+1]||after)}}
   async function ask(r,ch,B){
     S.phase='choice';d.ui('choice',ch);d.cmd('BRANCH_ON');
