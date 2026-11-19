@@ -612,7 +612,7 @@ function createEngine(d){
         if(e.resume&&phases[k+1])phases[k+1]={...phases[k+1],call:e.resume};
       }
     }
-    d.ui('move',{move:g});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('chime');d.robot('DEMO:'+g.demo);
+    d.ui('move',{move:g});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx(g.signal||'chime');d.robot('DEMO:'+g.demo);
     // 故事最後一句已經在叫孩子動了，不再念「為什麼要動」（實測：一個動作被叫了三次才開始動，像在下指令）
     const q=makeQueue(r);if(!hasOutcome)q.push(g.lead);
     while(alive(r)&&!q.idle&&!A.skip){await hold(r);await d.sleep(cfg.tick)}     // 先唸完「為什麼要動」
@@ -622,7 +622,16 @@ function createEngine(d){
     const gameStart=d.now();let lastMv=gameStart,reactSaid=0,assisted=0,assistT=0,wrongT=0,beatT=0,reactI=0,lastReact=0,raceAt=0;let reactOrder=shuffle(reacts);
     // 每動一下：世界回應一句（不重複，用完再洗牌）。旁白還在講的時候不插話
     // 兩句回應之間留 1.4 秒空白（實測：動作中 85% 的時間都有人在講話，孩子沒有喘息、也聽不到音效）
-    const beat=t=>{if(!reactOrder.length||!q.idle||t-q.lastEnd<1400)return;if(reactI>=reactOrder.length){reactI=0;reactOrder=shuffle(reacts)}q.push(reactOrder[reactI++]);lastReact=t;reactSaid++};
+    // 照孩子的速度講不同的話（reactsFast／reactsSlow）：跑得快，烏鴉嚇一跳；慢下來，烏鴉越飛越遠。孩子聽得出「是我讓故事變的」
+    const RF=Array.isArray(g.reactsFast)?g.reactsFast.filter(Boolean):[],RS=Array.isArray(g.reactsSlow)?g.reactsSlow.filter(Boolean):[];
+    const speedy=RF.length>0&&RS.length>0;let lastSaid='';
+    const reshuffle=l=>{let o=shuffle(l);if(o.length>1&&o[0]===lastSaid)o.push(o.shift());return o};   // 洗牌後第一句不要跟剛剛那句一樣（實測：「變成一個小黑點」連講兩次）
+    const said1=x=>{lastSaid=x;q.push(x)};let fOrder=shuffle(RF),sOrder=shuffle(RS),fI=0,sI=0;
+    const beat=t=>{if(!reactOrder.length||!q.idle||t-q.lastEnd<1400)return;
+      if(speedy){const fast=t-A.levelAt<800&&A.level>=cfg.strongMin;
+        if(fast){if(fI>=fOrder.length){fI=0;fOrder=reshuffle(RF)}said1(fOrder[fI++])}else{if(sI>=sOrder.length){sI=0;sOrder=reshuffle(RS)}said1(sOrder[sI++])}}
+      else{if(reactI>=reactOrder.length){reactI=0;reactOrder=reshuffle(reacts)}said1(reactOrder[reactI++])}
+      lastReact=t;reactSaid++};
     let callPending=false,gaveUp=false;
     const nextPhase=()=>{pi++;ph=phases[pi];A.ph=ph;phDone=0;cue=null;sMark=A.counts[ph.sig===''?'__none':(ph.sig||'S')]||0;assisted=0;assistT=0;idleSince=d.now();stage=0;
       // 突發狀況要馬上講：排在後面的回應先丟掉（實測：「停！」晚了 3 秒才講，孩子還在動就被算成動到了）
@@ -641,9 +650,9 @@ function createEngine(d){
       if(callPending&&q.idle)callPending=false;                               // 這一段的口令講完了
       if(ph.mode==='level'){
         const ok=LV[ph.band](lv),moving=fresh&&lv>=cfg.lightMin;
-        if(ok){phDone+=dt;moved+=dt;progressed=true;beatT+=dt;if(beatT>=1.3){beatT=0;beat(now)}}
+        if(ok){phDone+=dt;moved+=dt;progressed=true;beatT+=dt;if(lv>=cfg.strongMin)A.fastT=(A.fastT||0)+dt;if(beatT>=1.3){beatT=0;beat(now)}}
         // 夥伴已經幫過忙（發生過挫折）：孩子有在動就算，只是慢一點，故事走「需要幫忙」，不會卡住
-        else if(moving&&setbackDone){phDone+=dt*0.7;moved+=dt;progressed=true;struggled=true}
+        else if(moving&&setbackDone){phDone+=dt*0.7;moved+=dt;progressed=true;struggled=true;beatT+=dt;if(beatT>=1.3){beatT=0;beat(now)}}   // 慢慢動也有世界的回應（不然「至少聽到 3 句回應」永遠等不到，故事卡住）
         else if(ph.band==='light'&&lv>cfg.lightMax){                        // 要輕輕的卻太大力：進度倒退，不是亂動也能過
           phDone=Math.max(0,phDone-dt*1.5);progressed=true;wrongT+=dt;
           if(now-oopsAt>4000&&q.idle){oopsAt=now;q.push(ph.oops||'輕一點，慢慢來……')}
@@ -746,6 +755,7 @@ function createEngine(d){
     if(hasOutcome){
       // 孩子的表現決定故事怎麼走：順利 → 多了一個好的新發展；需要幫忙 → 夥伴幫忙，用不同方法過關。兩種都會往下走
       if(A.skip||gaveUp||totalMisses>=2||stillResets>=2)struggled=true;
+      if(g.judge==='fast'&&moved>3&&(A.fastT||0)/moved<0.45)struggled=true;          // 要比快的（追烏鴉、逃跑）：大部分時間都跑得快才算追上
       const outcome=struggled?'help':'win';
       if(g.free){if(g.done)d.sfx(g.done)}                                   // 自由故事：不歡呼、不打斷，故事自己接下去
       else if(outcome==='win'){d.robot('CHEER');d.sfx('cheer')}else{d.robot('NUDGE');d.sfx('chime')}
@@ -822,7 +832,8 @@ function createEngine(d){
       if(!scenes.slice(i).some(s=>s.game||s.move))fire();
       d.ui('scene',sc);d.robot('EMO:'+sc.emotion);if(d.prefetch)d.prefetch(sc);
       if(i>0)await d.sleep(cfg.sceneGap);                                    // 換幕前停一下，像翻頁
-      await say(r,sc.text);
+      const last=S.log.length?S.log[S.log.length-1].outcome:'win';
+      await say(r,(sc.textBy&&sc.textBy[last])||sc.text);                       // 這一幕可以照孩子剛剛的表現講不同的開頭（追得近，就看到烏鴉躲去哪裡）
       if((sc.game||sc.move)&&alive(r))await d.sleep(cfg.sceneGap/2);        // 故事講完、要動之前也喘口氣
       if(sc.game&&alive(r))await runGame(r,sc.game,sc);
       else if(sc.move&&alive(r))await runMove(r,sc.move);
@@ -1105,9 +1116,9 @@ async function speak(text){
 // Fish 配音有延遲，所以一幕開始時就先把這一幕會用到的句子抓好
 function prefetch(sc){
   if(voiceMode!=='fish')return;
-  const list=[sc.text];
+  const list=[sc.text,...Object.values(sc.textBy||{})];
   if(sc.move)list.push(sc.move.lead,...sc.move.beats);
-  if(sc.game){const g=sc.game;list.push(g.lead,...g.steps);for(const ph of g.phases){if(ph.call)list.push(ph.call);if(ph.hint)list.push(ph.hint)}
+  if(sc.game){const g=sc.game;list.push(g.lead,...g.steps,...(g.reactsFast||[]),...(g.reactsSlow||[]));for(const ph of g.phases){if(ph.call)list.push(ph.call);if(ph.hint)list.push(ph.hint)}
     list.push(g.win,g.help,(g.waits||[])[0])}                   // 結果和等待句也先準備，動作做完不會突然安靜很久
   if(sc.after)list.push(sc.after);
   if(sc.move)list.push(...sc.move.hints);
@@ -1143,6 +1154,7 @@ function sfx(name){
   if(!name||name==='none')return;
   const now=performance.now();
   if(name==='chime'){tone(880,0,.5,.18);tone(1320,.14,.7,.16);return}
+  if(name==='drums'){tone(110,0,.2,.32);tone(110,.28,.2,.32);tone(147,.56,.4,.34);noise(.08,'lowpass',300,.8,.4);return}   // 咚、咚、咚！：故事需要你的身體了
   if(name==='cheer'){tone(660,0,.18,.14);tone(880,.12,.18,.14);tone(1100,.24,.4,.16);return}
   if(name==='ding'){tone(1568,0,.6,.24);tone(2350,0,.35,.08);return}
   if(name==='wobble'){tone(392,0,.18,.12);tone(330,.14,.28,.12);return}
