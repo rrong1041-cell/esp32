@@ -1071,6 +1071,8 @@ function storyParts(text){
 // 說故事的停頓：句子結束停久一點，換角色說話前後也停一下。停頓中被暫停或取消都會立刻反應
 async function storyPause(ms,my){const end=performance.now()+ms;while(my===speechToken&&performance.now()<end){await waitResume(my);await new Promise(r=>setTimeout(r,40))}}
 async function speak(text){
+  // 保險：新的一句開始前，上一句（Fish 音檔或裝置語音）一定先停掉，不會兩個聲音疊在一起
+  try{if(fishPlaying)player.pause()}catch(e){}try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel()}catch(e){}try{if(speechEnd)speechEnd()}catch(e){}
   const my=++speechToken;
   if(voiceMode==='fish'){                                   // Fish 自己的聲音就有語氣，維持一段一段送
     // 以前整段一口氣唸完、句子之間沒有換氣，聽起來很急：改成兩三句一段，每段之間停一下
@@ -1115,16 +1117,24 @@ function prefetchText(list){
 }
 
 /* ═════════ 聲音：音效（用程式合成，不需要音檔） ═════════ */
-let actx=null,lastSfx=0;
+let actx=null,lastSfx=0,mainOut=null,mainEl=null;
 function audio(){if(!actx){const C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}if(actx&&actx.state==='suspended')actx.resume();return actx}
+// 合成的聲音（叮鈴、音效、背景音樂）的出口。iPhone 的靜音開關會把網頁合成的聲音關掉（Fish 配音不會），
+// 所以 iPhone 上改成經過一個 <audio> 播放，靜音開關打開也聽得到。要在按「開始」時呼叫一次 audioUnlock()。
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function audioOut(){const a=audio();if(!a)return null;if(mainOut)return mainOut;
+  mainOut=a.createGain();mainOut.gain.value=1;let routed=false;
+  if(isIOS&&a.createMediaStreamDestination){try{const d=a.createMediaStreamDestination();mainOut.connect(d);mainEl=new Audio();mainEl.srcObject=d.stream;mainEl.setAttribute('playsinline','');Promise.resolve(mainEl.play()).catch(()=>{});routed=true}catch(e){routed=false}}
+  if(!routed)mainOut.connect(a.destination);return mainOut}
+function audioUnlock(){audioOut();try{if(mainEl&&mainEl.paused)Promise.resolve(mainEl.play()).catch(()=>{})}catch(e){}}
 function noise(dur,type,freq,q,gain,attack){
   const a=audio();if(!a)return;const n=Math.floor(a.sampleRate*dur),buf=a.createBuffer(1,n,a.sampleRate),ch=buf.getChannelData(0);
   for(let i=0;i<n;i++)ch[i]=Math.random()*2-1;
   const src=a.createBufferSource();src.buffer=buf;const f=a.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;
   const g=a.createGain(),t=a.currentTime;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+(attack||0.006));g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  src.connect(f);f.connect(g);g.connect(a.destination);src.start(t);src.stop(t+dur+0.02);return f}
+  src.connect(f);f.connect(g);g.connect(audioOut());src.start(t);src.stop(t+dur+0.02);return f}
 function tone(freq,at,dur,gain){const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.type='sine';o.frequency.value=freq;
-  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+0.05)}
+  g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(audioOut());o.start(t);o.stop(t+dur+0.05)}
 function sfx(name){
   if(!name||name==='none')return;
   const now=performance.now();
@@ -1141,7 +1151,7 @@ function sfx(name){
   if(name==='drum'){lastSfx=now;tone(110,0,.22,.3);noise(.06,'lowpass',300,.8,.4);return}                                                              // 咚
   if(name==='sparkle'){lastSfx=now;tone(1760,0,.12,.07);tone(2217,.07,.12,.07);tone(2637,.14,.2,.07);return}                                           // 魔法：叮叮叮
   if(name==='boing'){lastSfx=now;const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;o.type='sine';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(520,t+.18);
-    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+.32);return}   // 彈起來：啵嚶
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g);g.connect(audioOut());o.start(t);o.stop(t+.32);return}   // 彈起來：啵嚶
   if(name==='whoosh'){lastSfx=now;const f=noise(.45,'bandpass',500,.8,.25,.12);if(f&&actx)f.frequency.exponentialRampToValueAtTime(1800,actx.currentTime+.4);return}   // 飛過：呼咻
   if(now-lastSfx<170)return;lastSfx=now;
   if(name==='step')noise(.09,'lowpass',380,.7,.5);
@@ -1156,7 +1166,8 @@ function sfx(name){
    要停住的時候音樂也跟著安靜下來。只用 C 大調五聲音階（Do Re Mi Sol La），怎麼排都不會難聽。
    story＝講故事　move＝動作　fast＝快！　soft＝輕輕的　still＝別動　branch＝選路　off＝關掉 */
 const music=(()=>{
-  const MODES={story:{bpm:66,vol:.05},move:{bpm:112,vol:.075},fast:{bpm:138,vol:.085},soft:{bpm:80,vol:.05},still:{bpm:60,vol:.03},branch:{bpm:72,vol:.045}};
+  // 音量：以前是 0.05，比 Fish 配音小 20 分貝左右，用手機喇叭幾乎聽不到，所以調大到大約 3 倍
+  const MODES={story:{bpm:66,vol:.16},move:{bpm:112,vol:.24},fast:{bpm:138,vol:.26},soft:{bpm:80,vol:.16},still:{bpm:60,vol:.1},branch:{bpm:72,vol:.15}};
   const SC=[0,2,4,7,9],BASS=[65.41,55,87.31,98];                       // 低音：C、A、F、G，四小節一輪
   const hz=n=>261.63*Math.pow(2,(SC[((n%5)+5)%5]+12*Math.floor(n/5))/12);
   let on=true,mode='off',timer=null,next=0,step=0,out=null,talking=false,held=false,mel=5,nbuf=null;
@@ -1193,7 +1204,7 @@ const music=(()=>{
   function set(m){
     if(!on||!MODES[m])m='off';if(m===mode)return;
     const a=audio();if(!a)return;
-    if(!out){out=a.createGain();out.gain.value=.0001;out.connect(a.destination)}
+    if(!out){out=a.createGain();out.gain.value=.0001;out.connect(audioOut())}
     mode=m;ramp(m==='off'?.15:.3);
     if(m==='off'){clearInterval(timer);timer=null}
     else{step=Math.ceil(step/8)*8;if(!timer)timer=setInterval(tick,60)}   // 換音樂時從新的一小節開始
@@ -1463,7 +1474,7 @@ document.addEventListener('visibilitychange',()=>{
   if($('stage').hidden)return;
   if(document.hidden){engine.pause();show('resume',true)}else keepAwake();
 });
-$('resumeBtn').onclick=()=>{audio();show('resume',false);keepAwake();engine.resume()};
+$('resumeBtn').onclick=()=>{audio();audioUnlock();show('resume',false);keepAwake();engine.resume()};
 
 /* 沒有手環時，用按鈕或鍵盤代替 */
 let simTimer=null,simHeld=false,simStep=0;
@@ -1487,7 +1498,7 @@ let pressTimer=null;
 $('stage').addEventListener('pointerdown',e=>{if(e.target.closest('#sheet,#fork,#resume'))return;pressTimer=setTimeout(()=>{show('sheet',true);clearTimeout(sheetTimer);sheetTimer=setTimeout(()=>{if(!simHeld)show('sheet',false)},9000)},900)});
 ['pointerup','pointerleave','pointercancel'].forEach(t=>$('stage').addEventListener(t,()=>clearTimeout(pressTimer)));
 $('sheet').addEventListener('pointerdown',()=>{clearTimeout(sheetTimer);sheetTimer=setTimeout(()=>{if(!simHeld)show('sheet',false)},9000)});
-$('pauseBtn').onclick=()=>{if(engine.state.paused){audio();engine.resume()}else engine.pause()};
+$('pauseBtn').onclick=()=>{if(engine.state.paused){audio();audioUnlock();engine.resume()}else engine.pause()};
 $('skipBtn').onclick=()=>engine.skipMove();
 $('quitBtn').onclick=()=>{engine.stop();leaveStage();show('setup',true);notice('')};
 $('fork').addEventListener('click',e=>{const b=e.target.closest('[data-choice]');if(b)engine.signal(b.dataset.choice==='left'?'CHOICE_LEFT':'CHOICE_RIGHT')});
@@ -1509,7 +1520,7 @@ function begin(replay){
   notice('');
   if(!(replay&&replay.start&&replay.start.scenes)){replay=null;replayId=null}   // 一般開始；replay 是「再聽一次」存下來的故事
   // 這些一定要在「按下按鈕」的當下做，手機才允許之後自動播放聲音
-  audio();try{player.src=silentWav();Promise.resolve(player.play()).catch(()=>{})}catch(e){}
+  audio();audioUnlock();try{player.src=silentWav();Promise.resolve(player.play()).catch(()=>{})}catch(e){}
   try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}
   keepAwake();
   voiceMode=$('fish').checked?'fish':'device';fishFails=0;voiceCache.clear();
