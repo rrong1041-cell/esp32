@@ -113,7 +113,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--plum)}
     <div class="row"><span><b>好聽的配音</b><small>Fish 配音；不能用時自動換成裝置的聲音</small></span><input type="checkbox" id="fish" checked></div>
     <div class="row"><span><b>背景音樂</b><small>動的時候有節奏，可以跟著動</small></span><input type="checkbox" id="music" checked></div>
     <div class="row"><span><b>顯示字幕</b><small>讓旁邊的人看到故事在說什麼</small></span><input type="checkbox" id="subs" checked></div>
-    <div class="row"><span><b>沒戴手環時自動示範</b><small>只用聽的時候，假裝有一個小孩照著故事在動</small></span><input type="checkbox" id="demo" checked></div>
+    <div class="row"><span><b>示範模式（給大人看）</b><small>打開後，沒戴手環時會假裝有小孩在動，故事會自己往下走</small></span><input type="checkbox" id="demo"></div>
     <div class="row"><span><b>手環靈敏度</b><small>孩子動了卻沒反應，就調高</small></span><div class="seg" id="sens"><button type="button" data-sens="low" aria-pressed="false">低</button><button type="button" data-sens="mid" aria-pressed="true">中</button><button type="button" data-sens="high" aria-pressed="false">高</button></div></div>
   </section>
   <button type="button" id="begin">開始冒險</button>
@@ -125,6 +125,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--plum)}
   <div id="title"></div>
   <button type="button" id="ctlBtn" aria-label="大人控制">⚙</button>
   <div class="face" id="face" data-emo="calm"><i class="eye l"></i><i class="eye r"></i></div>
+  <div id="demoTag" hidden style="position:absolute;top:12px;left:12px;padding:4px 10px;border-radius:999px;background:rgba(0,0,0,.45);color:#fff;font-size:13px;z-index:5">示範模式：假裝有小孩在動</div>
   <p id="caption" aria-live="polite"></p>
   <div id="meter" aria-hidden="true"><i id="meterFill"></i></div>
   <div id="fork" hidden>
@@ -190,7 +191,7 @@ function createEngine(d){
     let F=(m.fast||[]).slice(),SL=((m.slow&&m.slow.length?m.slow:m.fast)||[]).slice(),fi=0,si=0,calm=0,lastLine='';
     const pick=(L,i,re)=>{if(!L.length)return '';if(i>0&&i%L.length===0){const n=shuffle(L);L.splice(0,L.length,...n)}let x=L[i%L.length];if(L.length>1&&x===lastLine)x=L[(i+1)%L.length];return x};
     const idleLines=[(m.stop||[])[0],m.invite,(m.stop||[])[1]].filter(Boolean);let ii=0,stage=0;
-    let done=0,moveT=0,fastT=0,idle=0,said=0,helped=false,struggled=false,wrongT=0,oopsAt=-1e9,last=d.now(),doneAt=0;const t0=d.now();
+    let realAt=-1e9,done=0,moveT=0,fastT=0,idle=0,said=0,helped=false,struggled=false,wrongT=0,oopsAt=-1e9,last=d.now(),doneAt=0;const t0=d.now();
     let ev=m.event&&m.event.say?{...m.event,state:'wait',t:0}:null,goDone=false;A.ev=ev;
     while(alive(r)){
       await hold(r);if(!alive(r))return;
@@ -216,8 +217,8 @@ function createEngine(d){
           if(wrongT<10)done=Math.max(0,done-dt);else{done+=dt*0.6;struggled=true}          // 一直太用力：10 秒後也算，故事不會卡住（結果走「夥伴幫忙」）
           if(now-oopsAt>5000&&q.idle&&wrongT<10){oopsAt=now;q.push('噓……輕一點……');d.sfx('wobble')}}
       }else{
-        if(l>=cfg.moveMin){done+=dt;moveT+=dt;ok=true;if(l>=cfg.strongMin)fastT+=dt;if(now-oopsAt>220){oopsAt=now;d.sfx('step')}}
-        else if(l>cfg.stillMax&&l>=cfg.moveMin-1){done+=dt*0.5;moveT+=dt*0.5;ok=true}   // 動得小小的也算在動（只是比較慢），不會一直被說「你停下來了」
+        if(l>=cfg.moveMin){done+=dt;moveT+=dt;ok=true;realAt=now;if(l>=cfg.strongMin)fastT+=dt;if(now-oopsAt>220){oopsAt=now;d.sfx('step')}}
+        else if(l>cfg.stillMax&&l>=cfg.moveMin-1&&now-realAt<1500){done+=dt*0.5;moveT+=dt*0.5;ok=true}   // 剛剛真的在動、只是一下下變小：還算在動（手放著不動的小晃動不算）
       }
       if(cueing)ok=true;
       d.ui('progress',Math.min(1,done/need));
@@ -708,13 +709,13 @@ document.addEventListener('visibilitychange',()=>{if($('stage').hidden)return;if
 $('resumeBtn').onclick=()=>{audio();audioUnlock();show('resume',false);keepAwake();engine.resume()};
 
 /* 沒有手環：按住按鈕（或空白鍵＝用力、S 鍵＝慢慢）代替 */
-let simTimer=null,simLv=0,demoOn=true;
+let simTimer=null,simLv=0,demoOn=false;
 // 示範小孩：沒戴手環、也沒按按鈕的時候，照故事要的快慢「動」（只用聽的也聽得到整篇真正的樣子）
 function demoLevel(){const A=engine.state.act,c=engine.cfg;if(!A)return 0;const ev=A.ev,j=Math.random()<.5?0:1;
   if(ev&&ev.state==='on')return ev.kind==='stop'?0:c.strongMin+2;
   if(A.pace==='fast')return c.strongMin+1+j;if(A.pace==='light')return Math.round((c.lightMin+c.lightMax)/2);if(A.pace==='still')return 0;return c.moveMin+j}
-function simStart(){if(simTimer)return;simTimer=setInterval(()=>{if(!band.connected)engine.signal('A:'+(simLv||(demoOn?demoLevel():0)))},250)}
-function simStop(){clearInterval(simTimer);simTimer=null;simLv=0}
+function simStart(){if(simTimer)return;simTimer=setInterval(()=>{const demo=demoOn&&!band.connected;show('demoTag',demo&&!$('stage').hidden);if(!band.connected)engine.signal('A:'+(simLv||(demo?demoLevel():0)))},250)}
+function simStop(){clearInterval(simTimer);simTimer=null;simLv=0;show('demoTag',false)}
 for(const [id,lv] of [['simSlow',3],['simFast',7]]){const el=$(id);
   el.addEventListener('pointerdown',e=>{e.preventDefault();simLv=lv});['pointerup','pointerleave','pointercancel'].forEach(t=>el.addEventListener(t,()=>{simLv=0}))}
 document.addEventListener('keydown',e=>{if($('stage').hidden)return;
@@ -735,7 +736,7 @@ $('sens').addEventListener('click',e=>{const b=e.target.closest('[data-sens]');i
 $('chips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('idea').value=b.dataset.idea||'';$('idea').focus()});
 $('connect').onclick=connectBand;
 try{const s=JSON.parse(localStorage.getItem('sdq11')||'{}');if(/^[5-8]$/.test(String(s.age||''))){ageValue=String(s.age);seg('ages','age',ageValue)}if(SENS[s.sens]){sensValue=s.sens;seg('sens','sens',sensValue)}
-  if(typeof s.fish==='boolean')$('fish').checked=s.fish;if(typeof s.music==='boolean')$('music').checked=s.music;if(typeof s.subs==='boolean')$('subs').checked=s.subs;if(typeof s.demo==='boolean')$('demo').checked=s.demo;$('seated').checked=!!s.seated}catch(e){}
+  if(typeof s.fish==='boolean')$('fish').checked=s.fish;if(typeof s.music==='boolean')$('music').checked=s.music;if(typeof s.subs==='boolean')$('subs').checked=s.subs;$('demo').checked=s.demoOn===true;$('seated').checked=!!s.seated}catch(e){}
 // 網址加 ?story=故事編號：直接播那一篇（例如精選故事 ?story=crow-demo-1）
 const STORY_ID=(()=>{try{const v=new URLSearchParams(location.search).get('story');return /^[\w-]{3,60}$/.test(v||'')?v:''}catch(e){return ''}})();
 if(STORY_ID){$('replayBanner').textContent='這次會播放故事庫裡的故事：'+STORY_ID;show('replayBanner',true)}
@@ -750,7 +751,7 @@ async function begin(id){
   music.hold(false);music.setOn($('music').checked);subsOn=$('subs').checked;demoOn=$('demo').checked;
   const seated=$('seated').checked;
   Object.assign(engine.cfg,SENS[sensValue]||SENS.mid);
-  try{localStorage.setItem('sdq11',JSON.stringify({age:ageValue,sens:sensValue,fish:$('fish').checked,music:$('music').checked,subs:subsOn,demo:demoOn,seated}))}catch(e){}
+  try{localStorage.setItem('sdq11',JSON.stringify({age:ageValue,sens:sensValue,fish:$('fish').checked,music:$('music').checked,subs:subsOn,demoOn,seated}))}catch(e){}
   show('home',false);show('finale',false);show('stage',true);show('fork',false);show('sheet',false);show('resume',false);
   $('caption').style.visibility=subsOn?'visible':'hidden';$('title').textContent='';$('meter').classList.remove('on');
   face.classList.add('thinking');face.dataset.emo='calm';music.set('story');simStart();
