@@ -113,6 +113,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--plum)}
     <div class="row"><span><b>好聽的配音</b><small>Fish 配音；不能用時自動換成裝置的聲音</small></span><input type="checkbox" id="fish" checked></div>
     <div class="row"><span><b>背景音樂</b><small>動的時候有節奏，可以跟著動</small></span><input type="checkbox" id="music" checked></div>
     <div class="row"><span><b>顯示字幕</b><small>讓旁邊的人看到故事在說什麼</small></span><input type="checkbox" id="subs" checked></div>
+    <div class="row"><span><b>沒戴手環時自動示範</b><small>只用聽的時候，假裝有一個小孩照著故事在動</small></span><input type="checkbox" id="demo" checked></div>
     <div class="row"><span><b>手環靈敏度</b><small>孩子動了卻沒反應，就調高</small></span><div class="seg" id="sens"><button type="button" data-sens="low" aria-pressed="false">低</button><button type="button" data-sens="mid" aria-pressed="true">中</button><button type="button" data-sens="high" aria-pressed="false">高</button></div></div>
   </section>
   <button type="button" id="begin">開始冒險</button>
@@ -165,9 +166,10 @@ function notice(t){$('notice').textContent=t||''}
 /* ENGINE-BEGIN —— 故事播放引擎：不碰畫面、聲音、藍牙，全部從 d 傳進來（可以在電腦上模擬測試） */
 function createEngine(d){
   const cfg=Object.assign({tick:100,strongMin:5,moveMin:3,lightMin:1,lightMax:4,stillMax:1,fresh:800,
-    idleAt:[4,9,16],giveUp:20,lineGap:1400,eventSecs:{stop:3,fast:5},choiceRemind:15,choiceAuto:45},d.cfg||{});
+    idleAt:[4,8,12],giveUp:16,lineGap:1400,eventSecs:{stop:3,fast:5},choiceRemind:15,choiceAuto:45},d.cfg||{});
   const S={run:0,phase:'idle',paused:false,level:0,levelAt:-1e9,act:null,choiceWaiter:null,moved:0,last:'win',story:null};
   const alive=r=>r===S.run;
+  const noDing=t=>String(t||'').replace(/^\s*叮咚[！!～~。，,…—\s]*/,''),noDrum=t=>String(t||'').replace(/^\s*(咚[、，,！!～~…—\s]*){2,}/,'');
   const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
   async function hold(r){while(alive(r)&&S.paused)await d.sleep(cfg.tick)}
   async function say(r,text){text=String(text||'').trim();if(!text||!alive(r))return;await hold(r);if(!alive(r))return;d.ui('line',text);await d.speak(text)}
@@ -182,7 +184,8 @@ function createEngine(d){
     const A=S.act={skip:false,pace:m.pace||'move',ev:null};
     const need=Number(m.seconds)||18,pace=m.pace||'move';
     d.ui('move',{pace,go:m.go});d.cmd('ACT:BODY');d.cmd('BUZZ');d.sfx('drums');
-    const q=queue(r);q.push(m.go);
+    await d.sleep(1100);if(!alive(r))return;                                   // 先聽完「咚、咚、咚！」再說話
+    const q=queue(r);q.push(noDrum(m.go));                                   // 鼓聲已經響了，開始的話不用再念「咚咚咚」
     // 第一輪照 AI 寫的順序念（「越來越近」→「追上了」），之後才打亂；不會連講同一句
     let F=(m.fast||[]).slice(),SL=((m.slow&&m.slow.length?m.slow:m.fast)||[]).slice(),fi=0,si=0,calm=0,lastLine='';
     const pick=(L,i,re)=>{if(!L.length)return '';if(i>0&&i%L.length===0){const n=shuffle(L);L.splice(0,L.length,...n)}let x=L[i%L.length];if(L.length>1&&x===lastLine)x=L[(i+1)%L.length];return x};
@@ -214,6 +217,7 @@ function createEngine(d){
           if(now-oopsAt>5000&&q.idle&&wrongT<10){oopsAt=now;q.push('噓……輕一點……');d.sfx('wobble')}}
       }else{
         if(l>=cfg.moveMin){done+=dt;moveT+=dt;ok=true;if(l>=cfg.strongMin)fastT+=dt;if(now-oopsAt>220){oopsAt=now;d.sfx('step')}}
+        else if(l>cfg.stillMax&&l>=cfg.moveMin-1){done+=dt*0.5;moveT+=dt*0.5;ok=true}   // 動得小小的也算在動（只是比較慢），不會一直被說「你停下來了」
       }
       if(cueing)ok=true;
       d.ui('progress',Math.min(1,done/need));
@@ -237,7 +241,8 @@ function createEngine(d){
     const out=helped||struggled||(pace==='fast'&&moveT>3&&fastT/moveT<0.45)?'help':'win';     // 要快的：大部分時間都很快才算「追上」
     S.last=out;S.moved+=Math.round(moveT);
     d.ui('progress',1);d.ui('moved',{out,pace});d.sfx('dingdong');
-    await say(r,out==='win'?m.done:m.help);
+    await d.sleep(1000);if(!alive(r))return;                                   // 門鈴響完再說結果
+    await say(r,noDing(out==='win'?m.done:m.help));                                 // 門鈴「叮咚」已經響了，不用再念一次
     d.ui('rest');
   }
   async function scene(r,b,next){
@@ -497,12 +502,36 @@ function noise(dur,type,freq,q,gain,attack){
   src.connect(f);f.connect(g);g.connect(audioOut());src.start(t);src.stop(t+dur+0.02);return f}
 function tone(freq,at,dur,gain){const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+at;o.type='sine';o.frequency.value=freq;
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(audioOut());o.start(t);o.stop(t+dur+0.05)}
+// ── 真的鼓和真的門鈴：照真的樂器怎麼發聲來合成（不需要音檔，也不用下載）
+// 鼓：鼓皮被打下去的瞬間音比較高、馬上掉下來（「咚」的感覺），再加上鼓皮的泛音、鼓棒打到的「啪」、鼓身的空氣聲，最後有一點房間的回音。
+// 門鈴：兩根金屬音條被小槌敲到（Mi→Do），基音響很久，金屬的高泛音很快消失，兩個音差一點點，聽起來會「嗡嗡」地晃，像真的門鈴。
+let roomNode=null;
+function room(){const a=audio();if(!a)return null;if(roomNode)return roomNode;
+  const len=Math.floor(a.sampleRate*1.6),ir=a.createBuffer(2,len,a.sampleRate);
+  for(let c=0;c<2;c++){const ch=ir.getChannelData(c);for(let i=0;i<len;i++){const t=i/a.sampleRate;ch[i]=(Math.random()*2-1)*Math.exp(-t*3.4)*(t<.012?t/.012:1)}}
+  const cv=a.createConvolver();cv.buffer=ir;const wet=a.createGain();wet.gain.value=.22;cv.connect(wet);wet.connect(audioOut());roomNode=cv;return cv}
+function voiceNode(t,gain){const a=actx,g=a.createGain();g.gain.value=gain;g.connect(audioOut());const r=room();if(r)g.connect(r);return g}
+function env(g,t,peak,att,dec){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(peak,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+att+dec)}
+function burst(out,t,dur,type,freq,q,peak){const a=actx,n=Math.max(64,Math.floor(a.sampleRate*dur)),b=a.createBuffer(1,n,a.sampleRate),c=b.getChannelData(0);for(let i=0;i<n;i++)c[i]=Math.random()*2-1;
+  const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain();s.buffer=b;f.type=type;f.frequency.value=freq;f.Q.value=q;env(g,t,peak,.002,dur);s.connect(f);f.connect(g);g.connect(out);s.start(t);s.stop(t+dur+.05)}
+function drumHit(at,f0,gain,len){const a=audio();if(!a)return;const t=a.currentTime+.03+at,out=voiceNode(t,gain);len=len||.6;
+  const o=a.createOscillator(),g=a.createGain();o.type='sine';                      // 鼓皮：音高從高掉下來
+  o.frequency.setValueAtTime(f0*2.2,t);o.frequency.exponentialRampToValueAtTime(f0*1.05,t+.035);o.frequency.exponentialRampToValueAtTime(f0*.9,t+len);
+  env(g,t,1,.003,len);o.connect(g);g.connect(out);o.start(t);o.stop(t+len+.05);
+  for(const [r,p,dk] of [[1.59,.32,.22],[2.14,.18,.12],[2.65,.1,.07]]){const x=a.createOscillator(),e=a.createGain();x.type='sine';   // 鼓皮的泛音（不是整數倍，所以聽起來像鼓、不像電子音）
+    x.frequency.setValueAtTime(f0*r*1.6,t);x.frequency.exponentialRampToValueAtTime(f0*r,t+.03);env(e,t,p,.002,dk);x.connect(e);e.connect(out);x.start(t);x.stop(t+dk+.05)}
+  burst(out,t,.025,'bandpass',2400,.9,.45);                                        // 鼓棒打到鼓皮的「啪」
+  burst(out,t,.16,'lowpass',260,.7,.55)}                                           // 鼓身裡的空氣「噗」
+function bellHit(at,f,gain,len){const a=audio();if(!a)return;const t=a.currentTime+.03+at,out=voiceNode(t,gain);len=len||2.2;
+  for(const [r,p,dk,det] of [[1,1,len,0],[1,.45,len*.9,1.3],[2,.12,len*.45,0],[2.76,.22,.35,0],[5.4,.07,.12,0]]){   // 基音（加一個差一點點的音，會晃）、八度、金屬的高泛音
+    const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f*r+det;env(g,t,p,.004,dk);o.connect(g);g.connect(out);o.start(t);o.stop(t+dk+.1)}
+  burst(out,t,.012,'highpass',3500,.7,.12)}                                        // 小槌敲到的「叮」
 function sfx(name){
   if(!name||name==='none')return;
   const now=performance.now();
-  if(name==='chime'){tone(880,0,.5,.18);tone(1320,.14,.7,.16);return}
-  if(name==='dingdong'){tone(1319,0,.45,.2);tone(1047,.32,.7,.2);return}   // 叮咚：這段動作做完了，可以停下來
-  if(name==='drums'){tone(110,0,.2,.32);tone(110,.28,.2,.32);tone(147,.56,.4,.34);noise(.08,'lowpass',300,.8,.4);return}   // 咚、咚、咚！：故事需要你的身體了
+  if(name==='chime'){bellHit(0,880,.16,1.2);bellHit(.16,1318.5,.13,1.4);return}
+  if(name==='dingdong'){bellHit(0,659.25,.22,3);bellHit(.6,523.25,.24,3.6);return}   // 叮咚（真的門鈴：Mi→Do）：這段動作做完了，可以停下來
+  if(name==='drums'){drumHit(0,98,.4,.45);drumHit(.3,98,.4,.45);drumHit(.62,78,.68,.9);return}   // 咚、咚、咚！（真的大鼓）：故事需要你的身體了
   if(name==='cheer'){tone(660,0,.18,.14);tone(880,.12,.18,.14);tone(1100,.24,.4,.16);return}
   if(name==='ding'){tone(1568,0,.6,.24);tone(2350,0,.35,.08);return}
   if(name==='wobble'){tone(392,0,.18,.12);tone(330,.14,.28,.12);return}
@@ -512,7 +541,7 @@ function sfx(name){
   if(now-lastSfx<150&&/^(swish|clang|drum|sparkle|boing|whoosh)$/.test(name))return;
   if(name==='swish'){lastSfx=now;const f=noise(.22,'bandpass',3200,1.4,.35);if(f&&actx)f.frequency.exponentialRampToValueAtTime(700,actx.currentTime+.2);return}   // 揮寶劍：咻
   if(name==='clang'){lastSfx=now;tone(1250,0,.25,.12);tone(1870,0,.18,.08);tone(2640,.01,.12,.05);return}                                                 // 打到：鏘
-  if(name==='drum'){lastSfx=now;tone(110,0,.22,.3);noise(.06,'lowpass',300,.8,.4);return}                                                              // 咚
+  if(name==='drum'){lastSfx=now;drumHit(0,92,.45,.5);return}                                                              // 咚
   if(name==='sparkle'){lastSfx=now;tone(1760,0,.12,.07);tone(2217,.07,.12,.07);tone(2637,.14,.2,.07);return}                                           // 魔法：叮叮叮
   if(name==='boing'){lastSfx=now;const a=audio();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;o.type='sine';o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(520,t+.18);
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g);g.connect(audioOut());o.start(t);o.stop(t+.32);return}   // 彈起來：啵嚶
@@ -531,11 +560,11 @@ function sfx(name){
    story＝講故事　move＝動作　fast＝快！　soft＝輕輕的　still＝別動　branch＝選路　off＝關掉 */
 const music=(()=>{
   // 音量：以前是 0.05，比 Fish 配音小 20 分貝左右，用手機喇叭幾乎聽不到，所以調大到大約 3 倍
-  const MODES={story:{bpm:66,vol:.16},move:{bpm:112,vol:.24},fast:{bpm:138,vol:.26},soft:{bpm:80,vol:.16},still:{bpm:60,vol:.1},branch:{bpm:72,vol:.15}};
+  const MODES={story:{bpm:66,vol:.2},move:{bpm:112,vol:.26},fast:{bpm:138,vol:.28},soft:{bpm:80,vol:.2},still:{bpm:60,vol:.13},branch:{bpm:72,vol:.18}};
   const SC=[0,2,4,7,9],BASS=[65.41,55,87.31,98];                       // 低音：C、A、F、G，四小節一輪
   const hz=n=>261.63*Math.pow(2,(SC[((n%5)+5)%5]+12*Math.floor(n/5))/12);
   let on=true,mode='off',timer=null,next=0,step=0,out=null,talking=false,held=false,mel=5,nbuf=null;
-  const level=()=>mode==='off'||held?0.0001:MODES[mode].vol*(talking?.5:1);   // 有人講話時音樂小聲一半
+  const level=()=>mode==='off'||held?0.0001:MODES[mode].vol*(talking?.6:1);   // 有人講話時音樂小聲一點
   function ramp(tc){if(out&&actx)out.gain.setTargetAtTime(level(),actx.currentTime,tc||.25)}
   function pluck(f,t,dur,g,type){const o=actx.createOscillator(),e=actx.createGain();o.type=type||'triangle';o.frequency.value=f;
     e.gain.setValueAtTime(.0001,t);e.gain.exponentialRampToValueAtTime(g,t+.012);e.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(e);e.connect(out);o.start(t);o.stop(t+dur+.05)}
@@ -562,7 +591,11 @@ const music=(()=>{
       if(p===0)pluck(hz(5),t,.9,.5);if(p===2)pluck(hz(7),t,.9,.5);if(p===4)pluck(hz(6),t,.9,.5);if(p===6)pluck(hz(8),t,1.2,.4);
     }
   }
-  function tick(){if(!actx||mode==='off'||held)return;const m=mode,half=60/MODES[m].bpm/2;
+  let fixAt=0;
+  function revive(){const now=performance.now();if(now-fixAt<1500)return;fixAt=now;       // 音樂不見的保險：聲音被手機中斷（suspended／interrupted）就接回來
+    try{if(actx.state!=='running'&&actx.state!=='closed')Promise.resolve(actx.resume()).catch(()=>{})}catch(e){}
+    try{const busy=typeof fishPlaying!=='undefined'&&fishPlaying;if(mainEl&&mainEl.paused&&!busy)Promise.resolve(mainEl.play()).catch(()=>{})}catch(e){}}
+  function tick(){if(!actx||mode==='off'||held)return;revive();const m=mode,half=60/MODES[m].bpm/2;
     if(next<actx.currentTime)next=actx.currentTime+.05;
     while(next<actx.currentTime+.25){play(step++,next,m);next+=half}}
   function set(m){
@@ -573,7 +606,7 @@ const music=(()=>{
     if(m==='off'){clearInterval(timer);timer=null}
     else{step=Math.ceil(step/8)*8;if(!timer)timer=setInterval(tick,60)}   // 換音樂時從新的一小節開始
   }
-  return {set,get mode(){return mode},get on(){return on},
+  return {set,get mode(){return mode},get on(){return on},get state(){return actx?actx.state:'none'},get level(){return out?out.gain.value:0},
     setOn(v){on=!!v;if(!on)set('off')},
     talk(v){talking=!!v;ramp(.12)},                                       // 夥伴講話時自動變小聲
     hold(v){held=!!v;ramp(.1)}};                                          // 暫停故事時音樂也停
@@ -654,7 +687,7 @@ function ui(ev,data){
     $('bye').textContent=(data.story.buddy&&data.story.buddy.name?data.story.buddy.name+'說：「明天見！」':'明天見！');remember(data.story,data.moved)}
   else if(ev==='error'){leaveStage();show('home',true);notice('故事沒有說成：'+data)}
 }
-function info(){$('sheetInfo').textContent=(band.connected?'手環已連線':'沒有手環：用上面的按鈕代替')+'　·　'+(voiceMode==='fish'?'Fish 配音':'裝置聲音')+(source==='curated'?'　·　AI 這次沒寫成功，先說精選故事'+(current&&current.fail?'（'+Object.entries(current.fail).map(([k,v])=>k+'：'+v).join('；')+'）':''):source==='library'?'　·　故事庫':source==='ai'&&current?'　·　'+String(current.model||'').split('/').pop()+(current.seconds?'，'+current.seconds+' 秒':''):'')}
+function info(){$('sheetInfo').textContent=(band.connected?'手環已連線':demoOn?'沒有手環：示範小孩照著故事在動（按住上面的按鈕可以自己控制）':'沒有手環：用上面的按鈕代替')+'　·　'+(voiceMode==='fish'?'Fish 配音':'裝置聲音')+(source==='curated'?'　·　AI 這次沒寫成功，先說精選故事'+(current&&current.fail?'（'+Object.entries(current.fail).map(([k,v])=>k+'：'+v).join('；')+'）':''):source==='library'?'　·　故事庫':source==='ai'&&current?'　·　'+String(current.model||'').split('/').pop()+(current.seconds?'，'+current.seconds+' 秒':''):'')}
 function leaveStage(){show('stage',false);show('sheet',false);simStop();releaseWake();cancelSpeech();music.set('off');music.hold(false)}
 const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,ui,prefetch,sleep,now:()=>performance.now(),cfg:{}});
 
@@ -675,8 +708,12 @@ document.addEventListener('visibilitychange',()=>{if($('stage').hidden)return;if
 $('resumeBtn').onclick=()=>{audio();audioUnlock();show('resume',false);keepAwake();engine.resume()};
 
 /* 沒有手環：按住按鈕（或空白鍵＝用力、S 鍵＝慢慢）代替 */
-let simTimer=null,simLv=0;
-function simStart(){if(simTimer)return;simTimer=setInterval(()=>{if(!band.connected)engine.signal('A:'+simLv)},250)}
+let simTimer=null,simLv=0,demoOn=true;
+// 示範小孩：沒戴手環、也沒按按鈕的時候，照故事要的快慢「動」（只用聽的也聽得到整篇真正的樣子）
+function demoLevel(){const A=engine.state.act,c=engine.cfg;if(!A)return 0;const ev=A.ev,j=Math.random()<.5?0:1;
+  if(ev&&ev.state==='on')return ev.kind==='stop'?0:c.strongMin+2;
+  if(A.pace==='fast')return c.strongMin+1+j;if(A.pace==='light')return Math.round((c.lightMin+c.lightMax)/2);if(A.pace==='still')return 0;return c.moveMin+j}
+function simStart(){if(simTimer)return;simTimer=setInterval(()=>{if(!band.connected)engine.signal('A:'+(simLv||(demoOn?demoLevel():0)))},250)}
 function simStop(){clearInterval(simTimer);simTimer=null;simLv=0}
 for(const [id,lv] of [['simSlow',3],['simFast',7]]){const el=$(id);
   el.addEventListener('pointerdown',e=>{e.preventDefault();simLv=lv});['pointerup','pointerleave','pointercancel'].forEach(t=>el.addEventListener(t,()=>{simLv=0}))}
@@ -698,7 +735,7 @@ $('sens').addEventListener('click',e=>{const b=e.target.closest('[data-sens]');i
 $('chips').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$('idea').value=b.dataset.idea||'';$('idea').focus()});
 $('connect').onclick=connectBand;
 try{const s=JSON.parse(localStorage.getItem('sdq11')||'{}');if(/^[5-8]$/.test(String(s.age||''))){ageValue=String(s.age);seg('ages','age',ageValue)}if(SENS[s.sens]){sensValue=s.sens;seg('sens','sens',sensValue)}
-  if(typeof s.fish==='boolean')$('fish').checked=s.fish;if(typeof s.music==='boolean')$('music').checked=s.music;if(typeof s.subs==='boolean')$('subs').checked=s.subs;$('seated').checked=!!s.seated}catch(e){}
+  if(typeof s.fish==='boolean')$('fish').checked=s.fish;if(typeof s.music==='boolean')$('music').checked=s.music;if(typeof s.subs==='boolean')$('subs').checked=s.subs;if(typeof s.demo==='boolean')$('demo').checked=s.demo;$('seated').checked=!!s.seated}catch(e){}
 // 網址加 ?story=故事編號：直接播那一篇（例如精選故事 ?story=crow-demo-1）
 const STORY_ID=(()=>{try{const v=new URLSearchParams(location.search).get('story');return /^[\w-]{3,60}$/.test(v||'')?v:''}catch(e){return ''}})();
 if(STORY_ID){$('replayBanner').textContent='這次會播放故事庫裡的故事：'+STORY_ID;show('replayBanner',true)}
@@ -710,10 +747,10 @@ async function begin(id){
   try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(' '))}catch(e){}
   keepAwake();
   voiceMode=$('fish').checked?'fish':'device';fishFails=0;voiceCache.clear();
-  music.hold(false);music.setOn($('music').checked);subsOn=$('subs').checked;
+  music.hold(false);music.setOn($('music').checked);subsOn=$('subs').checked;demoOn=$('demo').checked;
   const seated=$('seated').checked;
   Object.assign(engine.cfg,SENS[sensValue]||SENS.mid);
-  try{localStorage.setItem('sdq11',JSON.stringify({age:ageValue,sens:sensValue,fish:$('fish').checked,music:$('music').checked,subs:subsOn,seated}))}catch(e){}
+  try{localStorage.setItem('sdq11',JSON.stringify({age:ageValue,sens:sensValue,fish:$('fish').checked,music:$('music').checked,subs:subsOn,demo:demoOn,seated}))}catch(e){}
   show('home',false);show('finale',false);show('stage',true);show('fork',false);show('sheet',false);show('resume',false);
   $('caption').style.visibility=subsOn?'visible':'hidden';$('title').textContent='';$('meter').classList.remove('on');
   face.classList.add('thinking');face.dataset.emo='calm';music.set('story');simStart();
