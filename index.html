@@ -618,7 +618,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function prefetch(list){prefetchText((list||[]).filter(Boolean))}
 async function api(path,body){
   for(let attempt=0;;attempt++){
-    const c=new AbortController(),t=setTimeout(()=>c.abort(),150000);          // AI 寫一篇大約 30～90 秒
+    const c=new AbortController(),t=setTimeout(()=>c.abort(),180000);          // AI 寫一篇大約 40～120 秒
     try{
       const r=await fetch(WORKER_URL+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:c.signal});
       const j=await r.json().catch(()=>({}));
@@ -654,7 +654,7 @@ function ui(ev,data){
     $('bye').textContent=(data.story.buddy&&data.story.buddy.name?data.story.buddy.name+'說：「明天見！」':'明天見！');remember(data.story,data.moved)}
   else if(ev==='error'){leaveStage();show('home',true);notice('故事沒有說成：'+data)}
 }
-function info(){$('sheetInfo').textContent=(band.connected?'手環已連線':'沒有手環：用上面的按鈕代替')+'　·　'+(voiceMode==='fish'?'Fish 配音':'裝置聲音')+(source==='curated'?'　·　AI 這次沒寫成功，先說精選故事':source==='library'?'　·　故事庫':'')}
+function info(){$('sheetInfo').textContent=(band.connected?'手環已連線':'沒有手環：用上面的按鈕代替')+'　·　'+(voiceMode==='fish'?'Fish 配音':'裝置聲音')+(source==='curated'?'　·　AI 這次沒寫成功，先說精選故事'+(current&&current.fail?'（'+Object.entries(current.fail).map(([k,v])=>k+'：'+v).join('；')+'）':''):source==='library'?'　·　故事庫':source==='ai'&&current?'　·　'+String(current.model||'').split('/').pop()+(current.seconds?'，'+current.seconds+' 秒':''):'')}
 function leaveStage(){show('stage',false);show('sheet',false);simStop();releaseWake();cancelSpeech();music.set('off');music.hold(false)}
 const engine=createEngine({speak,cancelSpeech,pauseSpeech,resumeSpeech,sfx,cmd,ui,prefetch,sleep,now:()=>performance.now(),cfg:{}});
 
