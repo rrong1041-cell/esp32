@@ -736,7 +736,11 @@ function createEngine(d){
       await d.sleep(cfg.tick);
     }
     if(!alive(r))return null;
-    S.act=null;d.cmd('PAUSE');q.clear();await q.drain();if(!alive(r))return null;
+    S.act=null;d.cmd('PAUSE');
+    // 邊動邊講（g.keep）：故事有一部分在動的時候講。夥伴陪著過關或按了跳過時，還沒講到的故事要講完，不能漏掉
+    let told=false;
+    if(g.keep&&said<steps.length){await q.drain();if(!alive(r))return null;if(g.help)await say(r,g.help);while(said<steps.length&&alive(r))await say(r,steps[said++]);told=true}
+    q.clear();await q.drain();if(!alive(r))return null;
     d.ui('progress',1);d.ui('phase',{mode:'done'});S.moved+=Math.round(moved);   // 動作做完：音樂回到講故事的樣子，再講結果
     if(coop){S.famMoved=(S.famMoved||0)+Math.round(famDone);d.ui('famProgress',-1)}
     if(hasOutcome){
@@ -745,7 +749,7 @@ function createEngine(d){
       const outcome=struggled?'help':'win';
       if(g.free){if(g.done)d.sfx(g.done)}                                   // 自由故事：不歡呼、不打斷，故事自己接下去
       else if(outcome==='win'){d.robot('CHEER');d.sfx('cheer')}else{d.robot('NUDGE');d.sfx('chime')}
-      await say(r,g[outcome]);
+      if(!told)await say(r,g[outcome]);
       S.log.push({index:sc?sc.index:0,type:g.type,outcome,reward:g.reward||'',lesson:g.lesson||''});
     }else{
       d.robot('CHEER');d.sfx('cheer');
